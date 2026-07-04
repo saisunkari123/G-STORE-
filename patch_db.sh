@@ -1,3 +1,5 @@
+#!/bin/bash
+cat << 'INNER_EOF' > app/src/main/java/com/example/data/local/db/RiceMartDatabase.kt
 package com.example.data.local.db
 
 import androidx.room.Database
@@ -26,3 +28,4 @@ abstract class RiceMartDatabase : RoomDatabase() {
     abstract fun addressDao(): AddressDao
     abstract fun orderDao(): OrderDao
 }
+INNER_EOF
