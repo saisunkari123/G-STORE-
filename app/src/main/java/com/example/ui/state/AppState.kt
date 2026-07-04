@@ -15,6 +15,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.withContext
@@ -410,9 +412,9 @@ object AppState {
                             userRepository.saveUser(adminUser)
                             // Remove old generic seed products if still in Firestore
                             val legacyIds = listOf("p_sonamasoori", "p_basmati")
-                            legacyIds.forEach { id ->
-                                try { productRepository.deleteProduct(id) } catch (_: Exception) {}
-                            }
+                            legacyIds.map { id ->
+                                async { try { productRepository.deleteProduct(id) } catch (_: Exception) {} }
+                            }.awaitAll()
                             // Always save the 4 real brand products (upsert — safe to run every login)
                             productRepository.saveProducts(initialProducts)
                         } catch (err: Exception) {
@@ -490,9 +492,9 @@ object AppState {
                                 try {
                                     userRepository.saveUser(adminUser)
                                     val legacyIds = listOf("p_sonamasoori", "p_basmati")
-                                    legacyIds.forEach { id ->
-                                        try { productRepository.deleteProduct(id) } catch (_: Exception) {}
-                                    }
+                                    legacyIds.map { id ->
+                                        async { try { productRepository.deleteProduct(id) } catch (_: Exception) {} }
+                                    }.awaitAll()
                                     productRepository.saveProducts(initialProducts)
                                 } catch (err: Exception) {
                                     err.printStackTrace()
