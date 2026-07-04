@@ -1,0 +1,16 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Product images — any logged-in user can READ (view) images
+    // Only the admin account can WRITE (upload) images
+    match /products/{imageFile} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.email == "admin@gstore.com";
+    }
+    // Deny all other paths by default
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

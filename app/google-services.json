@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "748001273030",
+    "project_id": "rice---mart-3bfcd",
+    "storage_bucket": "rice---mart-3bfcd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:748001273030:android:056b1fe2d3a4e3e6bce3c7",
+        "android_client_info": {
+          "package_name": "com.aistudio.ricemart.pkqmsx"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDf6i7QXMulbrsOH0n-e2P73xe8xwKuroM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
