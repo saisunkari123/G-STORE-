@@ -5,7 +5,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.example.data.local.db.RiceMartDatabase
 import com.example.data.repository.*
 import com.example.domain.model.*
 import com.example.domain.repository.*
@@ -15,6 +14,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.withContext
@@ -66,7 +67,7 @@ object AppState {
     var isDarkMode by mutableStateOf(false)
 
     // Role-based Passwords
-    private const val ADMIN_PASSWORD = "Ram@123"
+    private val ADMIN_PASSWORD = com.example.BuildConfig.ADMIN_PASSWORD
 
     // 3. Observed Lists connected to Room Database
     var productsList by mutableStateOf(emptyList<Product>())
@@ -148,41 +149,6 @@ object AppState {
                 ProductVariant(id = "lb_26", weight = "26",  unit = "Kg", currentPrice = 1750.0, mrp = 2000.0, stockQuantity = 0, sku = "LB-26KG")
             )
         )
-    )
-
-    private val initialAddresses = listOf(
-        Address(
-            id = "addr_1",
-            userId = "cust_1",
-            houseNo = "Flat 402, Sai Residency, Road No. 4",
-            landmark = "Opposite Ganesha Temple",
-            distanceKm = 2.4,
-            isSelected = true
-        )
-    )
-
-    private val initialOrders = listOf(
-        Order(
-            id = "G-9941",
-            userId = "cust_1",
-            customerName = "Satish Kumar",
-            customerPhone = "+91 94401 23456",
-            addressHouseNo = "Flat 402, Sai Residency, Road No. 4",
-            addressLandmark = "Opposite Ganesha Temple",
-            distanceKm = 2.4,
-            subtotal = 1350.0,
-            deliveryFee = 0.0,
-            totalAmount = 1350.0,
-            status = OrderStatus.DELIVERED,
-            createdAt = System.currentTimeMillis() - 86400000,
-            items = listOf(
-                OrderItem("p_sonamasoori", "Sona Masoori Raw Rice", "25 Kg", 1350.0, 1)
-            )
-        )
-    )
-
-    private val initialUsers = listOf(
-        User("admin_1", "+91 00000 00001", "G-STORE Admin", "ADMIN", "admin@gstore.com", ADMIN_PASSWORD)
     )
 
     // Helper to calculate cart metrics
@@ -410,9 +376,9 @@ object AppState {
                             userRepository.saveUser(adminUser)
                             // Remove old generic seed products if still in Firestore
                             val legacyIds = listOf("p_sonamasoori", "p_basmati")
-                            legacyIds.forEach { id ->
-                                try { productRepository.deleteProduct(id) } catch (_: Exception) {}
-                            }
+                            legacyIds.map { id ->
+                                async { try { productRepository.deleteProduct(id) } catch (_: Exception) {} }
+                            }.awaitAll()
                             // Always save the 4 real brand products (upsert — safe to run every login)
                             productRepository.saveProducts(initialProducts)
                         } catch (err: Exception) {
@@ -490,9 +456,9 @@ object AppState {
                                 try {
                                     userRepository.saveUser(adminUser)
                                     val legacyIds = listOf("p_sonamasoori", "p_basmati")
-                                    legacyIds.forEach { id ->
-                                        try { productRepository.deleteProduct(id) } catch (_: Exception) {}
-                                    }
+                                    legacyIds.map { id ->
+                                        async { try { productRepository.deleteProduct(id) } catch (_: Exception) {} }
+                                    }.awaitAll()
                                     productRepository.saveProducts(initialProducts)
                                 } catch (err: Exception) {
                                     err.printStackTrace()
