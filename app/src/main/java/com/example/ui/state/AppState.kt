@@ -152,6 +152,41 @@ object AppState {
         )
     )
 
+    private val initialAddresses = listOf(
+        Address(
+            id = "addr_1",
+            userId = "cust_1",
+            houseNo = "Flat 402, Sai Residency, Road No. 4",
+            landmark = "Opposite Ganesha Temple",
+            distanceKm = 2.4,
+            isSelected = true
+        )
+    )
+
+    private val initialOrders = listOf(
+        Order(
+            id = "G-9941",
+            userId = "cust_1",
+            customerName = "Satish Kumar",
+            customerPhone = "+91 94401 23456",
+            addressHouseNo = "Flat 402, Sai Residency, Road No. 4",
+            addressLandmark = "Opposite Ganesha Temple",
+            distanceKm = 2.4,
+            subtotal = 1350.0,
+            deliveryFee = 0.0,
+            totalAmount = 1350.0,
+            status = OrderStatus.DELIVERED,
+            createdAt = System.currentTimeMillis() - 86400000,
+            items = listOf(
+                OrderItem("p_sonamasoori", "Sona Masoori Raw Rice", "25 Kg", 1350.0, 1)
+            )
+        )
+    )
+
+    private val initialUsers = listOf(
+        User("admin_1", "+91 00000 00001", "G-STORE Admin", "ADMIN", "admin@gstore.com", ADMIN_PASSWORD)
+    )
+
     // Helper to calculate cart metrics
     val cartSubtotal: Double
         get() {
