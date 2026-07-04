@@ -5,7 +5,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.example.data.local.db.RiceMartDatabase
 import com.example.data.repository.*
 import com.example.domain.model.*
 import com.example.domain.repository.*
@@ -68,7 +67,7 @@ object AppState {
     var isDarkMode by mutableStateOf(false)
 
     // Role-based Passwords
-    private const val ADMIN_PASSWORD = "Ram@123"
+    private val ADMIN_PASSWORD = com.example.BuildConfig.ADMIN_PASSWORD
 
     // 3. Observed Lists connected to Room Database
     var productsList by mutableStateOf(emptyList<Product>())
@@ -152,6 +151,8 @@ object AppState {
         )
     )
 
+<<<<<<< Updated upstream
+=======
     private val initialAddresses = listOf(
         Address(
             id = "addr_1",
@@ -183,6 +184,7 @@ object AppState {
         )
     )
 
+>>>>>>> Stashed changes
     // Helper to calculate cart metrics
     val cartSubtotal: Double
         get() {
