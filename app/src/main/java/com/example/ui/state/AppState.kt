@@ -68,7 +68,7 @@ object AppState {
     var isDarkMode by mutableStateOf(false)
 
     // Role-based Passwords
-    private const val ADMIN_PASSWORD = "Ram@123"
+    private val ADMIN_PASSWORD = com.example.BuildConfig.ADMIN_PASSWORD
 
     // 3. Observed Lists connected to Room Database
     var productsList by mutableStateOf(emptyList<Product>())
