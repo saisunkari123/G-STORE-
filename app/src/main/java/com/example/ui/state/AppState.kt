@@ -19,6 +19,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.tasks.await
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
@@ -78,78 +79,9 @@ object AppState {
     // Map of "product_id#variant_id" to Quantity
     var cartItems by mutableStateOf(mapOf<String, Int>())
 
-    // Initial default seed values — Uncle's 4 real rice brands
-    // Admin sets prices and uploads bag images via Inventory screen
-    private val initialProducts = listOf(
-        Product(
-            id = "p_akshaya",
-            categoryId = "c_rice",
-            nameEn = "Akshaya Rice",
-            nameTe = "అక్షయ బియ్యం",
-            brand = "Akshaya",
-            descriptionEn = "Fresh quality rice delivered directly from the mill. Ideal for everyday home cooking.",
-            descriptionTe = "మిల్లు నుండి నేరుగా అందించే తాజా నాణ్యమైన బియ్యం. రోజువారీ వంట కోసం అనువైనది.",
-            shortDescriptionEn = "Quality everyday rice from Akshaya brand.",
-            shortDescriptionTe = "అక్షయ బ్రాండ్ నాణ్యమైన బియ్యం.",
-            imageUrls = listOf("android.resource://com.aistudio.ricemart.pkqmsx/drawable/akshaya_rice_bag"),
-            variants = listOf(
-                ProductVariant(id = "ak_5",  weight = "5",  unit = "Kg", currentPrice = 350.0, mrp = 400.0, stockQuantity = 25, sku = "AK-5KG"),
-                ProductVariant(id = "ak_10", weight = "10",  unit = "Kg", currentPrice = 700.0, mrp = 800.0, stockQuantity = 5, sku = "AK-10KG"),
-                ProductVariant(id = "ak_26", weight = "26",  unit = "Kg", currentPrice = 1750.0, mrp = 2000.0, stockQuantity = 0, sku = "AK-26KG")
-            )
-        ),
-        Product(
-            id = "p_sameera",
-            categoryId = "c_rice",
-            nameEn = "Sameera Rice",
-            nameTe = "సమీరా బియ్యం",
-            brand = "Sameera",
-            descriptionEn = "Trusted Sameera brand rice — soft texture, consistent quality for the whole family.",
-            descriptionTe = "నమ్మదగిన సమీరా బ్రాండ్ బియ్యం — మెత్తటి రుచి, మొత్తం కుటుంబానికి నాణ్యత.",
-            shortDescriptionEn = "Soft and consistent Sameera rice.",
-            shortDescriptionTe = "సమీరా మెత్తటి నాణ్యమైన బియ్యం.",
-            imageUrls = listOf("android.resource://com.aistudio.ricemart.pkqmsx/drawable/sameera_rice_bag"),
-            variants = listOf(
-                ProductVariant(id = "sm_5",  weight = "5",  unit = "Kg", currentPrice = 350.0, mrp = 400.0, stockQuantity = 0, sku = "SM-5KG"),
-                ProductVariant(id = "sm_10", weight = "10",  unit = "Kg", currentPrice = 700.0, mrp = 800.0, stockQuantity = 15, sku = "SM-10KG"),
-                ProductVariant(id = "sm_26", weight = "26",  unit = "Kg", currentPrice = 1750.0, mrp = 2000.0, stockQuantity = 3, sku = "SM-26KG")
-            )
-        ),
-        Product(
-            id = "p_bell",
-            categoryId = "c_rice",
-            nameEn = "Bell Brand Rice",
-            nameTe = "బెల్ బ్రాండ్ బియ్యం",
-            brand = "Bell Brand",
-            descriptionEn = "Bell Brand — popular choice for clean, fluffy grains. Great for rice dishes.",
-            descriptionTe = "బెల్ బ్రాండ్ — శుభ్రమైన, మృదువైన గింజల కోసం ప్రసిద్ధ ఎంపిక.",
-            shortDescriptionEn = "Fluffy clean grains from Bell Brand.",
-            shortDescriptionTe = "బెల్ బ్రాండ్ మెత్తటి శుభ్రమైన బియ్యం.",
-            imageUrls = listOf("android.resource://com.aistudio.ricemart.pkqmsx/drawable/bell_brand_rice_bag"),
-            variants = listOf(
-                ProductVariant(id = "bb_5",  weight = "5",  unit = "Kg", currentPrice = 350.0, mrp = 400.0, stockQuantity = 8, sku = "BB-5KG"),
-                ProductVariant(id = "bb_10", weight = "10",  unit = "Kg", currentPrice = 700.0, mrp = 800.0, stockQuantity = 0, sku = "BB-10KG"),
-                ProductVariant(id = "bb_26", weight = "26",  unit = "Kg", currentPrice = 1750.0, mrp = 2000.0, stockQuantity = 50, sku = "BB-26KG")
-            )
-        ),
-        Product(
-            id = "p_lalitha",
-            categoryId = "c_rice",
-            nameEn = "Lalitha Brand Rice",
-            nameTe = "లలిత బ్రాండ్ బియ్యం",
-            brand = "Lalitha Brand",
-            descriptionEn = "Lalitha Brand rice — fine quality, light on stomach, perfect for everyday use.",
-            descriptionTe = "లలిత బ్రాండ్ బియ్యం — మంచి నాణ్యత, జీర్ణానికి తేలికగా ఉండే రోజువారీ బియ్యం.",
-            shortDescriptionEn = "Light and quality Lalitha Brand rice.",
-            shortDescriptionTe = "లలిత బ్రాండ్ తేలికైన నాణ్యమైన బియ్యం.",
-            imageUrls = listOf("android.resource://com.aistudio.ricemart.pkqmsx/drawable/lalitha_brand_rice_bag"),
-            variants = listOf(
-                ProductVariant(id = "lb_5",  weight = "5",  unit = "Kg", currentPrice = 350.0, mrp = 400.0, stockQuantity = 30, sku = "LB-5KG"),
-                ProductVariant(id = "lb_10", weight = "10",  unit = "Kg", currentPrice = 700.0, mrp = 800.0, stockQuantity = 2, sku = "LB-10KG"),
-                ProductVariant(id = "lb_26", weight = "26",  unit = "Kg", currentPrice = 1750.0, mrp = 2000.0, stockQuantity = 0, sku = "LB-26KG")
-            )
-        )
-    )
+
+
+
 
     // Helper to calculate cart metrics
     val cartSubtotal: Double
@@ -701,32 +633,6 @@ object AppState {
             }
             return@withContext "No address selected"
         }
-        
-        // Validate stock levels before placing the order
-        var stockError: String? = null
-        cartItems.forEach { (key, qty) ->
-            val parts = key.split("#")
-            if (parts.size == 2) {
-                val prodId = parts[0]
-                val variantId = parts[1]
-                val prod = productsList.find { it.id == prodId }
-                val variant = prod?.variants?.find { it.id == variantId }
-                if (prod != null && variant != null) {
-                    if (qty > variant.stockQuantity) {
-                        val brandName = prod.nameEn
-                        stockError = "Insufficient stock: Only ${variant.stockQuantity} bags of $brandName (${variant.weight} ${variant.unit}) are available."
-                        return@forEach
-                    }
-                }
-            }
-        }
-
-        if (stockError != null) {
-            withContext(Dispatchers.Main) {
-                isNetworkLoading = false
-            }
-            return@withContext stockError
-        }
 
         val currentItems = mutableListOf<OrderItem>()
         cartItems.forEach { (key, qty) ->
@@ -748,7 +654,12 @@ object AppState {
             }
         }
 
-        if (currentItems.isEmpty()) return@withContext "Cart is empty"
+        if (currentItems.isEmpty()) {
+            withContext(Dispatchers.Main) {
+                isNetworkLoading = false
+            }
+            return@withContext "Cart is empty"
+        }
 
         withContext(Dispatchers.Main) {
             isPlacingOrder = true
@@ -770,32 +681,54 @@ object AppState {
             items = currentItems
         )
 
-        // Build a fast lookup: "productId#variantId" -> orderedQty from the cart snapshot
-        val cartSnapshot = cartItems.toMap() // safe copy before clearCart
-        
-        // Deduct stocks only for modified products
-        val updatedProducts = mutableListOf<Product>()
-        productsList.forEach { prod ->
-            var modified = false
-            val updatedVariants = prod.variants.map { variant ->
-                val cartKey = "${prod.id}#${variant.id}"
-                val orderedQty = cartSnapshot[cartKey] ?: 0
-                if (orderedQty > 0) {
-                    modified = true
-                    val newStock = (variant.stockQuantity - orderedQty).coerceAtLeast(0)
-                    variant.copy(stockQuantity = newStock)
-                } else {
-                    variant
-                }
-            }
-            if (modified) {
-                updatedProducts.add(prod.copy(variants = updatedVariants, lastUpdated = System.currentTimeMillis()))
-            }
-        }
-
+        val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
         try {
-            productRepository.saveProducts(updatedProducts)
-            orderRepository.saveOrder(newOrder)
+            firestore.runTransaction { transaction ->
+                val cartSnapshot = cartItems.toMap()
+                val uniqueProductIds = cartSnapshot.keys.map { it.split("#")[0] }.distinct()
+
+                // 1. Fetch fresh products from the database inside the transaction
+                val dbProducts = uniqueProductIds.associateWith { prodId ->
+                    val ref = firestore.collection("products").document(prodId)
+                    val snapshot = transaction.get(ref)
+                    val prod = snapshot.toObject(Product::class.java)
+                        ?: throw Exception("Product not found in store catalog.")
+                    prod
+                }
+
+                // 2. Validate stock levels and compute updated variants
+                val productsToUpdate = mutableListOf<Product>()
+                dbProducts.forEach { (prodId, prod) ->
+                    var modified = false
+                    val updatedVariants = prod.variants.map { variant ->
+                        val cartKey = "$prodId#${variant.id}"
+                        val orderedQty = cartSnapshot[cartKey] ?: 0
+                        if (orderedQty > 0) {
+                            if (orderedQty > variant.stockQuantity) {
+                                throw Exception("Insufficient stock: Only ${variant.stockQuantity} bags of ${prod.nameEn} (${variant.weight} ${variant.unit}) are available.")
+                            }
+                            modified = true
+                            variant.copy(stockQuantity = variant.stockQuantity - orderedQty)
+                        } else {
+                            variant
+                        }
+                    }
+                    if (modified) {
+                        productsToUpdate.add(prod.copy(variants = updatedVariants, lastUpdated = System.currentTimeMillis()))
+                    }
+                }
+
+                // 3. Write updated product stock records
+                productsToUpdate.forEach { prod ->
+                    val ref = firestore.collection("products").document(prod.id)
+                    transaction.set(ref, prod)
+                }
+
+                // 4. Save the order document
+                val orderRef = firestore.collection("orders").document(newOrder.id.ifEmpty { java.util.UUID.randomUUID().toString() })
+                val orderToSave = newOrder.copy(id = orderRef.id)
+                transaction.set(orderRef, orderToSave)
+            }.await()
             withContext(Dispatchers.Main) {
                 lastPlacedOrder = newOrder
                 clearCart()
