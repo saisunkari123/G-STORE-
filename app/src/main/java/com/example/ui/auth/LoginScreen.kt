@@ -52,11 +52,11 @@ fun LoginScreen() {
         focusedBorderColor = primaryGreen,
         unfocusedBorderColor = Color.LightGray,
         focusedLabelColor = primaryGreen,
-        unfocusedLabelColor = Color.Gray,
+        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
         focusedLeadingIconColor = primaryGreen,
-        unfocusedLeadingIconColor = Color.Gray,
-        focusedPlaceholderColor = Color.Gray,
-        unfocusedPlaceholderColor = Color.Gray
+        unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant
     )
 
     Column(
@@ -327,7 +327,7 @@ fun RequiredLabel(text: String) {
         text = text,
         fontSize = 13.sp,
         fontWeight = FontWeight.SemiBold,
-        color = Color(0xFF424242),
+        color = MaterialTheme.colorScheme.onSurface,
         modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
     )
 }

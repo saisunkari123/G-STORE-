@@ -89,7 +89,7 @@ fun CustomerScreen() {
             ) {
                 Text("Logout", fontWeight = FontWeight.Black, fontSize = 24.sp, color = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.height(8.dp))
-                Text("Are you sure you want to log out?", color = Color.Gray, fontSize = 16.sp)
+                Text("Are you sure you want to log out?", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)
                 Spacer(Modifier.height(24.dp))
                 Button(
                     onClick = { AppState.logout(); showLogoutConfirm = false },
@@ -104,7 +104,7 @@ fun CustomerScreen() {
                     onClick = { showLogoutConfirm = false },
                     modifier = Modifier.fillMaxWidth().height(50.dp)
                 ) {
-                    Text("Cancel", color = Color.Gray, fontWeight = FontWeight.Bold)
+                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -228,7 +228,7 @@ fun CustomerCatalogView(onLogoutClick: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
-                    placeholder = { Text("Search premium grains...", color = Color.Gray) },
+                    placeholder = { Text("Search premium grains...", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     leadingIcon = { Icon(Icons.Default.Search, null, tint = RoyalEmerald) },
                     shape = RoundedCornerShape(16.dp),
                     singleLine = true,
@@ -260,7 +260,7 @@ fun CustomerCatalogView(onLogoutClick: () -> Unit) {
                         modifier = Modifier.fillMaxWidth().padding(top = 40.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("No items found matching '$searchQuery'", color = Color.Gray)
+                        Text("No items found matching '$searchQuery'", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             } else {
@@ -441,7 +441,7 @@ fun CustomerProductCard(product: Product) {
                         Text(
                             "₹${currentVariant.mrp.toInt()}",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
                         )
                         Text(
@@ -465,7 +465,7 @@ fun CustomerProductCard(product: Product) {
                 Text(
                     product.descriptionEn,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
@@ -522,7 +522,7 @@ fun CustomerProductCard(product: Product) {
                     enabled = hasVariants && !isOutOfStock,
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (hasVariants) RoyalEmerald else Color.Gray.copy(alpha = 0.3f)
+                        containerColor = if (hasVariants) RoyalEmerald else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                     )
                 ) {
                     Icon(Icons.Outlined.ShoppingBag, contentDescription = null, modifier = Modifier.size(20.dp))
@@ -565,7 +565,7 @@ fun QtyController(qty: Int, onMinus: () -> Unit, onPlus: () -> Unit, maxStock: I
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             modifier = Modifier
-                .background(Color(0xFFF1F3F4), RoundedCornerShape(10.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
                 .padding(horizontal = 4.dp, vertical = 4.dp)
         ) {
             IconButton(onClick = onMinus, modifier = Modifier.size(32.dp)) {
@@ -582,7 +582,7 @@ fun QtyController(qty: Int, onMinus: () -> Unit, onPlus: () -> Unit, maxStock: I
                     Icons.Default.Add,
                     contentDescription = "Increase Quantity",
                     modifier = Modifier.size(16.dp),
-                    tint = if (qty < maxStock) RoyalEmerald else Color.Gray
+                    tint = if (qty < maxStock) RoyalEmerald else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -622,7 +622,7 @@ fun CustomerCartView(onOpenAddressManager: () -> Unit) {
             Text(
                 text = "Go back to home screen and add products to your cart.",
                 fontSize = 14.sp,
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 8.dp)
             )
@@ -721,7 +721,7 @@ fun AddressCard(address: Address?, onEdit: () -> Unit) {
                 Text(
                     "Delivery Address",
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     address?.houseNo ?: "No Address Selected",
@@ -735,7 +735,7 @@ fun AddressCard(address: Address?, onEdit: () -> Unit) {
                     Text(
                         address.landmark,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1
                     )
                 }
@@ -762,7 +762,7 @@ fun CartItemRow(product: Product, variant: ProductVariant, quantity: Int) {
             modifier = Modifier
                 .size(90.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color(0xFFF2F2F2)),
+                .background(MaterialTheme.colorScheme.surfaceVariant),
             contentScale = ContentScale.Crop
         )
 
@@ -778,7 +778,7 @@ fun CartItemRow(product: Product, variant: ProductVariant, quantity: Int) {
             Text(
                 "${variant.weight}${variant.unit}",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(8.dp))
             Text(
@@ -858,7 +858,7 @@ fun PriceRow(label: String, value: String, isTotal: Boolean = false, color: Colo
             label,
             style = if (isTotal) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
             fontWeight = if (isTotal) FontWeight.Bold else FontWeight.Normal,
-            color = if (isTotal) MaterialTheme.colorScheme.onSurface else Color.Gray
+            color = if (isTotal) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
             value,
@@ -926,7 +926,7 @@ fun CheckoutBottomBar() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Total Price", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    Text("Total Price", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("₹${AppState.cartTotal.toInt()}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = RoyalEmerald)
                 }
 
@@ -1023,7 +1023,7 @@ fun AddressSelectionDialog(onDismiss: () -> Unit) {
                                             focusedLabelColor = RoyalEmerald,
                                             unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                                             focusedBorderColor = RoyalEmerald,
-                                            unfocusedBorderColor = Color.Gray,
+                                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                             unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                                             focusedContainerColor = MaterialTheme.colorScheme.surface
                                         )
@@ -1042,7 +1042,7 @@ fun AddressSelectionDialog(onDismiss: () -> Unit) {
                                             focusedLabelColor = RoyalEmerald,
                                             unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                                             focusedBorderColor = RoyalEmerald,
-                                            unfocusedBorderColor = Color.Gray,
+                                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                             unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                                             focusedContainerColor = MaterialTheme.colorScheme.surface
                                         )
@@ -1053,7 +1053,7 @@ fun AddressSelectionDialog(onDismiss: () -> Unit) {
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
                                         TextButton(onClick = { isEditing = false }) {
-                                            Text("Cancel", color = Color.Gray)
+                                            Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         }
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Button(
@@ -1096,7 +1096,7 @@ fun AddressSelectionDialog(onDismiss: () -> Unit) {
                     }
                 }
 
-                HorizontalDivider(color = Color.Gray, thickness = 1.dp, modifier = Modifier.padding(vertical = 6.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant, thickness = 1.dp, modifier = Modifier.padding(vertical = 6.dp))
 
                 Text("Or Add New Address:", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
 
@@ -1113,7 +1113,7 @@ fun AddressSelectionDialog(onDismiss: () -> Unit) {
                         focusedLabelColor = RoyalEmerald,
                         unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         focusedBorderColor = RoyalEmerald,
-                        unfocusedBorderColor = Color.Gray,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                         focusedContainerColor = MaterialTheme.colorScheme.surface
                     )
@@ -1132,7 +1132,7 @@ fun AddressSelectionDialog(onDismiss: () -> Unit) {
                         focusedLabelColor = RoyalEmerald,
                         unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         focusedBorderColor = RoyalEmerald,
-                        unfocusedBorderColor = Color.Gray,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                         focusedContainerColor = MaterialTheme.colorScheme.surface
                     )
@@ -1192,7 +1192,7 @@ fun CustomerOrdersView() {
                     Text(
                         "No orders placed yet",
                         fontWeight = FontWeight.Bold,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         "Place your first order to see it here",
@@ -1224,7 +1224,7 @@ fun CustomerOrdersView() {
                                     fontSize = 15.sp
                                 )
                                 val sdf = SimpleDateFormat("dd MMM, hh:mm a", Locale.ENGLISH)
-                                Text(sdf.format(Date(order.createdAt)), fontSize = 11.sp, color = Color.Gray)
+                                Text(sdf.format(Date(order.createdAt)), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Text(
                                 text = "₹${order.totalAmount.toInt()}",
@@ -1268,7 +1268,7 @@ fun CustomerOrdersView() {
                         Spacer(modifier = Modifier.height(10.dp))
 
                         // Items list
-                        Text("Items:", fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = Color.Gray)
+                        Text("Items:", fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(4.dp))
                         order.items.forEach { item ->
                             Text(
@@ -1316,7 +1316,7 @@ fun OrderProgressStepper(currentStep: Int) {
                         Icon(
                             imageVector = icons[index],
                             contentDescription = null,
-                            tint = if (isCompleted) Color.White else Color.Gray,
+                            tint = if (isCompleted) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -1334,7 +1334,7 @@ fun OrderProgressStepper(currentStep: Int) {
                     text = label,
                     fontSize = 10.sp,
                     fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isCompleted) RoyalEmerald else Color.Gray,
+                    color = if (isCompleted) RoyalEmerald else MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
             }
@@ -1478,7 +1478,7 @@ fun OrderSuccessView(order: Order, onContinueShopping: () -> Unit) {
                 Text(
                     text = "Thank you for your purchase. We are preparing your premium pantry essentials.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
@@ -1501,11 +1501,11 @@ fun OrderSuccessView(order: Order, onContinueShopping: () -> Unit) {
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column {
-                            Text("ORDER ID", style = MaterialTheme.typography.labelSmall, color = Color.Gray, fontWeight = FontWeight.Bold)
+                            Text("ORDER ID", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
                             Text(text = order.id, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
                         }
                         Column(horizontalAlignment = Alignment.End) {
-                            Text("AMOUNT PAID", style = MaterialTheme.typography.labelSmall, color = Color.Gray, fontWeight = FontWeight.Bold)
+                            Text("AMOUNT PAID", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
                             Text(text = "₹${order.totalAmount.toInt()}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = RoyalEmerald)
                         }
                     }
@@ -1524,7 +1524,7 @@ fun OrderSuccessView(order: Order, onContinueShopping: () -> Unit) {
                             modifier = Modifier.size(24.dp)
                         )
                         Column {
-                            Text("DELIVERY ADDRESS", style = MaterialTheme.typography.labelSmall, color = Color.Gray, fontWeight = FontWeight.Bold)
+                            Text("DELIVERY ADDRESS", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "${order.addressHouseNo}, ${order.addressLandmark}",
@@ -1549,7 +1549,7 @@ fun OrderSuccessView(order: Order, onContinueShopping: () -> Unit) {
                             modifier = Modifier.size(24.dp)
                         )
                         Column {
-                            Text("PAYMENT METHOD", style = MaterialTheme.typography.labelSmall, color = Color.Gray, fontWeight = FontWeight.Bold)
+                            Text("PAYMENT METHOD", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "Cash on Delivery (COD)",
@@ -1606,7 +1606,7 @@ fun CustomerAccountView(onLogoutClick: () -> Unit) {
         Text(
             text = "PROFILE INFORMATION",
             style = MaterialTheme.typography.labelSmall,
-            color = Color.Gray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.Bold
         )
 
@@ -1636,7 +1636,7 @@ fun CustomerAccountView(onLogoutClick: () -> Unit) {
                         Text(
                             text = "Full Name",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.Gray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
                             text = user?.name ?: "Valued Customer",
@@ -1666,7 +1666,7 @@ fun CustomerAccountView(onLogoutClick: () -> Unit) {
                         Text(
                             text = "Email Address",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.Gray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
                             text = user?.email ?: "No email provided",
@@ -1696,7 +1696,7 @@ fun CustomerAccountView(onLogoutClick: () -> Unit) {
                         Text(
                             text = "Phone Number",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.Gray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
                             text = user?.phone ?: "No phone provided",
@@ -1713,7 +1713,7 @@ fun CustomerAccountView(onLogoutClick: () -> Unit) {
         Text(
             text = "APP SETTINGS",
             style = MaterialTheme.typography.labelSmall,
-            color = Color.Gray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.Bold
         )
 
@@ -1754,7 +1754,7 @@ fun CustomerAccountView(onLogoutClick: () -> Unit) {
                             Text(
                                 text = "Toggle light / dark appearance",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.Gray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -1801,7 +1801,7 @@ fun CustomerAccountView(onLogoutClick: () -> Unit) {
                         Text(
                             text = "Sign out of your customer account",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.Gray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

@@ -62,7 +62,7 @@ fun AdminScreen() {
             ) {
                 Text("Logout", fontWeight = FontWeight.Black, fontSize = 24.sp, color = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.height(8.dp))
-                Text("Are you sure you want to log out?", color = Color.Gray, fontSize = 16.sp)
+                Text("Are you sure you want to log out?", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)
                 Spacer(Modifier.height(24.dp))
                 Button(
                     onClick = { AppState.logout(); showLogoutConfirm = false },
@@ -77,7 +77,7 @@ fun AdminScreen() {
                     onClick = { showLogoutConfirm = false },
                     modifier = Modifier.fillMaxWidth().height(50.dp)
                 ) {
-                    Text("Cancel", color = Color.Gray, fontWeight = FontWeight.Bold)
+                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -100,7 +100,7 @@ fun AdminScreen() {
                 ) {
                     Column {
                         Text("G-STORE Control", fontWeight = FontWeight.Black, fontSize = 24.sp, color = MaterialTheme.colorScheme.onSurface)
-                        Text("Admin Center", fontSize = 12.sp, color = Color.Gray)
+                        Text("Admin Center", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     IconButton(
                         onClick = { showLogoutConfirm = true },
@@ -180,7 +180,7 @@ fun AdminDashboardStats() {
     ) {
         StatCard(label = "Total Sales", value = "₹${totalSales.toInt()}", icon = Icons.Default.ShoppingCart, color = RoyalEmerald)
         StatCard(label = "Pending", value = "$pendingCount", icon = Icons.Default.Notifications, color = DeepGold)
-        StatCard(label = "Orders", value = "$totalOrdersCount", icon = Icons.Default.List, color = Color.Gray)
+        StatCard(label = "Orders", value = "$totalOrdersCount", icon = Icons.Default.List, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -194,7 +194,7 @@ fun RowScope.StatCard(label: String, value: String, icon: androidx.compose.ui.gr
         Column(modifier = Modifier.padding(12.dp)) {
             Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.height(4.dp))
-            Text(label, fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+            Text(label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
             Text(value, fontSize = 16.sp, fontWeight = FontWeight.Black, color = color)
         }
     }
@@ -213,7 +213,7 @@ fun AdminOrdersView() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(64.dp), tint = RoyalEmerald.copy(alpha = 0.3f))
-            Text("No active orders", color = Color.Gray)
+            Text("No active orders", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     } else {
         LazyColumn(
@@ -246,7 +246,7 @@ fun OrderCard(order: com.example.domain.model.Order) {
                 Column {
                     Text("Order #${order.id}", fontWeight = FontWeight.Black, color = DeepGold, fontSize = 18.sp)
                     val sdf = java.text.SimpleDateFormat("dd MMM, hh:mm a", java.util.Locale.ENGLISH)
-                    Text(sdf.format(java.util.Date(order.createdAt)), fontSize = 11.sp, color = Color.Gray)
+                    Text(sdf.format(java.util.Date(order.createdAt)), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Surface(
                     color = when(order.status) {
@@ -271,7 +271,7 @@ fun OrderCard(order: com.example.domain.model.Order) {
             Spacer(modifier = Modifier.height(16.dp))
             
             // Customer Details Section
-            Text("CUSTOMER DETAILS", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.Gray, letterSpacing = 1.sp)
+            Text("CUSTOMER DETAILS", fontSize = 10.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp)
             Spacer(modifier = Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(16.dp), tint = RoyalEmerald)
@@ -297,7 +297,7 @@ fun OrderCard(order: com.example.domain.model.Order) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), thickness = 0.5.dp, color = Color.LightGray)
             
             // Order Items Section
-            Text("ITEMS ORDERED", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.Gray, letterSpacing = 1.sp)
+            Text("ITEMS ORDERED", fontSize = 10.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp)
             Spacer(modifier = Modifier.height(8.dp))
             order.items.forEach { item ->
                 Row(
@@ -324,7 +324,7 @@ fun OrderCard(order: com.example.domain.model.Order) {
                     .padding(12.dp)
             ) {
                 Column {
-                    Text("Bill Amount", fontSize = 11.sp, color = Color.Gray)
+                    Text("Bill Amount", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("₹${order.totalAmount.toInt()}", fontWeight = FontWeight.Black, fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurface)
                 }
                 if (order.status == OrderStatus.PENDING) {
@@ -413,7 +413,7 @@ fun InventoryItemCard(product: Product, onEditClicked: (Product) -> Unit) {
                     Text(product.brand, fontSize = 12.sp, color = RoyalEmerald, fontWeight = FontWeight.Black)
                 }
                 Row {
-                    IconButton(onClick = { onEditClicked(product) }) { Icon(Icons.Default.Edit, "Edit Product", tint = Color.Gray) }
+                    IconButton(onClick = { onEditClicked(product) }) { Icon(Icons.Default.Edit, "Edit Product", tint = MaterialTheme.colorScheme.onSurfaceVariant) }
                     IconButton(onClick = { AppState.adminDeleteProduct(product.id) }) { Icon(Icons.Default.Delete, "Delete Product", tint = Color.Red.copy(alpha = 0.5f)) }
                 }
             }
@@ -433,7 +433,7 @@ fun InventoryItemCard(product: Product, onEditClicked: (Product) -> Unit) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("₹${variant.currentPrice.toInt()}", fontWeight = FontWeight.Black, color = RoyalEmerald)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("MRP ₹${variant.mrp.toInt()}", fontSize = 12.sp, color = Color.Gray, textDecoration = TextDecoration.LineThrough)
+                            Text("MRP ₹${variant.mrp.toInt()}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, textDecoration = TextDecoration.LineThrough)
                         }
                         val stockColor = if (variant.stockQuantity < 5) Color.Red else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         Text("Stock: ${variant.stockQuantity}", color = stockColor, fontWeight = FontWeight.Bold, fontSize = 12.sp)
@@ -515,7 +515,7 @@ fun VariantEditorDialog(productId: String, existingVariant: ProductVariant?, onD
                         focusedTextColor = MaterialTheme.colorScheme.onSurface,
                         unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                         focusedLabelColor = RoyalEmerald,
-                        unfocusedLabelColor = Color.Gray,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         focusedBorderColor = RoyalEmerald,
                         unfocusedBorderColor = Color.LightGray
                     )
@@ -530,7 +530,7 @@ fun VariantEditorDialog(productId: String, existingVariant: ProductVariant?, onD
                         focusedTextColor = MaterialTheme.colorScheme.onSurface,
                         unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                         focusedLabelColor = RoyalEmerald,
-                        unfocusedLabelColor = Color.Gray,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         focusedBorderColor = RoyalEmerald,
                         unfocusedBorderColor = Color.LightGray
                     )
@@ -545,7 +545,7 @@ fun VariantEditorDialog(productId: String, existingVariant: ProductVariant?, onD
                         focusedTextColor = MaterialTheme.colorScheme.onSurface,
                         unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                         focusedLabelColor = RoyalEmerald,
-                        unfocusedLabelColor = Color.Gray,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         focusedBorderColor = RoyalEmerald,
                         unfocusedBorderColor = Color.LightGray
                     )
@@ -560,7 +560,7 @@ fun VariantEditorDialog(productId: String, existingVariant: ProductVariant?, onD
                         focusedTextColor = MaterialTheme.colorScheme.onSurface,
                         unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                         focusedLabelColor = RoyalEmerald,
-                        unfocusedLabelColor = Color.Gray,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         focusedBorderColor = RoyalEmerald,
                         unfocusedBorderColor = Color.LightGray
                     )
@@ -624,7 +624,7 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
                         focusedTextColor = MaterialTheme.colorScheme.onSurface,
                         unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                         focusedLabelColor = RoyalEmerald,
-                        unfocusedLabelColor = Color.Gray,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         focusedBorderColor = RoyalEmerald,
                         unfocusedBorderColor = Color.LightGray
                     )
@@ -639,7 +639,7 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
                         focusedTextColor = MaterialTheme.colorScheme.onSurface,
                         unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                         focusedLabelColor = RoyalEmerald,
-                        unfocusedLabelColor = Color.Gray,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         focusedBorderColor = RoyalEmerald,
                         unfocusedBorderColor = Color.LightGray
                     )
@@ -655,7 +655,7 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
                         focusedTextColor = MaterialTheme.colorScheme.onSurface,
                         unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                         focusedLabelColor = RoyalEmerald,
-                        unfocusedLabelColor = Color.Gray,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         focusedBorderColor = RoyalEmerald,
                         unfocusedBorderColor = Color.LightGray
                     )
@@ -678,8 +678,8 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
                         AsyncImage(model = currentImageUrl, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                     } else {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.Add, null, tint = Color.Gray, modifier = Modifier.size(40.dp))
-                            Text("Upload Image", color = Color.Gray, fontSize = 12.sp)
+                            Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(40.dp))
+                            Text("Upload Image", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                         }
                     }
                     
