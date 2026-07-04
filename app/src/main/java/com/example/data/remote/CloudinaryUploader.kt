@@ -4,7 +4,6 @@ import org.json.JSONObject
 import java.io.DataOutputStream
 import java.io.File
 import java.net.URL
-import java.security.MessageDigest
 import javax.net.ssl.HttpsURLConnection
 import com.example.BuildConfig
 
@@ -16,9 +15,8 @@ import com.example.BuildConfig
 object CloudinaryUploader {
 
     private val CLOUD_NAME = BuildConfig.CLOUDINARY_CLOUD_NAME
-    private val API_KEY    = BuildConfig.CLOUDINARY_API_KEY
-    private val API_SECRET = BuildConfig.CLOUDINARY_API_SECRET
     private const val FOLDER     = "products"
+    private const val UPLOAD_PRESET = "unsigned_preset"
     private val UPLOAD_URL = "https://api.cloudinary.com/v1_1/$CLOUD_NAME/image/upload"
 
     /**
@@ -26,12 +24,6 @@ object CloudinaryUploader {
      * Throws an exception if the upload fails — the caller handles it.
      */
     fun upload(file: File): String {
-        val timestamp = (System.currentTimeMillis() / 1000).toString()
-
-        // Cloudinary signing: sort params alphabetically, join as key=value&..., append secret
-        val paramsToSign = "folder=$FOLDER&timestamp=$timestamp"
-        val signature    = sha1("$paramsToSign$API_SECRET")
-
         val boundary = "----RiceMartBoundary${System.currentTimeMillis()}"
         val lineEnd  = "\r\n"
         val twoHyphens = "--"
@@ -56,9 +48,7 @@ object CloudinaryUploader {
                 out.writeBytes("$value$lineEnd")
             }
 
-            writeField("api_key",   API_KEY)
-            writeField("timestamp", timestamp)
-            writeField("signature", signature)
+            writeField("upload_preset", UPLOAD_PRESET)
             writeField("folder",    FOLDER)
 
             // Write the image file part
@@ -84,12 +74,5 @@ object CloudinaryUploader {
         connection.disconnect()
 
         return JSONObject(responseBody).getString("secure_url")
-    }
-
-    /** SHA-1 hex digest used for Cloudinary request signing */
-    private fun sha1(input: String): String {
-        val digest = MessageDigest.getInstance("SHA-1")
-        return digest.digest(input.toByteArray(Charsets.UTF_8))
-            .joinToString("") { "%02x".format(it) }
     }
 }
