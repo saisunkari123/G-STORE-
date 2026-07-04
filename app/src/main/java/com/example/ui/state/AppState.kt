@@ -183,10 +183,6 @@ object AppState {
         )
     )
 
-    private val initialUsers = listOf(
-        User("admin_1", "+91 00000 00001", "G-STORE Admin", "ADMIN", "admin@gstore.com", ADMIN_PASSWORD)
-    )
-
     // Helper to calculate cart metrics
     val cartSubtotal: Double
         get() {
