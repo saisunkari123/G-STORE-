@@ -83,6 +83,7 @@ data class Order(
 
 data class OrderItem(
     val productId: String = "",
+    val variantId: String = "",
     val productName: String = "",
     val selectedSize: String = "",
     val priceAtPurchase: Double = 0.0,

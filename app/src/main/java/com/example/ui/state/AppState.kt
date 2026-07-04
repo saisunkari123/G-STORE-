@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.SupervisorJob
+import com.google.firebase.firestore.FirebaseFirestore
+
 import kotlinx.coroutines.withContext
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
@@ -55,6 +57,9 @@ object AppState {
                 productsList = emptyList()
                 addressesList = emptyList()
                 ordersList = emptyList()
+                cartItems = emptyMap()
+                lastPlacedOrder = null
+                isPlacingOrder = false
             }
         }
     var showLoginScreen by mutableStateOf(true)
@@ -735,34 +740,10 @@ object AppState {
             }
             return@withContext "No address selected"
         }
-        
-        // Validate stock levels before placing the order
-        var stockError: String? = null
-        cartItems.forEach { (key, qty) ->
-            val parts = key.split("#")
-            if (parts.size == 2) {
-                val prodId = parts[0]
-                val variantId = parts[1]
-                val prod = productsList.find { it.id == prodId }
-                val variant = prod?.variants?.find { it.id == variantId }
-                if (prod != null && variant != null) {
-                    if (qty > variant.stockQuantity) {
-                        val brandName = prod.nameEn
-                        stockError = "Insufficient stock: Only ${variant.stockQuantity} bags of $brandName (${variant.weight} ${variant.unit}) are available."
-                        return@forEach
-                    }
-                }
-            }
-        }
-
-        if (stockError != null) {
-            withContext(Dispatchers.Main) {
-                isNetworkLoading = false
-            }
-            return@withContext stockError
-        }
 
         val currentItems = mutableListOf<OrderItem>()
+        val productsToUpdate = mutableMapOf<String, Product>()
+
         cartItems.forEach { (key, qty) ->
             val parts = key.split("#")
             if (parts.size == 2) {
@@ -771,8 +752,12 @@ object AppState {
                 val prod = productsList.find { it.id == prodId }
                 val variant = prod?.variants?.find { it.id == variantId }
                 if (prod != null && variant != null) {
+                    if (!productsToUpdate.containsKey(prod.id)) {
+                        productsToUpdate[prod.id] = prod
+                    }
                     currentItems.add(OrderItem(
                         productId = prod.id,
+                        variantId = variant.id,
                         productName = prod.nameEn,
                         selectedSize = "${variant.weight} ${variant.unit}",
                         priceAtPurchase = variant.currentPrice,
@@ -804,32 +789,46 @@ object AppState {
             items = currentItems
         )
 
-        // Build a fast lookup: "productId#variantId" -> orderedQty from the cart snapshot
-        val cartSnapshot = cartItems.toMap() // safe copy before clearCart
-        
-        // Deduct stocks only for modified products
-        val updatedProducts = mutableListOf<Product>()
-        productsList.forEach { prod ->
-            var modified = false
-            val updatedVariants = prod.variants.map { variant ->
-                val cartKey = "${prod.id}#${variant.id}"
-                val orderedQty = cartSnapshot[cartKey] ?: 0
-                if (orderedQty > 0) {
-                    modified = true
-                    val newStock = (variant.stockQuantity - orderedQty).coerceAtLeast(0)
-                    variant.copy(stockQuantity = newStock)
-                } else {
-                    variant
-                }
-            }
-            if (modified) {
-                updatedProducts.add(prod.copy(variants = updatedVariants, lastUpdated = System.currentTimeMillis()))
-            }
-        }
-
         try {
-            updatedProducts.forEach { productRepository.saveProduct(it) }
-            orderRepository.saveOrder(newOrder)
+            val db = FirebaseFirestore.getInstance()
+
+            kotlinx.coroutines.tasks.await(db.runTransaction { transaction ->
+                // 1. READ ALL FIRST (Transaction rule: all reads must happen before writes)
+                val productDocs = productsToUpdate.keys.map { prodId ->
+                    val ref = db.collection("products").document(prodId)
+                    val snapshot = transaction.get(ref)
+                    val product = snapshot.toObject(Product::class.java) ?: throw Exception("Product $prodId not found in database.")
+                    Pair(ref, product)
+                }
+
+                // 2. VALIDATE & MUTATE LOCALLY
+                val updatedProducts = productDocs.map { (ref, product) ->
+                    val updatedVariants = product.variants.map { variant ->
+                        // Find if this variant is in the cart
+                        val cartItem = currentItems.find { it.productId == product.id && it.variantId == variant.id }
+                        if (cartItem != null) {
+                            if (cartItem.quantity > variant.stockQuantity) {
+                                throw Exception("Insufficient stock: Only ${variant.stockQuantity} bags of ${product.nameEn} (${variant.weight} ${variant.unit}) are available.")
+                            }
+                            variant.copy(stockQuantity = variant.stockQuantity - cartItem.quantity)
+                        } else {
+                            variant
+                        }
+                    }
+                    Pair(ref, product.copy(variants = updatedVariants, lastUpdated = System.currentTimeMillis()))
+                }
+
+                // 3. WRITE ALL
+                updatedProducts.forEach { (ref, updatedProduct) ->
+                    transaction.set(ref, updatedProduct)
+                }
+
+                val orderRef = db.collection("orders").document(newOrder.id)
+                transaction.set(orderRef, newOrder)
+
+                newOrder
+            })
+
             withContext(Dispatchers.Main) {
                 lastPlacedOrder = newOrder
                 clearCart()
@@ -843,7 +842,7 @@ object AppState {
                 isPlacingOrder = false
                 isNetworkLoading = false
             }
-            e.localizedMessage ?: "Unknown error occurred"
+            e.message ?: e.localizedMessage ?: "Unknown error occurred"
         }
     }
 

@@ -15,6 +15,8 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -590,13 +592,13 @@ fun VariantEditorDialog(productId: String, existingVariant: ProductVariant?, onD
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
-    var nameEn by remember { mutableStateOf(existingProduct?.nameEn ?: "") }
-    var brand by remember { mutableStateOf(existingProduct?.brand ?: "") }
-    var descEn by remember { mutableStateOf(existingProduct?.descriptionEn ?: "") }
+    var nameEn by rememberSaveable { mutableStateOf(existingProduct?.nameEn ?: "") }
+    var brand by rememberSaveable { mutableStateOf(existingProduct?.brand ?: "") }
+    var descEn by rememberSaveable { mutableStateOf(existingProduct?.descriptionEn ?: "") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
-    var currentImageUrl by remember { mutableStateOf(existingProduct?.imageUrls?.firstOrNull() ?: "") }
-    var isUploading by remember { mutableStateOf(false) }
-    var uploadError by remember { mutableStateOf<String?>(null) }
+    var currentImageUrl by rememberSaveable { mutableStateOf(existingProduct?.imageUrls?.firstOrNull() ?: "") }
+    var isUploading by rememberSaveable { mutableStateOf(false) }
+    var uploadError by rememberSaveable { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
