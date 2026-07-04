@@ -828,7 +828,7 @@ object AppState {
         }
 
         try {
-            updatedProducts.forEach { productRepository.saveProduct(it) }
+            productRepository.saveProducts(updatedProducts)
             orderRepository.saveOrder(newOrder)
             withContext(Dispatchers.Main) {
                 lastPlacedOrder = newOrder
