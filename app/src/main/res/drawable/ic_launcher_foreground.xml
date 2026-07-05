@@ -1,43 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    
-    <!-- Left Sprout Leaf (Green/Yellow) -->
-    <path
-        android:fillColor="#F7C04A"
-        android:pathData="M54,26 C48,34 46,44 54,50 C56,42 58,34 54,26 Z" />
-        
-    <!-- Right Sprout Leaf -->
-    <path
-        android:fillColor="#E57C23"
-        android:pathData="M54,26 C60,34 62,44 54,50 C52,42 50,34 54,26 Z" />
-
-    <!-- Left Rice Grain -->
-    <path
-        android:fillColor="#F7C04A"
-        android:pathData="M38,40 C34,44 34,50 40,52 C42,48 42,44 38,40 Z" />
-
-    <!-- Right Rice Grain -->
-    <path
-        android:fillColor="#F7C04A"
-        android:pathData="M70,40 C74,44 74,50 68,52 C66,48 66,44 70,40 Z" />
-
-    <!-- Bowl Rim -->
-    <path
-        android:fillColor="#F8F9FA"
-        android:pathData="M24,52 h60 v4 h-60 z" />
-
-    <!-- Bowl Body -->
-    <path
-        android:fillColor="#F8F9FA"
-        android:pathData="M26,56 C26,74 40,82 54,82 C68,82 82,74 82,56 Z" />
-
-    <!-- Inner Rice Pile (Slightly visible above rim) -->
-    <path
-        android:fillColor="#F7C04A"
-        android:pathData="M30,52 C30,46 40,44 54,44 C68,44 78,46 78,52 Z" />
-
-</vector>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:drawable="@drawable/gstore_logo"
+        android:gravity="center"
+        android:width="76dp"
+        android:height="76dp" />
+</layer-list>
