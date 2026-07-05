@@ -3,9 +3,8 @@
     <!-- Base app theme — no action bar -->
     <style name="Theme.MyApplication" parent="android:Theme.DeviceDefault.NoActionBar" />
 
-    <!-- Splash screen theme — shown while app loads -->
+    <!-- Splash screen theme fallback for pre-API 31 -->
     <style name="Theme.MyApplication.Starting" parent="Theme.MyApplication">
-        <item name="android:windowSplashScreenBackground">#012E18</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="android:windowBackground">#012E18</item>
     </style>
 </resources>
