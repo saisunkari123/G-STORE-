@@ -55,6 +55,8 @@ data class Address(
     val houseNo: String = "",
     val landmark: String = "",
     val distanceKm: Double = 0.0,
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
     @get:PropertyName("selected") @set:PropertyName("selected") var isSelected: Boolean = false
 )
 

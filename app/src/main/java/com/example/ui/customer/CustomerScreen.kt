@@ -17,6 +17,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.compose.ui.platform.LocalContext
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.rememberCameraPositionState
 import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
 import coil.compose.rememberAsyncImagePainter
@@ -980,9 +987,27 @@ fun CheckoutBottomBar() {
 fun AddressSelectionDialog(onDismiss: () -> Unit) {
     var flatDetails by remember { mutableStateOf("") }
     var landmarkDetails by remember { mutableStateOf("") }
-    
-    // Automatically defaulting to 2.5 KM for now since we removed the mock slider
-    val selectedDist = 2.5 
+    var selectedLatitude by remember { mutableStateOf(0.0) }
+    var selectedLongitude by remember { mutableStateOf(0.0) }
+    var selectedDist by remember { mutableStateOf(2.5) }
+    var showMapPicker by remember { mutableStateOf(false) }
+
+    if (showMapPicker) {
+        GoogleMapPickerDialog(
+            onDismiss = { showMapPicker = false },
+            onLocationSelected = { latLng, address ->
+                selectedLatitude = latLng.latitude
+                selectedLongitude = latLng.longitude
+                landmarkDetails = address
+                selectedDist = AppState.calculateDistanceKm(
+                    AppState.SHOP_LATITUDE,
+                    AppState.SHOP_LONGITUDE,
+                    latLng.latitude,
+                    latLng.longitude
+                )
+            }
+        )
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1100,6 +1125,27 @@ fun AddressSelectionDialog(onDismiss: () -> Unit) {
 
                 Text("Or Add New Address:", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
 
+                Button(
+                    onClick = { showMapPicker = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = DeepGold)
+                ) {
+                    Icon(Icons.Default.Map, contentDescription = "Map")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Pin Location on Map", color = Color.White)
+                }
+
+                if (selectedLatitude != 0.0) {
+                    val feeText = if (selectedDist <= 2.0) "Free" else "${Math.ceil(selectedDist) * 10.0} rupees"
+                    Text(
+                        text = "Calculated Distance: ${String.format("%.2f", selectedDist)} km\nDelivery Fee: $feeText",
+                        color = RoyalEmerald,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
+
                 OutlinedTextField(
                     value = flatDetails,
                     onValueChange = { flatDetails = it },
@@ -1122,7 +1168,7 @@ fun AddressSelectionDialog(onDismiss: () -> Unit) {
                 OutlinedTextField(
                     value = landmarkDetails,
                     onValueChange = { landmarkDetails = it },
-                    label = { Text("Landmark (e.g., Opp Temple)") },
+                    label = { Text("Landmark / Map Address") },
                     singleLine = true,
                     textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface),
                     modifier = Modifier.fillMaxWidth().testTag("addr_landmark"),
@@ -1141,9 +1187,18 @@ fun AddressSelectionDialog(onDismiss: () -> Unit) {
                 Button(
                     onClick = {
                         if (flatDetails.isNotBlank()) {
-                            AppState.addNewAddress(flatDetails, landmarkDetails, selectedDist)
+                            AppState.addNewAddress(
+                                house = flatDetails,
+                                landmark = landmarkDetails,
+                                distance = selectedDist,
+                                lat = selectedLatitude,
+                                lon = selectedLongitude
+                            )
                             flatDetails = ""
                             landmarkDetails = ""
+                            selectedDist = 2.5
+                            selectedLatitude = 0.0
+                            selectedLongitude = 0.0
                         }
                     },
                     modifier = Modifier.fillMaxWidth().testTag("addr_add_submit"),
@@ -1808,5 +1863,129 @@ fun CustomerAccountView(onLogoutClick: () -> Unit) {
             }
         }
     }
+}
+
+@Composable
+fun GoogleMapPickerDialog(
+    onDismiss: () -> Unit,
+    onLocationSelected: (LatLng, String) -> Unit
+) {
+    val shopLatLng = LatLng(AppState.SHOP_LATITUDE, AppState.SHOP_LONGITUDE)
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(shopLatLng, 15f)
+    }
+
+    var selectedLatLng by remember { mutableStateOf(shopLatLng) }
+    var addressText by remember { mutableStateOf("Fetching location...") }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    // Geocoder to fetch address details for free locally on device
+    fun updateAddress(latLng: LatLng) {
+        selectedLatLng = latLng
+        scope.launch(Dispatchers.IO) {
+            try {
+                val geocoder = android.location.Geocoder(context, java.util.Locale.getDefault())
+                // Geocoder.getFromLocation has a blocking signature in older API levels, so run on IO
+                val addresses = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1)
+                if (!addresses.isNullOrEmpty()) {
+                    val address = addresses[0]
+                    val line = address.getAddressLine(0) ?: "Selected Pin Location"
+                    withContext(Dispatchers.Main) {
+                        addressText = line
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        addressText = "Lat: ${String.format("%.4f", latLng.latitude)}, Lon: ${String.format("%.4f", latLng.longitude)}"
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    addressText = "Lat: ${String.format("%.4f", latLng.latitude)}, Lon: ${String.format("%.4f", latLng.longitude)}"
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(cameraPositionState.position) {
+        val target = cameraPositionState.position.target
+        updateAddress(target)
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Set Delivery Pin",
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth().height(420.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Drag the map to position your exact home under the red center pin.",
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp))
+                ) {
+                    GoogleMap(
+                        modifier = Modifier.fillMaxSize(),
+                        cameraPositionState = cameraPositionState
+                    )
+                    
+                    // Stationary pin icon locked in the absolute center of the map
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = "Center Pin",
+                        tint = Color.Red,
+                        modifier = Modifier
+                            .size(44.dp)
+                            .align(Alignment.Center)
+                            .padding(bottom = 22.dp) // Offset to align pin tip exactly to target center
+                    )
+                }
+                
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = addressText,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onLocationSelected(selectedLatLng, addressText)
+                    onDismiss()
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald)
+            ) {
+                Text("Confirm Location", color = Color.White)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 

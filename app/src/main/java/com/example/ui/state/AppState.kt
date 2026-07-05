@@ -70,6 +70,11 @@ object AppState {
     // Role-based Passwords
     private val ADMIN_PASSWORD = com.example.BuildConfig.ADMIN_PASSWORD
 
+    // Shop Location & Delivery Boundaries (Hyderabad Center)
+    const val SHOP_LATITUDE = 17.4065
+    const val SHOP_LONGITUDE = 78.4772
+    const val MAX_DELIVERY_DISTANCE_KM = 10.0
+
     // 3. Observed Lists connected to Room Database
     var productsList by mutableStateOf(emptyList<Product>())
     var addressesList by mutableStateOf(emptyList<Address>())
@@ -105,10 +110,15 @@ object AppState {
     val cartDeliveryFee: Double
         get() {
             val sub = cartSubtotal
+            if (sub == 0.0) return 0.0
+            val selectedAddr = addressesList.find { it.isSelected } ?: return 40.0
             return when {
-                sub == 0.0 -> 0.0
-                sub >= 1000.0 -> 0.0
-                else -> 40.0
+                selectedAddr.distanceKm <= 2.0 -> 0.0
+                selectedAddr.distanceKm <= MAX_DELIVERY_DISTANCE_KM -> {
+                    // Charge $10 per kilometer, rounded up for clean pricing
+                    Math.ceil(selectedAddr.distanceKm) * 10.0
+                }
+                else -> 0.0 // Will be blocked during checkout
             }
         }
 
@@ -573,13 +583,15 @@ object AppState {
         cartItems = emptyMap()
     }
 
-    fun addNewAddress(house: String, landmark: String, distance: Double) {
+    fun addNewAddress(house: String, landmark: String, distance: Double, lat: Double = 0.0, lon: Double = 0.0) {
         val newAddr = Address(
             id = "addr_${System.currentTimeMillis()}",
             userId = currentUser?.id ?: "unknown",
             houseNo = house,
             landmark = landmark,
             distanceKm = distance,
+            latitude = lat,
+            longitude = lon,
             isSelected = true
         )
         ioScope.launch {
@@ -632,6 +644,13 @@ object AppState {
                 isNetworkLoading = false
             }
             return@withContext "No address selected"
+        }
+
+        if (selectedAddr.distanceKm > MAX_DELIVERY_DISTANCE_KM) {
+            withContext(Dispatchers.Main) {
+                isNetworkLoading = false
+            }
+            return@withContext "Sorry, we only deliver within $MAX_DELIVERY_DISTANCE_KM km of the shop."
         }
 
         val currentItems = mutableListOf<OrderItem>()
@@ -809,6 +828,18 @@ object AppState {
         ioScope.launch {
             productRepository.deleteProduct(productId)
         }
+    }
+
+    // Calculates distance in kilometers between two GPS coordinates using the Haversine formula (100% Free Offline)
+    fun calculateDistanceKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val r = 6371.0 // Earth radius in kilometers
+        val latDistance = Math.toRadians(lat2 - lat1)
+        val lonDistance = Math.toRadians(lon2 - lon1)
+        val a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2) +
+                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2)
+        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+        return r * c
     }
 
 
