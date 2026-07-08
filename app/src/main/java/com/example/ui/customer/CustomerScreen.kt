@@ -29,6 +29,7 @@ import coil.compose.SubcomposeAsyncImage
 import coil.compose.rememberAsyncImagePainter
 import coil.compose.AsyncImagePainter
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -119,64 +120,97 @@ fun CustomerScreen() {
 
     Scaffold(
         bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 8.dp
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 8.dp,
+                shadowElevation = 8.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .testTag("customer_bottom_nav")
             ) {
-                NavigationBarItem(
-                    selected = selectedTab == "HOME",
-                    onClick = { selectedTab = "HOME" },
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Shop") },
-                    label = { Text("Shop", fontWeight = FontWeight.Bold) },
-                    modifier = Modifier.testTag("nav_home")
-                )
-                NavigationBarItem(
-                    selected = selectedTab == "CART",
-                    onClick = { selectedTab = "CART" },
-                    icon = {
-                        BadgedBox(
-                            badge = {
-                                if (AppState.cartItems.isNotEmpty()) {
-                                    Badge(containerColor = DeepGold) {
-                                        Text(
-                                            text = AppState.cartItems.values.sum().toString(),
-                                            color = Color.White
-                                        )
-                                    }
-                                }
-                            }
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    val navItems = listOf(
+                        Triple("HOME", Icons.Default.Home, "Shop"),
+                        Triple("CART", Icons.Default.ShoppingCart, "Cart"),
+                        Triple("TRACKING", Icons.AutoMirrored.Filled.List, "Orders"),
+                        Triple("ACCOUNT", Icons.Default.Person, "Account")
+                    )
+                    
+                    navItems.forEach { (tab, icon, label) ->
+                        val isSelected = selectedTab == tab
+                        val activeColor = RoyalEmerald
+                        val inactiveColor = Color.Gray
+                        
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { selectedTab = tab }
+                                .padding(vertical = 4.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
-                            Icon(Icons.Default.ShoppingCart, contentDescription = "Cart")
+                            if (tab == "CART") {
+                                BadgedBox(
+                                    badge = {
+                                        if (AppState.cartItems.isNotEmpty()) {
+                                            Badge(containerColor = DeepGold) {
+                                                Text(
+                                                    text = AppState.cartItems.values.sum().toString(),
+                                                    color = Color.White,
+                                                    fontSize = 9.sp
+                                                )
+                                            }
+                                        }
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = label,
+                                        tint = if (isSelected) activeColor else inactiveColor,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            } else {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = label,
+                                    tint = if (isSelected) activeColor else inactiveColor,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = label,
+                                fontSize = 10.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) activeColor else inactiveColor
+                            )
                         }
-                    },
-                    label = { Text("Cart", fontWeight = FontWeight.Bold) },
-                    modifier = Modifier.testTag("nav_cart")
-                )
-                NavigationBarItem(
-                    selected = selectedTab == "TRACKING",
-                    onClick = { selectedTab = "TRACKING" },
-                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "My Orders") },
-                    label = { Text("Orders", fontWeight = FontWeight.Bold) },
-                    modifier = Modifier.testTag("nav_orders")
-                )
-                NavigationBarItem(
-                    selected = selectedTab == "ACCOUNT",
-                    onClick = { selectedTab = "ACCOUNT" },
-                    icon = { Icon(Icons.Default.Person, contentDescription = "My Account") },
-                    label = { Text("Account", fontWeight = FontWeight.Bold) },
-                    modifier = Modifier.testTag("nav_account")
-                )
+                    }
+                }
             }
         }
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(
+                    bottom = paddingValues.calculateBottomPadding(),
+                    top = if (selectedTab == "HOME") 0.dp else paddingValues.calculateTopPadding()
+                )
                 .background(MaterialTheme.colorScheme.background)
         ) {
             when (selectedTab) {
-                "HOME" -> CustomerCatalogView(onLogoutClick = { showLogoutConfirm = true })
+                "HOME" -> CustomerCatalogView(
+                    onLogoutClick = { showLogoutConfirm = true },
+                    onCartClick = { selectedTab = "CART" },
+                    onLocationClick = { showAddressModal = true }
+                )
                 "CART" -> CustomerCartView(onOpenAddressManager = { showAddressModal = true })
                 "TRACKING" -> CustomerOrdersView()
                 "ACCOUNT" -> CustomerAccountView(onLogoutClick = { showLogoutConfirm = true })
@@ -191,32 +225,172 @@ fun CustomerScreen() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CustomerCatalogView(onLogoutClick: () -> Unit) {
+fun CustomerCatalogView(
+    onLogoutClick: () -> Unit,
+    onCartClick: () -> Unit,
+    onLocationClick: () -> Unit
+) {
     var searchQuery by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf("All") }
     val filteredProducts = AppState.productsList.filter {
-        val matchesSearch = it.nameEn.contains(searchQuery, ignoreCase = true) ||
+        it.nameEn.contains(searchQuery, ignoreCase = true) ||
             it.brand.contains(searchQuery, ignoreCase = true)
-        val matchesCategory = selectedCategory == "All" || it.brand.equals(selectedCategory, ignoreCase = true)
-        matchesSearch && matchesCategory
+    }
+
+    val selectedAddress = AppState.addressesList.find { it.isSelected }
+    val addressDisplay = if (selectedAddress != null) {
+        "${selectedAddress.houseNo}, ${selectedAddress.landmark}"
+    } else {
+        "Tap to select delivery address"
     }
 
     Scaffold(
         topBar = {
-            Column(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
-                CenterAlignedTopAppBar(
-                    title = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(RoyalEmerald, Color(0xFF022C22))
+                        )
+                    )
+                    .statusBarsPadding()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp)
+                ) {
+                    // Top Row: Logo & Title + Cart & Logout Icons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Image(
+                                painter = painterResource(id = com.example.R.drawable.gstore_logo_transparent),
+                                contentDescription = "Logo",
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "G-STORE",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Black,
+                                    letterSpacing = (-0.5).sp,
+                                    color = Color.White
+                                )
+                            )
+                        }
+                        
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            // Cart Icon with count badge
+                            IconButton(onClick = onCartClick) {
+                                val cartItemsCount = AppState.cartItems.values.sum()
+                                if (cartItemsCount > 0) {
+                                    BadgedBox(
+                                        badge = {
+                                            Badge(
+                                                containerColor = DeepGold,
+                                                contentColor = Color.White
+                                            ) {
+                                                Text(cartItemsCount.toString(), fontSize = 9.sp)
+                                            }
+                                        }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.ShoppingCart,
+                                            contentDescription = "Cart",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                } else {
+                                    Icon(
+                                        Icons.Default.ShoppingCart,
+                                        contentDescription = "Cart",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            
+                            // Logout Button
+                            IconButton(onClick = onLogoutClick) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                                    contentDescription = "Logout",
+                                    tint = Color.White.copy(alpha = 0.8f),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(4.dp))
+                    
+                    // Greeting & Location Row (Side-by-Side to save vertical space)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val userName = AppState.currentUser?.name ?: "Guest"
                         Text(
-                            "G-STORE",
-                            style = MaterialTheme.typography.headlineMedium.copy(
-                                fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = (-1).sp,
-                                color = RoyalEmerald
+                            text = "Hello, $userName!",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
                             )
                         )
-                    },
-                    actions = {}
-                )
+                        
+                        Row(
+                            modifier = Modifier.clickable { onLocationClick() },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = "Location Pin",
+                                tint = Color(0xFFFBBF24),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Text(
+                                text = "$addressDisplay ▼",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.White.copy(alpha = 0.9f)
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.widthIn(max = 180.dp)
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    // Search Bar contained fully inside the green background
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Search premium grains...", color = Color.Gray, fontSize = 13.sp) },
+                        leadingIcon = { Icon(Icons.Default.Search, null, tint = RoyalEmerald, modifier = Modifier.size(18.dp)) },
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true,
+                        textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            focusedBorderColor = Color.Transparent,
+                            unfocusedBorderColor = Color.Transparent
+                        )
+                    )
+                }
             }
         }
     ) { padding ->
@@ -228,43 +402,15 @@ fun CustomerCatalogView(onLogoutClick: () -> Unit) {
             contentPadding = PaddingValues(bottom = 32.dp)
         ) {
             item {
-                // Search Bar integrated nicely
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    placeholder = { Text("Search premium grains...", color = Color.Gray) },
-                    leadingIcon = { Icon(Icons.Default.Search, null, tint = RoyalEmerald) },
-                    shape = RoundedCornerShape(16.dp),
-                    singleLine = true,
-                    textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        focusedBorderColor = RoyalEmerald.copy(alpha = 0.3f),
-                        unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f)
-                    )
-                )
-            }
-
-            item {
-                CategoryFilters(selectedCategory, onCategorySelect = { selectedCategory = it })
-            }
-
-            item {
-                SectionHeader(
-                    title = if (searchQuery.isEmpty()) "Curated Selection" else "Search Results"
-                )
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
             if (filteredProducts.isEmpty()) {
                 item {
                     Column(
-                        modifier = Modifier.fillMaxWidth().padding(top = 40.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 40.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text("No items found matching '$searchQuery'", color = Color.Gray)
@@ -1704,35 +1850,6 @@ fun CustomerAccountView(onLogoutClick: () -> Unit) {
 
                 HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
 
-                // Email Row
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(RoyalEmerald.copy(alpha = 0.1f), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.Email, contentDescription = null, tint = RoyalEmerald)
-                    }
-                    Column {
-                        Text(
-                            text = "Email Address",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.Gray
-                        )
-                        Text(
-                            text = user?.email ?: "No email provided",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-
-                HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
 
                 // Phone Row
                 Row(

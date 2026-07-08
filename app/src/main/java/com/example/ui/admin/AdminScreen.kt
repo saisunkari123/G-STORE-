@@ -1,6 +1,7 @@
 package com.example.ui.admin
 
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
 import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -47,6 +48,9 @@ fun AdminScreen() {
     var isAddingProduct by remember { mutableStateOf(false) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
 
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+
     if (showLogoutConfirm) {
         @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
         androidx.compose.material3.ModalBottomSheet(
@@ -82,146 +86,508 @@ fun AdminScreen() {
         }
     }
 
-    Scaffold(
-        topBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.White)
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet(
+                drawerContainerColor = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.width(320.dp)
             ) {
-                // Header with Logout
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text("G-STORE Control", fontWeight = FontWeight.Black, fontSize = 24.sp, color = MaterialTheme.colorScheme.onSurface)
-                        Text("Admin Center", fontSize = 12.sp, color = Color.Gray)
+                AdminSidePanelContent(
+                    onLogoutClicked = {
+                        scope.launch { drawerState.close() }
+                        showLogoutConfirm = true
                     }
-                    IconButton(
-                        onClick = { showLogoutConfirm = true },
-                        modifier = Modifier.background(DeepGold.copy(alpha = 0.1f), CircleShape)
-                    ) {
-                        Icon(Icons.Default.ExitToApp, contentDescription = "Logout", tint = DeepGold)
-                    }
-                }
-
-                AdminDashboardStats()
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                TabRow(
-                    selectedTabIndex = if (adminTab == "ORDERS") 0 else 1,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = RoyalEmerald,
-                    indicator = { tabPositions ->
-                        TabRowDefaults.SecondaryIndicator(
-                            Modifier.tabIndicatorOffset(tabPositions[if (adminTab == "ORDERS") 0 else 1]),
-                            color = RoyalEmerald
-                        )
-                    }
-                ) {
-                    Tab(
-                        selected = adminTab == "ORDERS",
-                        onClick = { adminTab = "ORDERS" },
-                        text = { Text("Live Orders", fontWeight = FontWeight.Bold) }
-                    )
-                    Tab(
-                        selected = adminTab == "INVENTORY",
-                        onClick = { adminTab = "INVENTORY" },
-                        text = { Text("Inventory", fontWeight = FontWeight.Bold) }
-                    )
-                }
+                )
             }
         }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-            when (adminTab) {
-                "ORDERS" -> AdminOrdersView()
-                "INVENTORY" -> AdminInventoryView(
-                    onAddProductClicked = { isAddingProduct = true },
-                    onEditProductClicked = { showProductEditor = it }
-                )
-            }
-
-            if (isAddingProduct || showProductEditor != null) {
-                AdminProductEditor(
-                    existingProduct = showProductEditor,
-                    onDismiss = { 
-                        isAddingProduct = false
-                        showProductEditor = null
+    ) {
+        Scaffold(
+            topBar = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White)
+                ) {
+                    // Header with Menu Icon Toggle
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("G-STORE Control", fontWeight = FontWeight.Black, fontSize = 24.sp, color = MaterialTheme.colorScheme.onSurface)
+                            Text("Admin Center", fontSize = 12.sp, color = Color.Gray)
+                        }
+                        IconButton(
+                            onClick = { scope.launch { drawerState.open() } },
+                            modifier = Modifier.background(RoyalEmerald.copy(alpha = 0.1f), CircleShape)
+                        ) {
+                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = RoyalEmerald)
+                        }
                     }
-                )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    TabRow(
+                        selectedTabIndex = if (adminTab == "ORDERS") 0 else 1,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = RoyalEmerald,
+                        indicator = { tabPositions ->
+                            TabRowDefaults.SecondaryIndicator(
+                                Modifier.tabIndicatorOffset(tabPositions[if (adminTab == "ORDERS") 0 else 1]),
+                                color = RoyalEmerald
+                            )
+                        }
+                    ) {
+                        Tab(
+                            selected = adminTab == "ORDERS",
+                            onClick = { adminTab = "ORDERS" },
+                            text = { Text("Live Orders", fontWeight = FontWeight.Bold) }
+                        )
+                        Tab(
+                            selected = adminTab == "INVENTORY",
+                            onClick = { adminTab = "INVENTORY" },
+                            text = { Text("Inventory", fontWeight = FontWeight.Bold) }
+                        )
+                    }
+                }
+            }
+        ) { paddingValues ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                when (adminTab) {
+                    "ORDERS" -> AdminOrdersView()
+                    "INVENTORY" -> AdminInventoryView(
+                        onAddProductClicked = { isAddingProduct = true },
+                        onEditProductClicked = { showProductEditor = it }
+                    )
+                }
+
+                if (isAddingProduct || showProductEditor != null) {
+                    AdminProductEditor(
+                        existingProduct = showProductEditor,
+                        onDismiss = { 
+                            isAddingProduct = false
+                            showProductEditor = null
+                        }
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-fun AdminDashboardStats() {
+fun AdminSidePanelContent(onLogoutClicked: () -> Unit) {
     val totalSales = AppState.ordersList.filter { it.status == OrderStatus.DELIVERED }.sumOf { it.totalAmount }
     val pendingCount = AppState.ordersList.filter { it.status == OrderStatus.PENDING }.size
     val totalOrdersCount = AppState.ordersList.size
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        StatCard(label = "Total Sales", value = "₹${totalSales.toInt()}", icon = Icons.Default.ShoppingCart, color = RoyalEmerald)
-        StatCard(label = "Pending", value = "$pendingCount", icon = Icons.Default.Notifications, color = DeepGold)
-        StatCard(label = "Orders", value = "$totalOrdersCount", icon = Icons.Default.List, color = Color.Gray)
-    }
-}
+    var showGoalEditDialog by remember { mutableStateOf(false) }
+    var newGoalText by remember { mutableStateOf("") }
 
-@Composable
-fun RowScope.StatCard(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color) {
-    Card(
-        modifier = Modifier.weight(1f),
-        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.05f)),
-        shape = RoundedCornerShape(16.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(20.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(label, fontSize = 10.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
-            Text(value, fontSize = 16.sp, fontWeight = FontWeight.Black, color = color)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Menu,
+                contentDescription = null,
+                tint = RoyalEmerald,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = "G-STORE Menu",
+                    fontWeight = FontWeight.Black,
+                    fontSize = 20.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text("Dashboard Analytics & Tools", fontSize = 11.sp, color = Color.Gray)
+            }
+        }
+
+        HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.5f))
+
+        val percentage = if (AppState.monthlySalesGoal > 0) (totalSales / AppState.monthlySalesGoal).coerceIn(0.0, 1.0) else 0.0
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = RoyalEmerald.copy(alpha = 0.02f)),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(0.5.dp, Color.LightGray.copy(alpha = 0.5f))
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Monthly Goal (₹${AppState.monthlySalesGoal.toInt()})",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        IconButton(
+                            onClick = {
+                                newGoalText = AppState.monthlySalesGoal.toInt().toString()
+                                showGoalEditDialog = true
+                            },
+                            modifier = Modifier.size(16.dp)
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit Goal", tint = RoyalEmerald, modifier = Modifier.size(12.dp))
+                        }
+                    }
+                    Text(
+                        text = "${(percentage * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Black,
+                        color = RoyalEmerald
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                LinearProgressIndicator(
+                    progress = { percentage.toFloat() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp)),
+                    color = RoyalEmerald,
+                    trackColor = Color.LightGray.copy(alpha = 0.3f)
+                )
+            }
+        }
+
+        val recentOrders = AppState.ordersList.takeLast(7).map { it.totalAmount.toFloat() }
+        if (recentOrders.size >= 2) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(0.5.dp, Color.LightGray.copy(alpha = 0.5f))
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "Sales growth trend (recent orders)",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp)
+                    ) {
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val width = size.width
+                            val height = size.height
+                            val maxVal = (recentOrders.maxOrNull() ?: 1f).coerceAtLeast(1f)
+                            val minVal = recentOrders.minOrNull() ?: 0f
+                            val delta = (maxVal - minVal).coerceAtLeast(1f)
+
+                            val points = recentOrders.mapIndexed { idx, valAmount ->
+                                val x = idx * (width / (recentOrders.size - 1))
+                                val y = height - ((valAmount - minVal) / delta) * (height - 12f) - 6f
+                                androidx.compose.ui.geometry.Offset(x, y)
+                            }
+
+                            val path = androidx.compose.ui.graphics.Path().apply {
+                                if (points.isNotEmpty()) {
+                                    moveTo(points.first().x, points.first().y)
+                                    for (i in 0 until points.size - 1) {
+                                        val from = points[i]
+                                        val to = points[i + 1]
+                                        val cx1 = (from.x + to.x) / 2f
+                                        val cy1 = from.y
+                                        val cx2 = (from.x + to.x) / 2f
+                                        val cy2 = to.y
+                                        cubicTo(cx1, cy1, cx2, cy2, to.x, to.y)
+                                    }
+                                }
+                            }
+
+                            val fillPath = androidx.compose.ui.graphics.Path().apply {
+                                addPath(path)
+                                if (points.isNotEmpty()) {
+                                    lineTo(points.last().x, height)
+                                    lineTo(points.first().x, height)
+                                    close()
+                                }
+                            }
+                            drawPath(
+                                path = fillPath,
+                                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    colors = listOf(RoyalEmerald.copy(alpha = 0.2f), Color.Transparent)
+                                )
+                            )
+
+                            drawPath(
+                                path = path,
+                                color = RoyalEmerald,
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                    width = 3.dp.toPx(),
+                                    cap = androidx.compose.ui.graphics.StrokeCap.Round
+                                )
+                            )
+
+                            points.forEach { pt ->
+                                drawCircle(
+                                    color = RoyalEmerald,
+                                    radius = 4.dp.toPx(),
+                                    center = pt
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        val brandSalesMap = remember(AppState.ordersList) {
+            val m = mutableMapOf<String, Int>()
+            AppState.ordersList.forEach { order ->
+                order.items.forEach { item ->
+                    val prod = AppState.productsList.find { it.id == item.productId }
+                    val brandName = prod?.brand ?: "G-Store"
+                    m[brandName] = (m[brandName] ?: 0) + item.quantity
+                }
+            }
+            m.toList().sortedByDescending { it.second }.take(4)
+        }
+        if (brandSalesMap.isNotEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(0.5.dp, Color.LightGray.copy(alpha = 0.5f))
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "Top Selling Brands (Units sold)",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    brandSalesMap.forEach { (brandName, unitsSold) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = brandName,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "$unitsSold bags",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = RoyalEmerald
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Total Revenue", fontSize = 12.sp, color = Color.Gray)
+                    Text("₹${totalSales.toInt()}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Pending Orders", fontSize = 12.sp, color = Color.Gray)
+                    Text("$pendingCount", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("All Orders Count", fontSize = 12.sp, color = Color.Gray)
+                    Text("$totalOrdersCount", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(
+            onClick = onLogoutClicked,
+            colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+            shape = RoundedCornerShape(10.dp),
+            modifier = Modifier.fillMaxWidth().height(44.dp)
+        ) {
+            Icon(Icons.Default.ExitToApp, contentDescription = null, tint = Color.White)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Log Out", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
         }
     }
+
+    if (showGoalEditDialog) {
+        AlertDialog(
+            onDismissRequest = { showGoalEditDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Set Monthly Goal", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Enter monthly target sales amount (₹):", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                    OutlinedTextField(
+                        value = newGoalText,
+                        onValueChange = { newGoalText = it.filter { char -> char.isDigit() } },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedBorderColor = RoyalEmerald,
+                            unfocusedBorderColor = Color.LightGray
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val amount = newGoalText.toDoubleOrNull() ?: 50000.0
+                        AppState.monthlySalesGoal = amount
+                        showGoalEditDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald)
+                ) {
+                    Text("Save", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showGoalEditDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminOrdersView() {
-    val activeOrders = AppState.ordersList.filter {
-        it.status != OrderStatus.DELIVERED && it.status != OrderStatus.CANCELLED
-    }
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedStatusFilter by remember { mutableStateOf<OrderStatus?>(null) }
 
-    if (activeOrders.isEmpty()) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+    val filteredOrders = AppState.ordersList.filter { order ->
+        val matchesSearch = searchQuery.isEmpty() ||
+            order.id.contains(searchQuery, ignoreCase = true) ||
+            order.customerName.contains(searchQuery, ignoreCase = true) ||
+            order.customerPhone.contains(searchQuery, ignoreCase = true)
+            
+        val matchesStatus = selectedStatusFilter == null || order.status == selectedStatusFilter
+        
+        matchesSearch && matchesStatus
+    }.sortedByDescending { it.createdAt }
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            placeholder = { Text("Search by ID, name, or phone...", color = Color.Gray) },
+            leadingIcon = { Icon(Icons.Default.Search, null, tint = RoyalEmerald) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true,
+            textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                focusedBorderColor = RoyalEmerald,
+                unfocusedBorderColor = Color.LightGray
+            )
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text("Filter by Status", style = MaterialTheme.typography.bodySmall, color = Color.Gray, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(64.dp), tint = RoyalEmerald.copy(alpha = 0.3f))
-            Text("No active orders", color = Color.Gray)
+            val isAllSelected = selectedStatusFilter == null
+            AssistChip(
+                onClick = { selectedStatusFilter = null },
+                label = { Text("All (${AppState.ordersList.size})") },
+                colors = AssistChipDefaults.assistChipColors(
+                    containerColor = if (isAllSelected) RoyalEmerald.copy(alpha = 0.15f) else Color.Transparent,
+                    labelColor = if (isAllSelected) RoyalEmerald else Color.Gray
+                ),
+                border = BorderStroke(1.dp, if (isAllSelected) RoyalEmerald else Color.LightGray.copy(alpha = 0.5f))
+            )
+
+            OrderStatus.values().forEach { status ->
+                val count = AppState.ordersList.count { it.status == status }
+                val isSelected = selectedStatusFilter == status
+                val label = when(status) {
+                    OrderStatus.PENDING -> "Pending"
+                    OrderStatus.OUT_FOR_DELIVERY -> "Out for Delivery"
+                    OrderStatus.DELIVERED -> "Delivered"
+                    OrderStatus.CANCELLED -> "Cancelled"
+                }
+                AssistChip(
+                    onClick = { selectedStatusFilter = status },
+                    label = { Text("$label ($count)") },
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = if (isSelected) RoyalEmerald.copy(alpha = 0.15f) else Color.Transparent,
+                        labelColor = if (isSelected) RoyalEmerald else Color.Gray
+                    ),
+                    border = BorderStroke(1.dp, if (isSelected) RoyalEmerald else Color.LightGray.copy(alpha = 0.5f))
+                )
+            }
         }
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(activeOrders) { order ->
-                OrderCard(order)
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (filteredOrders.isEmpty()) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(64.dp), tint = RoyalEmerald.copy(alpha = 0.3f))
+                Text("No matching orders found", color = Color.Gray)
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(filteredOrders, key = { it.id }) { order ->
+                    OrderCard(order)
+                }
             }
         }
     }
@@ -229,6 +595,15 @@ fun AdminOrdersView() {
 
 @Composable
 fun OrderCard(order: com.example.domain.model.Order) {
+    val context = LocalContext.current
+
+    val friendlyStatus = when(order.status) {
+        OrderStatus.PENDING -> "Pending"
+        OrderStatus.OUT_FOR_DELIVERY -> "Out for Delivery"
+        OrderStatus.DELIVERED -> "Delivered"
+        OrderStatus.CANCELLED -> "Cancelled"
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -242,23 +617,26 @@ fun OrderCard(order: com.example.domain.model.Order) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text("Order #${order.id}", fontWeight = FontWeight.Black, color = DeepGold, fontSize = 18.sp)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Order #${order.id}", fontWeight = FontWeight.Black, color = DeepGold, fontSize = 16.sp, maxLines = 1)
                     val sdf = java.text.SimpleDateFormat("dd MMM, hh:mm a", java.util.Locale.ENGLISH)
                     Text(sdf.format(java.util.Date(order.createdAt)), fontSize = 11.sp, color = Color.Gray)
                 }
+                Spacer(modifier = Modifier.width(8.dp))
                 Surface(
                     color = when(order.status) {
                         OrderStatus.PENDING -> Color(0xFFFFF4E5)
+                        OrderStatus.OUT_FOR_DELIVERY -> RoyalEmerald.copy(alpha = 0.15f)
                         else -> RoyalEmerald.copy(alpha = 0.1f)
                     },
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
-                        text = order.status.name,
+                        text = friendlyStatus,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
+                        maxLines = 1,
                         color = when(order.status) {
                             OrderStatus.PENDING -> DeepGold
                             else -> RoyalEmerald
@@ -277,11 +655,34 @@ fun OrderCard(order: com.example.domain.model.Order) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(order.customerName, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
             }
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(16.dp), tint = RoyalEmerald)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(order.customerPhone, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
+            
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(16.dp), tint = RoyalEmerald)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(order.customerPhone, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
+                }
+                
+                TextButton(
+                    onClick = {
+                        val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
+                            data = android.net.Uri.parse("tel:${order.customerPhone}")
+                        }
+                        context.startActivity(intent)
+                    },
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    modifier = Modifier.height(32.dp)
+                ) {
+                    Icon(Icons.Default.Call, null, modifier = Modifier.size(14.dp), tint = RoyalEmerald)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Call", fontSize = 12.sp, color = RoyalEmerald, fontWeight = FontWeight.Bold)
+                }
             }
+
             Row(verticalAlignment = Alignment.Top, modifier = Modifier.padding(top = 4.dp)) {
                 Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp), tint = RoyalEmerald)
                 Spacer(modifier = Modifier.width(8.dp))
@@ -360,6 +761,14 @@ fun OrderCard(order: com.example.domain.model.Order) {
 
 @Composable
 fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (Product) -> Unit) {
+    var searchQuery by remember { mutableStateOf("") }
+    
+    val filteredProducts = AppState.productsList.filter {
+        searchQuery.isEmpty() ||
+            it.nameEn.contains(searchQuery, ignoreCase = true) ||
+            it.brand.contains(searchQuery, ignoreCase = true)
+    }
+
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("Product Catalog", fontSize = 20.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
@@ -369,14 +778,45 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
             }
         }
         
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            placeholder = { Text("Search catalog by name or brand...", color = Color.Gray) },
+            leadingIcon = { Icon(Icons.Default.Search, null, tint = RoyalEmerald) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true,
+            textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                focusedBorderColor = RoyalEmerald,
+                unfocusedBorderColor = Color.LightGray
+            )
+        )
+
         Spacer(modifier = Modifier.height(16.dp))
         
-        LazyColumn(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(AppState.productsList, key = { it.id }) { product ->
-                InventoryItemCard(product, onEditClicked = onEditProductClicked)
+        if (filteredProducts.isEmpty()) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("No items found matching '$searchQuery'", color = Color.Gray)
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(filteredProducts, key = { it.id }) { product ->
+                    InventoryItemCard(product, onEditClicked = onEditProductClicked)
+                }
             }
         }
     }
@@ -434,8 +874,39 @@ fun InventoryItemCard(product: Product, onEditClicked: (Product) -> Unit) {
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("MRP ₹${variant.mrp.toInt()}", fontSize = 12.sp, color = Color.Gray, textDecoration = TextDecoration.LineThrough)
                         }
-                        val stockColor = if (variant.stockQuantity < 5) Color.Red else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                        Text("Stock: ${variant.stockQuantity}", color = stockColor, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        if (variant.stockQuantity < 5) {
+                            Surface(
+                                color = Color(0xFFFEE2E2),
+                                shape = RoundedCornerShape(6.dp),
+                                modifier = Modifier.padding(top = 2.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = "Low Stock Warning",
+                                        tint = Color.Red,
+                                        modifier = Modifier.size(10.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Low Stock: only ${variant.stockQuantity} left",
+                                        color = Color.Red,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp
+                                    )
+                                }
+                            }
+                        } else {
+                            Text(
+                                text = "Stock: ${variant.stockQuantity}",
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
                         Text(if(variant.stockQuantity > 0) "Available" else "Out of Stock", color = if(variant.stockQuantity > 0) RoyalEmerald else Color.Red, fontSize = 11.sp)
                     }
                     
@@ -494,9 +965,11 @@ fun InventoryItemCard(product: Product, onEditClicked: (Product) -> Unit) {
 @Composable
 fun VariantEditorDialog(productId: String, existingVariant: ProductVariant?, onDismiss: () -> Unit) {
     var weight by remember { mutableStateOf(existingVariant?.weight ?: "") }
+    var unit by remember { mutableStateOf(existingVariant?.unit ?: "Kg") }
     var price by remember { mutableStateOf(existingVariant?.currentPrice?.toInt()?.toString() ?: "") }
     var mrp by remember { mutableStateOf(existingVariant?.mrp?.toInt()?.toString() ?: "") }
     var stock by remember { mutableStateOf(existingVariant?.stockQuantity?.toString() ?: "") }
+    var validationError by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -506,9 +979,13 @@ fun VariantEditorDialog(productId: String, existingVariant: ProductVariant?, onD
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = weight,
-                    onValueChange = { weight = it },
-                    label = { Text("Bag Size (e.g. 5, 10, 25)") },
+                    onValueChange = { 
+                        weight = it 
+                        validationError = null
+                    },
+                    label = { Text("Size / Quantity (e.g. 5, 10, 500)") },
                     modifier = Modifier.fillMaxWidth(),
+                    isError = validationError != null && weight.trim().isEmpty(),
                     textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = MaterialTheme.colorScheme.onSurface,
@@ -519,6 +996,64 @@ fun VariantEditorDialog(productId: String, existingVariant: ProductVariant?, onD
                         unfocusedBorderColor = Color.LightGray
                     )
                 )
+
+                // Custom Unit Input Field
+                OutlinedTextField(
+                    value = unit,
+                    onValueChange = { 
+                        unit = it 
+                        validationError = null
+                    },
+                    label = { Text("Unit of Measurement") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = validationError != null && (unit.trim().isEmpty() || !unit.trim().all { it.isLetter() }),
+                    textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedLabelColor = RoyalEmerald,
+                        unfocusedLabelColor = Color.Gray,
+                        focusedBorderColor = RoyalEmerald,
+                        unfocusedBorderColor = Color.LightGray
+                    )
+                )
+
+                // Quick selector chips
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    val quickUnits = listOf("Kg", "g", "Ltr", "ml", "Pcs")
+                    quickUnits.forEach { qu ->
+                        val isSelected = unit.trim().equals(qu, ignoreCase = true)
+                        AssistChip(
+                            onClick = { 
+                                unit = qu
+                                validationError = null
+                            },
+                            label = { Text(qu, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
+                            colors = AssistChipDefaults.assistChipColors(
+                                containerColor = if (isSelected) RoyalEmerald.copy(alpha = 0.15f) else Color.Transparent,
+                                labelColor = if (isSelected) RoyalEmerald else Color.Gray
+                            ),
+                            border = BorderStroke(
+                                1.dp,
+                                if (isSelected) RoyalEmerald else Color.LightGray.copy(alpha = 0.5f)
+                            )
+                        )
+                    }
+                }
+
+                if (validationError != null) {
+                    Text(
+                        text = validationError!!,
+                        color = Color.Red,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
+                }
+
                 OutlinedTextField(
                     value = price,
                     onValueChange = { price = it },
@@ -569,9 +1104,30 @@ fun VariantEditorDialog(productId: String, existingVariant: ProductVariant?, onD
         confirmButton = {
             Button(
                 onClick = {
+                    val trimmedWeight = weight.trim()
+                    val trimmedUnit = unit.trim()
+                    
+                    if (trimmedWeight.isEmpty()) {
+                        validationError = "Please enter a size or weight value"
+                        return@Button
+                    }
+                    if (trimmedUnit.isEmpty()) {
+                        validationError = "Please enter or select a unit"
+                        return@Button
+                    }
+                    val cleanUnit = trimmedUnit.lowercase()
+                    val isApprovedUnit = cleanUnit in setOf(
+                        "kg", "kgs", "g", "grams", "ltr", "ltrs", "liters", "ml", "pcs", "pieces", "packet", "packets", "pkt", "pkts", "box", "boxes"
+                    )
+                    if (!isApprovedUnit) {
+                        validationError = "Invalid unit. Please use standard units like Kg, g, Ltr, ml, Pcs, Packet, Box."
+                        return@Button
+                    }
+
                     val variant = ProductVariant(
                         id = existingVariant?.id ?: "v_${System.currentTimeMillis()}",
-                        weight = weight,
+                        weight = trimmedWeight,
+                        unit = trimmedUnit,
                         currentPrice = price.toDoubleOrNull() ?: 0.0,
                         mrp = mrp.toDoubleOrNull() ?: 0.0,
                         stockQuantity = stock.toIntOrNull() ?: 0

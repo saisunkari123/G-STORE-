@@ -66,6 +66,7 @@ object AppState {
     var lastPlacedOrder by mutableStateOf<Order?>(null)
     var isPlacingOrder by mutableStateOf(false)
     var isDarkMode by mutableStateOf(false)
+    var monthlySalesGoal by mutableStateOf(50000.0)
 
     // Role-based Passwords
     private val ADMIN_PASSWORD = com.example.BuildConfig.ADMIN_PASSWORD
@@ -129,15 +130,20 @@ object AppState {
     // NOTE: Firebase Task callbacks (addOnSuccessListener/addOnFailureListener) always run on
     // the MAIN thread. Do NOT wrap them in ioScope.launch{} — the outer coroutine finishes
     // immediately (before the async Task completes), making inner `launch` calls no-ops.
-    fun customerLogin(email: String, pass: String) {
-        if (email.isBlank() || pass.isBlank()) {
-            authError = "Email and Password cannot be empty"
+    fun customerLogin(phone: String, pass: String) {
+        if (phone.isBlank() || pass.isBlank()) {
+            authError = "Phone Number and Password cannot be empty"
             return
         }
         authError = null
         isNetworkLoading = true
+        
+        val digitsOnly = phone.filter { it.isDigit() }
+        val cleanPhone = if (digitsOnly.length > 10) digitsOnly.takeLast(10) else digitsOnly
+        val dummyEmail = "$cleanPhone@ricemart.app"
+        
         // Direct Firebase Auth call — callbacks fire on main thread
-        FirebaseAuth.getInstance().signInWithEmailAndPassword(email.trim(), pass)
+        FirebaseAuth.getInstance().signInWithEmailAndPassword(dummyEmail, pass)
             .addOnSuccessListener { result ->
                 val firebaseUser = result?.user
                 if (firebaseUser == null) {
@@ -159,7 +165,7 @@ object AppState {
                             } else {
                                 FirebaseAuth.getInstance().signOut()
                                 currentUser = null
-                                authError = "Email is not registered as a customer. Please register first."
+                                authError = "Phone number is not registered as a customer. Please register first."
                                 isNetworkLoading = false
                             }
                         }
@@ -177,13 +183,11 @@ object AppState {
                 // This runs on main thread — set authError directly
                 authError = when {
                     e is FirebaseAuthInvalidUserException ->
-                        "Email is not registered. Please register first."
+                        "Phone number is not registered. Please register first."
                     e is FirebaseAuthInvalidCredentialsException ||
                     e.message?.contains("INVALID_LOGIN_CREDENTIALS", ignoreCase = true) == true ||
                     e.message?.contains("credential is incorrect", ignoreCase = true) == true ->
                         "Password incorrect."
-                    e.message?.contains("badly formatted", ignoreCase = true) == true ->
-                        "Please enter a valid email address."
                     e.message?.contains("network", ignoreCase = true) == true ->
                         "No internet connection. Please check your network."
                     else -> "Login failed: ${e.localizedMessage}"
@@ -191,27 +195,30 @@ object AppState {
             }
     }
 
-    fun customerRegister(name: String, phone: String, email: String, pass: String) {
+    fun customerRegister(name: String, phone: String, pass: String) {
         if (name.isBlank()) {
             authError = "Please enter your full name"
             return
         }
-        if (phone.isBlank() || phone.length < 10) {
+        val digitsOnly = phone.filter { it.isDigit() }
+        val cleanPhone = if (digitsOnly.length > 10) digitsOnly.takeLast(10) else digitsOnly
+        if (cleanPhone.length < 10) {
             authError = "Please enter a valid 10-digit phone number"
             return
         }
-        if (email.isBlank() || !email.contains("@")) {
-            authError = "Please enter a valid email address"
-            return
-        }
-        if (pass.length < 6) {
-            authError = "Password must be at least 6 characters"
+        val hasLetter = pass.any { it.isLetter() }
+        val hasDigit = pass.any { it.isDigit() }
+        val hasSymbol = pass.any { !it.isLetterOrDigit() }
+        if (pass.length < 8 || !hasLetter || !hasDigit || !hasSymbol) {
+            authError = "Password must be at least 8 characters with letters, numbers, and symbols"
             return
         }
         authError = null
         isNetworkLoading = true
+        val dummyEmail = "$cleanPhone@ricemart.app"
+        val formattedPhone = "+91$cleanPhone"
         try {
-            FirebaseAuth.getInstance().createUserWithEmailAndPassword(email.trim(), pass)
+            FirebaseAuth.getInstance().createUserWithEmailAndPassword(dummyEmail, pass)
                 .addOnSuccessListener { result ->
                     val firebaseUser = result?.user
                     if (firebaseUser == null) {
@@ -219,13 +226,12 @@ object AppState {
                         isNetworkLoading = false
                         return@addOnSuccessListener
                     }
-                    val formattedPhone = if (phone.startsWith("+91")) phone else "+91$phone"
                     val newUser = User(
                         id = firebaseUser.uid,
                         phone = formattedPhone,
                         name = name.trim(),
                         role = "CUSTOMER",
-                        email = email.trim(),
+                        email = dummyEmail,
                         pinOrPassword = "" // Don't store password in Firestore
                     )
                     // Save user profile to Firestore
@@ -258,10 +264,9 @@ object AppState {
                 .addOnFailureListener { e ->
                     e.printStackTrace()
                     val msg = when {
-                        e.message?.contains("already in use", ignoreCase = true) == true ->
-                            "An account with this email already exists. Please login instead."
-                        e.message?.contains("badly formatted", ignoreCase = true) == true ->
-                            "Please enter a valid email address."
+                        e.message?.contains("already in use", ignoreCase = true) == true ||
+                        e.message?.contains("already exists", ignoreCase = true) == true ->
+                            "An account with this phone number already exists. Please login instead."
                         e.message?.contains("weak password", ignoreCase = true) == true ->
                             "Password is too weak. Use at least 6 characters."
                         e.message?.contains("network", ignoreCase = true) == true ->
