@@ -42,7 +42,7 @@ object AppState {
         set(value) {
             _currentUser.value = value
             if (value != null) {
-                // BUG-F2 FIX: Only restart the products listener if it isn't already active.
+                // Only restart the products listener if it isn't already active.
                 // initializeDatabase() starts it at launch; no need to restart on every login/session restore.
                 if (productsJob == null || !productsJob!!.isActive) {
                     observeProducts()
