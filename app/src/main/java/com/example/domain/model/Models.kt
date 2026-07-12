@@ -64,7 +64,10 @@ enum class OrderStatus {
     PENDING,
     OUT_FOR_DELIVERY,
     DELIVERED,
-    CANCELLED
+    CANCELLED,
+    RETURN_REQUESTED,
+    RETURN_ACCEPTED,
+    RETURNED
 }
 
 data class Order(
@@ -88,5 +91,15 @@ data class OrderItem(
     val productName: String = "",
     val selectedSize: String = "",
     val priceAtPurchase: Double = 0.0,
-    val quantity: Int = 1
+    val quantity: Int = 1,
+    @get:PropertyName("isGift") @set:PropertyName("isGift") var isGift: Boolean = false
+)
+
+data class GiftItemConfig(
+    val id: String = "",
+    val thresholdAmount: Double = 0.0,
+    val giftPrice: Double = 0.0,
+    val productName: String = "",
+    val imageUrl: String = "",
+    val stockQuantity: Int = 0
 )

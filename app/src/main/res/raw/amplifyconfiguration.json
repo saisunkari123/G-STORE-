@@ -1,0 +1,89 @@
+{
+    "UserAgent": "aws-amplify-cli/2.0",
+    "Version": "1.0",
+    "api": {
+        "plugins": {
+            "awsAPIPlugin": {
+                "ricemartapi": {
+                    "endpointType": "GraphQL",
+                    "endpoint": "https://gosrh7asubcb3i2qznf6niewd4.appsync-api.us-east-1.amazonaws.com/graphql",
+                    "region": "us-east-1",
+                    "authorizationType": "API_KEY",
+                    "apiKey": "da2-zni3nzy6vvhafjm2kxm"
+                }
+            }
+        }
+    },
+    "auth": {
+        "plugins": {
+            "awsCognitoAuthPlugin": {
+                "UserAgent": "aws-amplify-cli/1.0",
+                "Version": "1.0",
+                "CredentialsProvider": {
+                    "CognitoIdentity": {
+                        "Default": {
+                            "PoolId": "us-east-1:3841a6fd-2c62-42cf-af8f-5ce8d47845d6",
+                            "Region": "us-east-1"
+                        }
+                    }
+                },
+                "CognitoUserPool": {
+                    "Default": {
+                        "PoolId": "us-east-1_h0uGcZU1T",
+                        "AppClientId": "ndnsac94g5m6kmm2mbk9rrvnm",
+                        "Region": "us-east-1"
+                    }
+                },
+                "Auth": {
+                    "Default": {
+                        "authenticationFlowType": "USER_SRP_AUTH",
+                        "socialProviders": [],
+                        "usernameAttributes": [
+                            "PHONE_NUMBER"
+                        ],
+                        "signupAttributes": [],
+                        "passwordProtectionSettings": {
+                            "passwordPolicyMinLength": 8,
+                            "passwordPolicyCharacters": []
+                        },
+                        "mfaConfiguration": "OFF",
+                        "mfaTypes": [],
+                        "verificationMechanisms": [
+                            "EMAIL"
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "storage": {
+        "plugins": {
+            "awsS3StoragePlugin": {
+                "bucket": "amplify-ricemart-saisunkari-ricemartbucketc8abaf9b-ifnwmpoqk2ww",
+                "region": "us-east-1",
+                "defaultAccessLevel": "guest"
+            }
+        }
+    },
+    "geo": {
+        "plugins": {
+            "awsLocationGeoPlugin": {
+                "region": "us-east-1",
+                "maps": {
+                    "items": {
+                        "RiceMartMap": {
+                            "style": "VectorEsriNavigation"
+                        }
+                    },
+                    "default": "RiceMartMap"
+                },
+                "searchIndices": {
+                    "items": [
+                        "RiceMartPlaceIndex"
+                    ],
+                    "default": "RiceMartPlaceIndex"
+                }
+            }
+        }
+    }
+}

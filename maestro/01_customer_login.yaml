@@ -1,0 +1,22 @@
+appId: com.aistudio.ricemart.pkqmsx
+---
+- launchApp
+# Switch to the Login Tab (App opens to Register by default)
+- tapOn: "Already have an account.*"
+
+# Wait for Login screen to appear
+- assertVisible: "10 digit number"
+
+# Type in Phone Number
+- tapOn: "10 digit number"
+- inputText: "6300028491"
+
+# Type in Password
+- tapOn: "••••••••"
+- inputText: "Sai@1234"
+
+# Click Login
+- tapOn: "Login"
+
+# Verify we reached the Customer Home Screen
+- assertVisible: "Rice Bags"

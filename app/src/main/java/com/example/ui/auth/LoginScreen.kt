@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.*
@@ -45,9 +46,17 @@ fun LoginScreen() {
     // Form Inputs
     var nameInput by remember { mutableStateOf("") }
     var phoneInput by remember { mutableStateOf("") }
+    var loginPhoneInput by remember { mutableStateOf("") }
+    var emailInput by remember { mutableStateOf("") }
     var passwordInput by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var loginPasswordVisible by remember { mutableStateOf(false) }
+    var showForgotPasswordDialog by remember { mutableStateOf(false) }
+    var forgotEmailInput by remember { mutableStateOf("") }
+    var forgotPhoneInput by remember { mutableStateOf("") }
+    var forgotCodeInput by remember { mutableStateOf("") }
+    var forgotNewPasswordInput by remember { mutableStateOf("") }
+    var forgotStep by remember { mutableStateOf(1) }
  
     // Admin Inputs
     var adminEmailInput by remember { mutableStateOf("") }
@@ -208,6 +217,29 @@ fun LoginScreen() {
                             Spacer(modifier = Modifier.height(20.dp))
 
                             Text(
+                                text = "Email Address",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.DarkGray
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = emailInput,
+                                onValueChange = { emailInput = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = { Text("email@example.com", color = Color.Gray) },
+                                leadingIcon = {
+                                    Icon(Icons.Outlined.Email, contentDescription = null, tint = primaryGreen)
+                                },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                                shape = RoundedCornerShape(16.dp),
+                                singleLine = true,
+                                colors = fieldColors
+                            )
+
+                            Spacer(modifier = Modifier.height(20.dp))
+
+                            Text(
                                 text = "Password",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
@@ -250,7 +282,7 @@ fun LoginScreen() {
                             Spacer(modifier = Modifier.height(32.dp))
 
                             Button(
-                                onClick = { AppState.customerRegister(nameInput, phoneInput, passwordInput) },
+                                onClick = { AppState.customerRegister(nameInput, phoneInput, emailInput, passwordInput) },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(56.dp),
@@ -289,7 +321,7 @@ fun LoginScreen() {
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         } else {
-                            // --- LOGIN FORM (To be upgraded next) ---
+                            // --- LOGIN FORM ---
                             Text(
                                 text = "Phone Number",
                                 style = MaterialTheme.typography.bodyMedium,
@@ -298,12 +330,22 @@ fun LoginScreen() {
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             OutlinedTextField(
-                                value = phoneInput,
-                                onValueChange = { if (it.length <= 10) phoneInput = it },
+                                value = loginPhoneInput,
+                                onValueChange = { if (it.length <= 10) loginPhoneInput = it },
                                 modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text("10 digit number") },
-                                prefix = { Text("+91 ", color = MaterialTheme.colorScheme.onSurface) },
-                                leadingIcon = { Icon(Icons.Default.Phone, null, tint = primaryGreen) },
+                                placeholder = { Text("10 digit number", color = Color.Gray) },
+                                leadingIcon = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(start = 12.dp)
+                                    ) {
+                                        Icon(Icons.Default.Phone, contentDescription = null, tint = primaryGreen)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("+91", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Box(modifier = Modifier.width(1.dp).height(24.dp).background(Color.LightGray))
+                                    }
+                                },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                                 singleLine = true,
                                 shape = RoundedCornerShape(12.dp),
@@ -338,9 +380,30 @@ fun LoginScreen() {
                                 shape = RoundedCornerShape(12.dp),
                                 colors = fieldColors
                             )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.CenterEnd
+                            ) {
+                                Text(
+                                    text = "Forgot Password?",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = primaryGreen,
+                                    modifier = Modifier.clickable {
+                                        forgotEmailInput = ""
+                                        forgotPhoneInput = ""
+                                        forgotCodeInput = ""
+                                        forgotNewPasswordInput = ""
+                                        forgotStep = 1
+                                        showForgotPasswordDialog = true
+                                        AppState.authError = null
+                                    }
+                                )
+                            }
                             Spacer(modifier = Modifier.height(24.dp))
                             Button(
-                                onClick = { AppState.customerLogin(phoneInput, passwordInput) },
+                                onClick = { AppState.customerLogin(loginPhoneInput, passwordInput) },
                                 modifier = Modifier.fillMaxWidth().height(56.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = primaryGreen),
                                 shape = RoundedCornerShape(12.dp),
@@ -437,6 +500,124 @@ fun LoginScreen() {
                 }
             }
             Spacer(modifier = Modifier.height(40.dp))
+        }
+
+        if (showForgotPasswordDialog) {
+            AlertDialog(
+                onDismissRequest = { showForgotPasswordDialog = false },
+                title = {
+                    Text(
+                        text = if (forgotStep == 1) "Forgot Password" else "Reset Password",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        if (AppState.authError != null) {
+                            Text(
+                                text = AppState.authError ?: "",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+
+                        if (forgotStep == 1) {
+                            Text(
+                                text = "Enter your registered phone number. We will send a password reset verification code to your registered email address.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.Gray
+                            )
+                            OutlinedTextField(
+                                value = forgotPhoneInput,
+                                onValueChange = { if (it.length <= 10) forgotPhoneInput = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = { Text("10 digit number", color = Color.Gray) },
+                                leadingIcon = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(start = 12.dp)
+                                    ) {
+                                        Icon(Icons.Default.Phone, contentDescription = null, tint = primaryGreen)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("+91", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Box(modifier = Modifier.width(1.dp).height(24.dp).background(Color.LightGray))
+                                    }
+                                },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = fieldColors
+                            )
+                        } else {
+                            Text(
+                                text = "A verification code has been sent to your registered email. Enter the code and your new password below.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.Gray
+                            )
+                            OutlinedTextField(
+                                value = forgotCodeInput,
+                                onValueChange = { forgotCodeInput = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = { Text("Enter verification code") },
+                                leadingIcon = { Icon(Icons.Default.Lock, null, tint = primaryGreen) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = fieldColors
+                            )
+                            OutlinedTextField(
+                                value = forgotNewPasswordInput,
+                                onValueChange = { forgotNewPasswordInput = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = { Text("New Password") },
+                                leadingIcon = { Icon(Icons.Default.Lock, null, tint = primaryGreen) },
+                                visualTransformation = PasswordVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = fieldColors
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (forgotStep == 1) {
+                                AppState.initiateForgotPassword(forgotPhoneInput) {
+                                    forgotStep = 2
+                                    AppState.authError = null
+                                }
+                            } else {
+                                AppState.confirmForgotPassword(forgotPhoneInput, forgotNewPasswordInput, forgotCodeInput) {
+                                    showForgotPasswordDialog = false
+                                    AppState.authError = null
+                                }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = primaryGreen),
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = !AppState.isNetworkLoading
+                    ) {
+                        if (AppState.isNetworkLoading) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text(if (forgotStep == 1) "Send Code" else "Reset Password", color = Color.White)
+                        }
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showForgotPasswordDialog = false }) {
+                        Text("Cancel", color = Color.Gray)
+                    }
+                },
+                shape = RoundedCornerShape(24.dp)
+            )
         }
     }
 }

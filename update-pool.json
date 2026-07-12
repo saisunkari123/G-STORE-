@@ -1,0 +1,62 @@
+{
+  "Policies": {
+    "PasswordPolicy": {
+      "MinimumLength": 8,
+      "RequireUppercase": true,
+      "RequireLowercase": true,
+      "RequireNumbers": true,
+      "RequireSymbols": true,
+      "TemporaryPasswordValidityDays": 7
+    },
+    "SignInPolicy": {
+      "AllowedFirstAuthFactors": [
+        "PASSWORD"
+      ]
+    }
+  },
+  "DeletionProtection": "INACTIVE",
+  "LambdaConfig": {
+    "PreSignUp": "arn:aws:lambda:us-east-1:359932033793:function:PreSignUpAutoConfirm"
+  },
+  "AutoVerifiedAttributes": [
+    "email"
+  ],
+  "SmsVerificationMessage": "The verification code to your new account is {####}",
+  "EmailVerificationMessage": "The verification code to your new account is {####}",
+  "EmailVerificationSubject": "Verify your new account",
+  "VerificationMessageTemplate": {
+    "SmsMessage": "The verification code to your new account is {####}",
+    "EmailMessage": "The verification code to your new account is {####}",
+    "EmailSubject": "Verify your new account",
+    "DefaultEmailOption": "CONFIRM_WITH_CODE"
+  },
+  "MfaConfiguration": "OFF",
+  "EmailConfiguration": {
+    "EmailSendingAccount": "COGNITO_DEFAULT"
+  },
+  "SmsConfiguration": {
+    "SnsCallerArn": "arn:aws:iam::359932033793:role/amplify-ricemart-saisunka-amplifyAuthUserPoolsmsRol-Db3TR0SHAHcH",
+    "ExternalId": "amplifyricemartsaisunkarisandboxd464aaa743authamplifyAuthUserPool5EC39DD9",
+    "SnsRegion": "us-east-1"
+  },
+  "UserPoolTags": {
+    "amplify:deployment-type": "sandbox",
+    "amplify:friendly-name": "amplifyAuth",
+    "aws:cloudformation:logical-id": "amplifyAuthUserPool4BA7F805",
+    "aws:cloudformation:stack-id": "arn:aws:cloudformation:us-east-1:359932033793:stack/amplify-ricemart-saisunkari-sandbox-d464aaa743-auth179371D7-1KMJR0TRB4JDH/bccb9f90-7a11-11f1-9c5b-1274c4ab7e8f",
+    "aws:cloudformation:stack-name": "amplify-ricemart-saisunkari-sandbox-d464aaa743-auth179371D7-1KMJR0TRB4JDH",
+    "created-by": "amplify"
+  },
+  "AdminCreateUserConfig": {
+    "AllowAdminCreateUserOnly": false,
+    "UnusedAccountValidityDays": 7
+  },
+  "AccountRecoverySetting": {
+    "RecoveryMechanisms": [
+      {
+        "Priority": 1,
+        "Name": "verified_email"
+      }
+    ]
+  }
+}

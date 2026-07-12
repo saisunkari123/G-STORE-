@@ -1,0 +1,17 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "geo:GetMap*",
+                "geo:SearchPlaceIndexForPosition",
+                "geo:SearchPlaceIndexForText"
+            ],
+            "Resource": [
+                "arn:aws:geo:us-east-1:*:map/RiceMartMap",
+                "arn:aws:geo:us-east-1:*:place-index/RiceMartPlaceIndex"
+            ]
+        }
+    ]
+}

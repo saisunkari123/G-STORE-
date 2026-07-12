@@ -50,4 +50,14 @@ class ProductRepositoryImpl(
     override suspend fun deleteProduct(productId: String) {
         productDao.deleteProduct(productId)
     }
+
+    override fun getGiftConfigs(): Flow<List<com.example.domain.model.GiftItemConfig>> = kotlinx.coroutines.flow.flowOf(emptyList())
+
+    override suspend fun saveGiftConfigs(configs: List<com.example.domain.model.GiftItemConfig>) {
+        // Not implemented for local DB yet
+    }
+
+    override suspend fun clearGiftConfigs() {
+        // Not implemented for local DB yet
+    }
 }

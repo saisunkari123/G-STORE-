@@ -103,6 +103,20 @@ class FirebaseProductRepositoryImpl(
     override suspend fun deleteProduct(productId: String) {
         firestore.collection("products").document(productId).delete().await()
     }
+
+    override fun getGiftConfigs(): Flow<List<GiftItemConfig>> = callbackFlow {
+        // Dummy implementation since AWS is primarily used now
+        trySend(emptyList())
+        awaitClose { }
+    }
+
+    override suspend fun saveGiftConfigs(configs: List<GiftItemConfig>) {
+        // Dummy implementation since AWS is primarily used now
+    }
+
+    override suspend fun clearGiftConfigs() {
+        // Dummy implementation since AWS is primarily used now
+    }
 }
 
 class FirebaseOrderRepositoryImpl(

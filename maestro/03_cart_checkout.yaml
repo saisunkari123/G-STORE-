@@ -1,0 +1,18 @@
+appId: com.aistudio.ricemart.pkqmsx
+---
+- launchApp
+- assertVisible: "Rice Bags" # Assumes user is already logged in
+
+# Find a product and click Add to Cart
+- tapOn: "Add to Cart" # It will just tap the first 'Add to Cart' button it sees
+- tapOn: "Cart" # Navigate to cart tab
+
+# Verify Cart loaded
+- assertVisible: "Proceed to Checkout"
+
+# Click Checkout
+- tapOn: "Proceed to Checkout"
+
+# Verify we reached checkout
+- assertVisible: "Order Details"
+- assertVisible: "Place Order"

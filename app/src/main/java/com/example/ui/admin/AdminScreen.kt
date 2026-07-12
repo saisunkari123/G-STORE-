@@ -20,6 +20,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -47,9 +48,32 @@ fun AdminScreen() {
     var showProductEditor by remember { mutableStateOf<Product?>(null) }
     var isAddingProduct by remember { mutableStateOf(false) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
+    var isSeeding by remember { mutableStateOf(false) }
+    var showManageCategoriesDialog by remember { mutableStateOf(false) }
+    var showManageGiftsDialog by remember { mutableStateOf(false) }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+
+    if (isSeeding) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.padding(24.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CircularProgressIndicator(color = RoyalEmerald)
+                    Text("Seeding 15 premium test products...", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    Text("Please wait, syncing with AWS cloud...", fontSize = 12.sp, color = Color.Gray)
+                }
+            }
+        }
+    }
 
     if (showLogoutConfirm) {
         @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
@@ -97,6 +121,21 @@ fun AdminScreen() {
                     onLogoutClicked = {
                         scope.launch { drawerState.close() }
                         showLogoutConfirm = true
+                    },
+                    onSeedClicked = {
+                        scope.launch { drawerState.close() }
+                        isSeeding = true
+                        AppState.seedTestData {
+                            isSeeding = false
+                        }
+                    },
+                    onManageCategoriesClicked = {
+                        scope.launch { drawerState.close() }
+                        showManageCategoriesDialog = true
+                    },
+                    onManageGiftsClicked = {
+                        scope.launch { drawerState.close() }
+                        showManageGiftsDialog = true
                     }
                 )
             }
@@ -182,10 +221,116 @@ fun AdminScreen() {
             }
         }
     }
+
+    if (showManageCategoriesDialog) {
+        AlertDialog(
+            onDismissRequest = { showManageCategoriesDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Manage Categories", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
+            text = {
+                var newCatName by remember { mutableStateOf("") }
+                var newCatImageUrl by remember { mutableStateOf("") }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Current categories list
+                    Text("Existing Categories:", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                    
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 150.dp)
+                            .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(8.dp))
+                            .padding(8.dp)
+                    ) {
+                        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                            items(AppState.categoriesList) { cat ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .clip(CircleShape)
+                                            .background(RoyalEmerald)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(cat.nameEn, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                                }
+                            }
+                        }
+                    }
+
+                    // Add Category Form
+                    Text("Add New Category:", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+
+                    OutlinedTextField(
+                        value = newCatName,
+                        onValueChange = { newCatName = it },
+                        label = { Text("Category Name") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedBorderColor = RoyalEmerald,
+                            focusedLabelColor = RoyalEmerald
+                        )
+                    )
+
+                    OutlinedTextField(
+                        value = newCatImageUrl,
+                        onValueChange = { newCatImageUrl = it },
+                        label = { Text("Image URL (Optional)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedBorderColor = RoyalEmerald,
+                            focusedLabelColor = RoyalEmerald
+                        )
+                    )
+
+                    Button(
+                        onClick = {
+                            if (newCatName.isNotBlank()) {
+                                AppState.addNewCategory(newCatName.trim(), newCatImageUrl.trim())
+                                newCatName = ""
+                                newCatImageUrl = ""
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald),
+                        shape = RoundedCornerShape(10.dp),
+                        enabled = newCatName.isNotBlank()
+                    ) {
+                        Text("Add Category", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showManageCategoriesDialog = false }) {
+                    Text("Close", color = RoyalEmerald, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
+    if (showManageGiftsDialog) {
+        ManageGiftsDialog(onDismiss = { showManageGiftsDialog = false })
+    }
 }
 
 @Composable
-fun AdminSidePanelContent(onLogoutClicked: () -> Unit) {
+fun AdminSidePanelContent(onLogoutClicked: () -> Unit, onSeedClicked: () -> Unit, onManageCategoriesClicked: () -> Unit, onManageGiftsClicked: () -> Unit) {
     val totalSales = AppState.ordersList.filter { it.status == OrderStatus.DELIVERED }.sumOf { it.totalAmount }
     val pendingCount = AppState.ordersList.filter { it.status == OrderStatus.PENDING }.size
     val totalOrdersCount = AppState.ordersList.size
@@ -219,6 +364,64 @@ fun AdminSidePanelContent(onLogoutClicked: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text("Dashboard Analytics & Tools", fontSize = 11.sp, color = Color.Gray)
+            }
+        }
+
+        // Profile Info Card
+        val currentUser = AppState.currentUser
+        if (currentUser != null) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(0.5.dp, Color.LightGray.copy(alpha = 0.5f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(RoyalEmerald, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = (currentUser.name.take(1) ?: "A").uppercase(Locale.ROOT),
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = currentUser.name,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = currentUser.email,
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .background(RoyalEmerald.copy(alpha = 0.1f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            val isDev = currentUser.email.equals("developer@gstore.com", ignoreCase = true)
+                            Text(
+                                text = if (isDev) "DEVELOPER ADMIN" else "ADMINISTRATOR",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = RoyalEmerald
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -435,6 +638,45 @@ fun AdminSidePanelContent(onLogoutClicked: () -> Unit) {
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
+            onClick = onSeedClicked,
+            colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald),
+            shape = RoundedCornerShape(10.dp),
+            modifier = Modifier.fillMaxWidth().height(44.dp)
+        ) {
+            Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Seed Test Products", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = onManageCategoriesClicked,
+            colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald),
+            shape = RoundedCornerShape(10.dp),
+            modifier = Modifier.fillMaxWidth().height(44.dp)
+        ) {
+            Icon(Icons.Default.Category, contentDescription = null, tint = Color.White)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Manage Categories", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = onManageGiftsClicked,
+            colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald),
+            shape = RoundedCornerShape(10.dp),
+            modifier = Modifier.fillMaxWidth().height(44.dp)
+        ) {
+            Icon(Icons.Default.Star, contentDescription = null, tint = Color.White)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Manage Gifts", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
             onClick = onLogoutClicked,
             colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
             shape = RoundedCornerShape(10.dp),
@@ -497,10 +739,11 @@ fun AdminOrdersView() {
     var selectedStatusFilter by remember { mutableStateOf<OrderStatus?>(null) }
 
     val filteredOrders = AppState.ordersList.filter { order ->
-        val matchesSearch = searchQuery.isEmpty() ||
-            order.id.contains(searchQuery, ignoreCase = true) ||
-            order.customerName.contains(searchQuery, ignoreCase = true) ||
-            order.customerPhone.contains(searchQuery, ignoreCase = true)
+        val cleanQuery = searchQuery.replace("\\s".toRegex(), "").lowercase()
+        val matchesSearch = cleanQuery.isEmpty() ||
+            order.id.replace("\\s".toRegex(), "").lowercase().contains(cleanQuery) ||
+            order.customerName.replace("\\s".toRegex(), "").lowercase().contains(cleanQuery) ||
+            order.customerPhone.replace("\\s".toRegex(), "").lowercase().contains(cleanQuery)
             
         val matchesStatus = selectedStatusFilter == null || order.status == selectedStatusFilter
         
@@ -554,6 +797,9 @@ fun AdminOrdersView() {
                     OrderStatus.OUT_FOR_DELIVERY -> "Out for Delivery"
                     OrderStatus.DELIVERED -> "Delivered"
                     OrderStatus.CANCELLED -> "Cancelled"
+                    OrderStatus.RETURN_REQUESTED -> "Return Req."
+                    OrderStatus.RETURN_ACCEPTED -> "Ret. Accepted"
+                    OrderStatus.RETURNED -> "Returned"
                 }
                 AssistChip(
                     onClick = { selectedStatusFilter = status },
@@ -602,6 +848,9 @@ fun OrderCard(order: com.example.domain.model.Order) {
         OrderStatus.OUT_FOR_DELIVERY -> "Out for Delivery"
         OrderStatus.DELIVERED -> "Delivered"
         OrderStatus.CANCELLED -> "Cancelled"
+        OrderStatus.RETURN_REQUESTED -> "Return Requested"
+        OrderStatus.RETURN_ACCEPTED -> "Return Accepted"
+        OrderStatus.RETURNED -> "Returned"
     }
 
     Card(
@@ -627,6 +876,10 @@ fun OrderCard(order: com.example.domain.model.Order) {
                     color = when(order.status) {
                         OrderStatus.PENDING -> Color(0xFFFFF4E5)
                         OrderStatus.OUT_FOR_DELIVERY -> RoyalEmerald.copy(alpha = 0.15f)
+                        OrderStatus.CANCELLED -> Color.Red.copy(alpha = 0.1f)
+                        OrderStatus.RETURN_REQUESTED -> DeepGold.copy(alpha = 0.15f)
+                        OrderStatus.RETURN_ACCEPTED -> DeepGold.copy(alpha = 0.25f)
+                        OrderStatus.RETURNED -> RoyalEmerald.copy(alpha = 0.1f)
                         else -> RoyalEmerald.copy(alpha = 0.1f)
                     },
                     shape = RoundedCornerShape(8.dp)
@@ -639,6 +892,9 @@ fun OrderCard(order: com.example.domain.model.Order) {
                         maxLines = 1,
                         color = when(order.status) {
                             OrderStatus.PENDING -> DeepGold
+                            OrderStatus.CANCELLED -> Color.Red
+                            OrderStatus.RETURN_REQUESTED -> DeepGold
+                            OrderStatus.RETURN_ACCEPTED -> DeepGold
                             else -> RoyalEmerald
                         }
                     )
@@ -740,7 +996,33 @@ fun OrderCard(order: com.example.domain.model.Order) {
                             Text("Dispatch Order", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
                         }
                     }
-                } else if (order.status != OrderStatus.DELIVERED && order.status != OrderStatus.CANCELLED) {
+                } else if (order.status == OrderStatus.RETURN_REQUESTED) {
+                    Button(
+                        onClick = { AppState.updateOrderStatus(order.id, OrderStatus.RETURN_ACCEPTED) },
+                        colors = ButtonDefaults.buttonColors(containerColor = DeepGold),
+                        shape = RoundedCornerShape(8.dp),
+                        enabled = !AppState.isNetworkLoading
+                    ) {
+                        if (AppState.isNetworkLoading) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text("Accept Return", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                } else if (order.status == OrderStatus.RETURN_ACCEPTED) {
+                    Button(
+                        onClick = { AppState.updateOrderStatus(order.id, OrderStatus.RETURNED) },
+                        colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald),
+                        shape = RoundedCornerShape(8.dp),
+                        enabled = !AppState.isNetworkLoading
+                    ) {
+                        if (AppState.isNetworkLoading) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text("Return Successfully", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                } else if (order.status != OrderStatus.DELIVERED && order.status != OrderStatus.CANCELLED && order.status != OrderStatus.RETURNED) {
                     Button(
                         onClick = { AppState.updateOrderStatus(order.id, OrderStatus.DELIVERED) },
                         colors = ButtonDefaults.buttonColors(containerColor = DeepGold),
@@ -760,13 +1042,115 @@ fun OrderCard(order: com.example.domain.model.Order) {
 }
 
 @Composable
+fun FilterCheckboxRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = CheckboxDefaults.colors(
+                checkedColor = RoyalEmerald,
+                uncheckedColor = Color.Gray
+            )
+        )
+    }
+}
+
+@Composable
+fun FilterRadioButtonRow(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        RadioButton(
+            selected = selected,
+            onClick = onClick,
+            colors = RadioButtonDefaults.colors(
+                selectedColor = RoyalEmerald,
+                unselectedColor = Color.Gray
+            )
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (Product) -> Unit) {
     var searchQuery by remember { mutableStateOf("") }
-    
-    val filteredProducts = AppState.productsList.filter {
-        searchQuery.isEmpty() ||
-            it.nameEn.contains(searchQuery, ignoreCase = true) ||
-            it.brand.contains(searchQuery, ignoreCase = true)
+    var appliedCategories by remember { mutableStateOf(emptySet<String>()) }
+    var tempSelectedCategories by remember { mutableStateOf(emptySet<String>()) }
+    var selectedSort by remember { mutableStateOf("Default") }
+    var tempSort by remember { mutableStateOf("Default") }
+    var stockFilter by remember { mutableStateOf("All") } // "All", "In Stock", "Out of Stock"
+    var tempStockFilter by remember { mutableStateOf("All") }
+
+    var showCategoryFilterSheet by remember { mutableStateOf(false) }
+    var showSortSheet by remember { mutableStateOf(false) }
+
+    val filteredProducts = AppState.productsList.filter { product ->
+        val cleanQuery = searchQuery.replace("\\s".toRegex(), "").lowercase()
+        val matchesQuery = cleanQuery.isEmpty() ||
+                product.nameEn.replace("\\s".toRegex(), "").lowercase().contains(cleanQuery) ||
+                product.brand.replace("\\s".toRegex(), "").lowercase().contains(cleanQuery)
+        
+        val matchesCategory = appliedCategories.isEmpty() || appliedCategories.contains(product.categoryId)
+        
+        val matchesStock = when (stockFilter) {
+            "In Stock" -> product.variants.any { it.stockQuantity > 0 }
+            "Out of Stock" -> product.variants.all { it.stockQuantity <= 0 }
+            else -> true
+        }
+        
+        matchesQuery && matchesCategory && matchesStock
+    }.let { list ->
+        list.sortedWith(
+            compareByDescending<Product> { prod ->
+                prod.variants.maxOfOrNull { it.weight.toDoubleOrNull() ?: 0.0 } ?: 0.0
+            }.thenBy { prod ->
+                when (selectedSort) {
+                    "Price: Low to High" -> {
+                        val maxWeightVariant = prod.variants.maxByOrNull { it.weight.toDoubleOrNull() ?: 0.0 }
+                        maxWeightVariant?.currentPrice ?: 0.0
+                    }
+                    "Price: High to Low" -> {
+                        val maxWeightVariant = prod.variants.maxByOrNull { it.weight.toDoubleOrNull() ?: 0.0 }
+                        -(maxWeightVariant?.currentPrice ?: 0.0)
+                    }
+                    "What's New" -> -prod.dateCreated.toDouble()
+                    else -> 0.0
+                }
+            }
+        )
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -797,6 +1181,68 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
             )
         )
 
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Filter Buttons Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Category Filter Button
+            val catText = if (appliedCategories.isEmpty()) "Category" else "Category (${appliedCategories.size})"
+            Button(
+                onClick = {
+                    tempSelectedCategories = appliedCategories
+                    showCategoryFilterSheet = true
+                },
+                modifier = Modifier.weight(1f).height(40.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (appliedCategories.isNotEmpty()) RoyalEmerald else MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = if (appliedCategories.isNotEmpty()) Color.White else MaterialTheme.colorScheme.onSurface
+                ),
+                shape = RoundedCornerShape(10.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.FilterList, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(catText, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(16.dp))
+                }
+            }
+
+            // Sort & Stock Filter Button
+            val isSortActive = selectedSort != "Default" || stockFilter != "All"
+            val sortStockText = when {
+                selectedSort != "Default" && stockFilter != "All" -> "Filters (2)"
+                selectedSort != "Default" -> "Sort: ${selectedSort.replace("Price: ", "")}"
+                stockFilter != "All" -> "Stock: $stockFilter"
+                else -> "Sort & Stock"
+            }
+            Button(
+                onClick = {
+                    tempSort = selectedSort
+                    tempStockFilter = stockFilter
+                    showSortSheet = true
+                },
+                modifier = Modifier.weight(1f).height(40.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isSortActive) RoyalEmerald else MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = if (isSortActive) Color.White else MaterialTheme.colorScheme.onSurface
+                ),
+                shape = RoundedCornerShape(10.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(sortStockText, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(16.dp))
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
         
         if (filteredProducts.isEmpty()) {
@@ -807,7 +1253,7 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("No items found matching '$searchQuery'", color = Color.Gray)
+                Text("No items found", color = Color.Gray)
             }
         } else {
             LazyColumn(
@@ -820,6 +1266,181 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
             }
         }
     }
+
+    // --- Bottom Sheets ---
+
+    if (showCategoryFilterSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showCategoryFilterSheet = false }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .padding(bottom = 32.dp)
+            ) {
+                Text(
+                    text = "Select Categories",
+                    fontWeight = FontWeight.Black,
+                    fontSize = 20.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false)
+                ) {
+                    items(AppState.categoriesList) { category ->
+                        val isChecked = tempSelectedCategories.contains(category.id)
+                        FilterCheckboxRow(
+                            label = category.nameEn,
+                            checked = isChecked,
+                            onCheckedChange = { checked ->
+                                tempSelectedCategories = if (checked) {
+                                    tempSelectedCategories + category.id
+                                } else {
+                                    tempSelectedCategories - category.id
+                                }
+                            }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { showCategoryFilterSheet = false },
+                        modifier = Modifier.weight(1f).height(50.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Cancel", fontWeight = FontWeight.Bold)
+                    }
+
+                    Button(
+                        onClick = {
+                            appliedCategories = tempSelectedCategories
+                            showCategoryFilterSheet = false
+                        },
+                        modifier = Modifier.weight(1f).height(50.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Apply Filter", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+
+    if (showSortSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSortSheet = false }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .padding(bottom = 32.dp)
+            ) {
+                Text(
+                    text = "Sort & Filter",
+                    fontWeight = FontWeight.Black,
+                    fontSize = 20.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                Text(
+                    text = "SORT BY",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Gray,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+
+                FilterRadioButtonRow(
+                    label = "Default",
+                    selected = tempSort == "Default",
+                    onClick = { tempSort = "Default" }
+                )
+                FilterRadioButtonRow(
+                    label = "Price: Low to High",
+                    selected = tempSort == "Price: Low to High",
+                    onClick = { tempSort = "Price: Low to High" }
+                )
+                FilterRadioButtonRow(
+                    label = "Price: High to Low",
+                    selected = tempSort == "Price: High to Low",
+                    onClick = { tempSort = "Price: High to Low" }
+                )
+                FilterRadioButtonRow(
+                    label = "What's New",
+                    selected = tempSort == "What's New",
+                    onClick = { tempSort = "What's New" }
+                )
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp, color = Color.LightGray)
+
+                Text(
+                    text = "STOCK STATUS",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Gray,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+
+                FilterRadioButtonRow(
+                    label = "All Items",
+                    selected = tempStockFilter == "All",
+                    onClick = { tempStockFilter = "All" }
+                )
+                FilterRadioButtonRow(
+                    label = "In Stock",
+                    selected = tempStockFilter == "In Stock",
+                    onClick = { tempStockFilter = "In Stock" }
+                )
+                FilterRadioButtonRow(
+                    label = "Out of Stock",
+                    selected = tempStockFilter == "Out of Stock",
+                    onClick = { tempStockFilter = "Out of Stock" }
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { showSortSheet = false },
+                        modifier = Modifier.weight(1f).height(50.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Cancel", fontWeight = FontWeight.Bold)
+                    }
+
+                    Button(
+                        onClick = {
+                            selectedSort = tempSort
+                            stockFilter = tempStockFilter
+                            showSortSheet = false
+                        },
+                        modifier = Modifier.weight(1f).height(50.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Apply", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -827,6 +1448,10 @@ fun InventoryItemCard(product: Product, onEditClicked: (Product) -> Unit) {
     var showAddVariantDialog by remember { mutableStateOf(false) }
     var variantToEdit by remember { mutableStateOf<ProductVariant?>(null) }
     var variantToDelete by remember { mutableStateOf<ProductVariant?>(null) }
+    var showProductDeleteConfirmation by remember { mutableStateOf(false) }
+    // Local shadow of isEnabled so the toggle feels instant (state updates from flow are async)
+    var isListed by remember(product.id) { mutableStateOf(product.isEnabled) }
+    var showHideConfirmation by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -851,17 +1476,112 @@ fun InventoryItemCard(product: Product, onEditClicked: (Product) -> Unit) {
                     Text(product.nameEn, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
                     Text(product.brand, fontSize = 12.sp, color = RoyalEmerald, fontWeight = FontWeight.Black)
                 }
-                Row {
-                    IconButton(onClick = { onEditClicked(product) }) { Icon(Icons.Default.Edit, "Edit Product", tint = Color.Gray) }
-                    IconButton(onClick = { AppState.adminDeleteProduct(product.id) }) { Icon(Icons.Default.Delete, "Delete Product", tint = Color.Red.copy(alpha = 0.5f)) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Listed toggle — hides/shows product from customer catalog, does NOT delete it
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            "Listed",
+                            fontSize = 10.sp,
+                            color = if (isListed) RoyalEmerald else Color.Gray
+                        )
+                        Switch(
+                            checked = isListed,
+                            onCheckedChange = { checked ->
+                                if (checked) {
+                                    isListed = true
+                                    AppState.adminUpdateProduct(product.copy(isEnabled = true))
+                                } else {
+                                    showHideConfirmation = true
+                                }
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = RoyalEmerald
+                            ),
+                            modifier = Modifier.scale(0.8f)
+                        )
+                    }
+
+                    Spacer(Modifier.width(4.dp))
+                    IconButton(onClick = { onEditClicked(product) }) {
+                        Icon(Icons.Default.Edit, "Edit Product", tint = Color.Gray)
+                    }
+                    // Separate trash icon for permanent deletion
+                    IconButton(onClick = { showProductDeleteConfirmation = true }) {
+                        Icon(Icons.Default.Delete, "Delete Product", tint = Color.Red.copy(alpha = 0.7f))
+                    }
                 }
             }
-            
             Spacer(modifier = Modifier.height(16.dp))
+
+            if (showHideConfirmation) {
+                AlertDialog(
+                    onDismissRequest = { showHideConfirmation = false },
+                    title = { Text("Hide Product?", fontWeight = FontWeight.Bold) },
+                    text = { Text("Are you sure you want to hide \"${product.nameEn}\" from customers? It will no longer be visible on the customer screen.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            showHideConfirmation = false
+                            isListed = false
+                            AppState.adminUpdateProduct(product.copy(isEnabled = false))
+                        }) {
+                            Text("Hide", color = Color.Red, fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showHideConfirmation = false }) {
+                            Text("Cancel", color = Color.Gray)
+                        }
+                    }
+                )
+            }
+
+            if (!isListed) {
+                Surface(
+                    color = Color.Red.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(Icons.Default.VisibilityOff, contentDescription = null, tint = Color.Red, modifier = Modifier.size(16.dp))
+                        Text(
+                            text = "Hidden from customers",
+                            fontSize = 12.sp,
+                            color = Color.Red,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            if (showProductDeleteConfirmation) {
+                AlertDialog(
+                    onDismissRequest = { showProductDeleteConfirmation = false },
+                    title = { Text("Delete Product", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
+                    text = { Text("Permanently delete \"${product.nameEn}\" and all its variants? This cannot be undone.\n\nTip: Use the Listed toggle to hide it from customers instead.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            showProductDeleteConfirmation = false
+                            AppState.adminDeleteProduct(product.id)
+                        }) {
+                            Text("Delete Permanently", color = Color.Red, fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showProductDeleteConfirmation = false }) {
+                            Text("Cancel", color = Color.Gray)
+                        }
+                    }
+                )
+            }
 
             Text("Variants", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
             
-            product.variants.forEach { variant ->
+            product.variants.sortedByDescending { it.weight.toDoubleOrNull() ?: 0.0 }.forEach { variant ->
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp, color = Color.LightGray)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1157,6 +1877,15 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    val categories = remember(AppState.categoriesList) {
+        AppState.categoriesList.map { Pair(it.id, it.nameEn) }
+    }
+    val defaultCategoryId = remember(AppState.categoriesList) {
+        AppState.categoriesList.firstOrNull()?.id ?: "c_rice"
+    }
+    var selectedCategoryId by rememberSaveable { mutableStateOf(existingProduct?.categoryId ?: defaultCategoryId) }
+    var expanded by remember { mutableStateOf(false) }
+
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -1184,6 +1913,41 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
                         unfocusedBorderColor = Color.LightGray
                     )
                 )
+                // Category Selector Dropdown
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = categories.find { it.first == selectedCategoryId }?.second ?: (AppState.categoriesList.firstOrNull()?.nameEn ?: "Select Category"),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Category") },
+                        trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, modifier = Modifier.clickable { expanded = true }) },
+                        modifier = Modifier.fillMaxWidth().clickable { expanded = true },
+                        textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedLabelColor = RoyalEmerald,
+                            unfocusedLabelColor = Color.Gray,
+                            focusedBorderColor = RoyalEmerald,
+                            unfocusedBorderColor = Color.LightGray
+                        )
+                    )
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        categories.forEach { (id, name) ->
+                            DropdownMenuItem(
+                                text = { Text(name, color = MaterialTheme.colorScheme.onSurface) },
+                                onClick = {
+                                    selectedCategoryId = id
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
                 OutlinedTextField(
                     value = brand,
                     onValueChange = { brand = it },
@@ -1287,7 +2051,7 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
                                     withContext(Dispatchers.IO) {
                                         try { tempFile.delete() } catch (_: Exception) {}
                                     }
-                                    saveProductWithImage(downloadUrl, nameEn, brand, descEn, existingProduct, onDismiss)
+                                    saveProductWithImage(downloadUrl, nameEn, brand, descEn, selectedCategoryId, existingProduct, onDismiss)
                                 } catch (e: Exception) {
                                     e.printStackTrace()
                                     uploadError = "Image upload failed: ${e.message ?: e.javaClass.simpleName}"
@@ -1296,7 +2060,7 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
                                 }
                             }
                         } else {
-                            saveProductWithImage(currentImageUrl, nameEn, brand, descEn, existingProduct, onDismiss)
+                            saveProductWithImage(currentImageUrl, nameEn, brand, descEn, selectedCategoryId, existingProduct, onDismiss)
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald),
@@ -1334,6 +2098,7 @@ private fun saveProductWithImage(
     nameEn: String,
     brand: String,
     descEn: String,
+    categoryId: String,
     existingProduct: Product?,
     onDismiss: () -> Unit
 ) {
@@ -1343,17 +2108,171 @@ private fun saveProductWithImage(
             brand,
             descEn,
             if (imageUrl.isBlank()) emptyList() else listOf(imageUrl),
-            emptyList()
+            emptyList(),
+            categoryId
         )
     } else {
         val updatedProduct = existingProduct.copy(
             nameEn = nameEn,
             brand = brand,
             descriptionEn = descEn,
+            categoryId = categoryId,
             imageUrls = if (imageUrl.isNotBlank()) listOf(imageUrl) else emptyList(),
             lastUpdated = System.currentTimeMillis()
         )
         AppState.adminUpdateProduct(updatedProduct)
     }
     onDismiss()
+}
+
+@Composable
+fun ManageGiftsDialog(onDismiss: () -> Unit) {
+    var newThreshold by remember { mutableStateOf("") }
+    var newPrice by remember { mutableStateOf("") }
+    var newProductName by remember { mutableStateOf("") }
+    var newStock by remember { mutableStateOf("100") }
+    var newImageUrl by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = { Text("Manage Gifts", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text("Existing Gifts:", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 200.dp)
+                        .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(8.dp))
+                        .padding(8.dp)
+                ) {
+                    if (AppState.giftConfigsList.isEmpty()) {
+                        Text("No gifts configured yet.", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(8.dp))
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            AppState.giftConfigsList.forEach { gift ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("${gift.productName} (₹${gift.giftPrice})", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                        Text("Unlocks at ₹${gift.thresholdAmount} | Stock: ${gift.stockQuantity}", fontSize = 12.sp, color = Color.Gray)
+                                    }
+                                    IconButton(onClick = { AppState.deleteGiftConfig(gift.id) }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
+                                    }
+                                }
+                                HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.5f))
+                            }
+                        }
+                    }
+                }
+
+                Text("Add New Gift:", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                
+                OutlinedTextField(
+                    value = newProductName,
+                    onValueChange = { newProductName = it },
+                    label = { Text("Gift Product Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedBorderColor = RoyalEmerald,
+                        focusedLabelColor = RoyalEmerald
+                    )
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = newThreshold,
+                        onValueChange = { newThreshold = it.filter { char -> char.isDigit() || char == '.' } },
+                        label = { Text("Threshold (₹)") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedBorderColor = RoyalEmerald,
+                            focusedLabelColor = RoyalEmerald
+                        )
+                    )
+                    OutlinedTextField(
+                        value = newPrice,
+                        onValueChange = { newPrice = it.filter { char -> char.isDigit() || char == '.' } },
+                        label = { Text("Gift Price (₹)") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedBorderColor = RoyalEmerald,
+                            focusedLabelColor = RoyalEmerald
+                        )
+                    )
+                }
+                OutlinedTextField(
+                    value = newStock,
+                    onValueChange = { newStock = it.filter { char -> char.isDigit() } },
+                    label = { Text("Stock Quantity") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedBorderColor = RoyalEmerald,
+                        focusedLabelColor = RoyalEmerald
+                    )
+                )
+                OutlinedTextField(
+                    value = newImageUrl,
+                    onValueChange = { newImageUrl = it },
+                    label = { Text("Image URL (Optional)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedBorderColor = RoyalEmerald,
+                        focusedLabelColor = RoyalEmerald
+                    )
+                )
+                
+                Button(
+                    onClick = {
+                        val thresh = newThreshold.toDoubleOrNull() ?: 0.0
+                        val price = newPrice.toDoubleOrNull() ?: 0.0
+                        val stock = newStock.toIntOrNull() ?: 100
+                        if (newProductName.isNotBlank() && thresh > 0) {
+                            AppState.addNewGiftConfig(thresh, price, newProductName.trim(), newImageUrl.trim(), stock)
+                            newProductName = ""
+                            newThreshold = ""
+                            newPrice = ""
+                            newImageUrl = ""
+                            newStock = "100"
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald),
+                    shape = RoundedCornerShape(10.dp),
+                    enabled = newProductName.isNotBlank() && newThreshold.isNotBlank()
+                ) {
+                    Text("Add Gift Tier", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close", color = RoyalEmerald, fontWeight = FontWeight.Bold)
+            }
+        }
+    )
 }

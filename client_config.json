@@ -1,0 +1,22 @@
+{
+    "UserPoolClient": {
+        "UserPoolId": "us-east-1_h0uGcZU1T",
+        "ClientName": "amplifyAuthUserPoolAppClient2626C6F8-Hafq5ZdR01iy",
+        "ClientId": "ndnsac94g5m6kmm2mbk9rrvnm",
+        "LastModifiedDate": "2026-07-09T00:03:06.977000+05:30",
+        "CreationDate": "2026-07-07T20:10:30.301000+05:30",
+        "RefreshTokenValidity": 30,
+        "TokenValidityUnits": {},
+        "ExplicitAuthFlows": [
+            "ALLOW_CUSTOM_AUTH",
+            "ALLOW_REFRESH_TOKEN_AUTH",
+            "ALLOW_USER_PASSWORD_AUTH",
+            "ALLOW_USER_SRP_AUTH"
+        ],
+        "AllowedOAuthFlowsUserPoolClient": false,
+        "PreventUserExistenceErrors": "ENABLED",
+        "EnableTokenRevocation": true,
+        "EnablePropagateAdditionalUserContextData": false,
+        "AuthSessionValidity": 3
+    }
+}
