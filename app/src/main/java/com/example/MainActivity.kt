@@ -21,8 +21,13 @@ import com.example.ui.theme.MyApplicationTheme
 import com.amplifyframework.geo.location.AWSLocationGeoPlugin
 import com.mapbox.mapboxsdk.Mapbox
 
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
+    val splashScreen = installSplashScreen()
+    splashScreen.setKeepOnScreenCondition { AppState.isInitializingSession }
+
     super.onCreate(savedInstanceState)
     try {
       Amplify.addPlugin(AWSApiPlugin())
@@ -47,9 +52,7 @@ class MainActivity : ComponentActivity() {
               .fillMaxSize()
               .padding(innerPadding)
           ) {
-            if (AppState.isInitializingSession) {
-                com.example.ui.SplashScreen()
-            } else if (AppState.showLoginScreen) {
+            if (AppState.showLoginScreen) {
                 com.example.ui.auth.LoginScreen()
             } else {
                 when (AppState.activeRole) {

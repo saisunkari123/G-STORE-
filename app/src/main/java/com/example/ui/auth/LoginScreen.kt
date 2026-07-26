@@ -56,6 +56,7 @@ fun LoginScreen() {
     var forgotPhoneInput by remember { mutableStateOf("") }
     var forgotCodeInput by remember { mutableStateOf("") }
     var forgotNewPasswordInput by remember { mutableStateOf("") }
+    var forgotPasswordVisible by remember { mutableStateOf(false) }
     var forgotStep by remember { mutableStateOf(1) }
  
     // Admin Inputs
@@ -117,10 +118,12 @@ fun LoginScreen() {
                     },
                 contentAlignment = Alignment.Center
             ) {
-                androidx.compose.foundation.Image(
-                    painter = painterResource(id = R.drawable.gstore_logo_transparent),
-                    contentDescription = "G-STORE Logo",
-                    modifier = Modifier.size(60.dp)
+                Text(
+                    text = "G",
+                    fontSize = 44.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color.White,
+                    letterSpacing = (-1).sp
                 )
             }
 
@@ -576,9 +579,19 @@ fun LoginScreen() {
                                 modifier = Modifier.fillMaxWidth(),
                                 placeholder = { Text("New Password") },
                                 leadingIcon = { Icon(Icons.Default.Lock, null, tint = primaryGreen) },
-                                visualTransformation = PasswordVisualTransformation(),
+                                trailingIcon = {
+                                    IconButton(onClick = { forgotPasswordVisible = !forgotPasswordVisible }) {
+                                        Icon(
+                                            imageVector = if (forgotPasswordVisible) Icons.Default.Visibility else Icons.Outlined.VisibilityOff,
+                                            contentDescription = "Toggle password visibility",
+                                            tint = primaryGreen
+                                        )
+                                    }
+                                },
+                                visualTransformation = if (forgotPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                                 singleLine = true,
+
                                 shape = RoundedCornerShape(12.dp),
                                 colors = fieldColors
                             )

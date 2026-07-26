@@ -1,0 +1,12 @@
+appId: com.aistudio.ricemart.pkqmsx
+---
+- launchApp
+- tapOn: "Already have an account.*"
+- tapOn: "10 digit number"
+- inputText: "6300028491"
+- tapOn: "••••••••"
+- inputText: "Sai@1234"
+- tapOn: "Login"
+- assertVisible: "G-STORE"
+- tapOn: "Gifts"
+- assertVisible: "Gift Items"

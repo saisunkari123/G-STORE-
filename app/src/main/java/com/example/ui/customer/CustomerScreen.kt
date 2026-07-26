@@ -39,12 +39,6 @@ import com.amplifyframework.geo.options.GeoSearchByCoordinatesOptions
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.mapbox.mapboxsdk.camera.CameraPosition
-import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
-import com.mapbox.mapboxsdk.geometry.LatLng
-import com.amplifyframework.geo.maplibre.view.AmplifyMapView
-import com.mapbox.mapboxsdk.maps.MapView
-import com.mapbox.mapboxsdk.maps.MapboxMap
 import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
 import coil.compose.rememberAsyncImagePainter
@@ -56,6 +50,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.Offset
@@ -91,6 +91,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.platform.LocalContext
 import java.text.SimpleDateFormat
 import java.util.*
+
+data class MapLatLng(val latitude: Double, val longitude: Double)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -272,6 +274,7 @@ fun CustomerCatalogView(
     var showCategoryFilterSheet by remember { mutableStateOf(false) }
     var showSortSheet by remember { mutableStateOf(false) }
 
+    val coroutineScope = rememberCoroutineScope()
     var tempSort by remember { mutableStateOf("Default") }
     var tempOnlyWithDiscount by remember { mutableStateOf(false) }
 
@@ -287,20 +290,13 @@ fun CustomerCatalogView(
         matchesQuery && matchesCategory && matchesDiscount
     }.let { list ->
         list.sortedWith(
-            compareByDescending<Product> { prod ->
-                prod.variants.maxOfOrNull { it.weight.toDoubleOrNull() ?: 0.0 } ?: 0.0
-            }.thenBy { prod ->
+            compareBy { prod ->
+                val highestPrice = prod.variants.maxOfOrNull { it.currentPrice } ?: 0.0
                 when (selectedSort) {
-                    "Price: Low to High" -> {
-                        val maxWeightVariant = prod.variants.maxByOrNull { it.weight.toDoubleOrNull() ?: 0.0 }
-                        maxWeightVariant?.currentPrice ?: 0.0
-                    }
-                    "Price: High to Low" -> {
-                        val maxWeightVariant = prod.variants.maxByOrNull { it.weight.toDoubleOrNull() ?: 0.0 }
-                        -(maxWeightVariant?.currentPrice ?: 0.0)
-                    }
+                    "Price: Low to High" -> highestPrice
+                    "Price: High to Low" -> -highestPrice
                     "What's New" -> -prod.dateCreated.toDouble()
-                    else -> 0.0
+                    else -> -highestPrice // Default is High to Low
                 }
             }
         )
@@ -312,6 +308,8 @@ fun CustomerCatalogView(
     } else {
         "Tap to select delivery address"
     }
+
+    var isRefreshing by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -338,11 +336,19 @@ fun CustomerCatalogView(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Image(
-                                painter = painterResource(id = com.example.R.drawable.gstore_logo_transparent),
-                                contentDescription = "Logo",
-                                modifier = Modifier.size(32.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(Color.White.copy(alpha = 0.15f), shape = androidx.compose.foundation.shape.CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "G",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White
+                                )
+                            }
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 "G-STORE",
@@ -464,94 +470,108 @@ fun CustomerCatalogView(
             }
         }
     ) { padding ->
-        LazyColumn(
+        @OptIn(ExperimentalMaterial3Api::class)
+        androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                coroutineScope.launch {
+                    isRefreshing = true
+                    AppState.refreshProductsFromCloud()
+                    kotlinx.coroutines.delay(1000)
+                    isRefreshing = false
+                }
+            },
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
-                .padding(padding),
-            contentPadding = PaddingValues(bottom = 32.dp)
+                .padding(padding)
         ) {
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Category Filter Button
-                    val catText = if (appliedCategories.isEmpty()) "Category" else "Category (${appliedCategories.size})"
-                    Button(
-                        onClick = {
-                            tempSelectedCategories = appliedCategories
-                            showCategoryFilterSheet = true
-                        },
-                        modifier = Modifier.weight(1f).height(44.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (appliedCategories.isNotEmpty()) RoyalEmerald else MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = if (appliedCategories.isNotEmpty()) Color.White else MaterialTheme.colorScheme.onSurface
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.FilterList, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(catText, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
-                        }
-                    }
-
-                    // Sort By Button
-                    val sortText = when (selectedSort) {
-                        "Price: Low to High" -> "Sort: Low to High"
-                        "Price: High to Low" -> "Sort: High to Low"
-                        "What's New" -> "Sort: What's New"
-                        else -> "Sort By"
-                    }
-                    val isSortActive = selectedSort != "Default" || onlyWithDiscount
-                    Button(
-                        onClick = {
-                            tempSort = selectedSort
-                            tempOnlyWithDiscount = onlyWithDiscount
-                            showSortSheet = true
-                        },
-                        modifier = Modifier.weight(1f).height(44.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isSortActive) RoyalEmerald else MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = if (isSortActive) Color.White else MaterialTheme.colorScheme.onSurface
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(sortText, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
-                        }
-                    }
-                }
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            if (filteredProducts.isEmpty()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 32.dp)
+            ) {
                 item {
-                    Column(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 40.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("No items found matching '$searchQuery'", color = Color.Gray)
+                        // Category Filter Button
+                        val catText = if (appliedCategories.isEmpty()) "Category" else "Category (${appliedCategories.size})"
+                        Button(
+                            onClick = {
+                                tempSelectedCategories = appliedCategories
+                                showCategoryFilterSheet = true
+                            },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (appliedCategories.isNotEmpty()) RoyalEmerald else MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = if (appliedCategories.isNotEmpty()) Color.White else MaterialTheme.colorScheme.onSurface
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.FilterList, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(catText, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
+                            }
+                        }
+
+                        // Sort By Button
+                        val sortText = when (selectedSort) {
+                            "Price: Low to High" -> "Sort: Low to High"
+                            "Price: High to Low" -> "Sort: High to Low"
+                            "What's New" -> "Sort: What's New"
+                            else -> "Sort By"
+                        }
+                        val isSortActive = selectedSort != "Default" || onlyWithDiscount
+                        Button(
+                            onClick = {
+                                tempSort = selectedSort
+                                tempOnlyWithDiscount = onlyWithDiscount
+                                showSortSheet = true
+                            },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isSortActive) RoyalEmerald else MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = if (isSortActive) Color.White else MaterialTheme.colorScheme.onSurface
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(sortText, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
+                            }
+                        }
                     }
                 }
-            } else {
-                items(filteredProducts) { product ->
-                    CustomerProductCard(product)
+
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                if (filteredProducts.isEmpty()) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 40.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("No items found matching '$searchQuery'", color = Color.Gray)
+                        }
+                    }
+                } else {
+                    items(filteredProducts) { product ->
+                        CustomerProductCard(product, selectedSort)
+                    }
                 }
             }
         }
@@ -818,10 +838,14 @@ fun SectionHeader(title: String) {
 }
 
 @Composable
-fun CustomerProductCard(product: Product) {
-    // Sort variants ascending by price so the cheapest is shown by default (matches "Low to High" sorting visually)
-    val sortedVariants = remember(product.variants) {
-        product.variants.sortedByDescending { it.weight.toDoubleOrNull() ?: 0.0 }
+fun CustomerProductCard(product: Product, selectedSort: String = "Default") {
+    // Sort variants inside the product card based on the active filter
+    val sortedVariants = remember(product.variants, selectedSort) {
+        if (selectedSort == "Price: Low to High") {
+            product.variants.sortedBy { it.currentPrice }
+        } else {
+            product.variants.sortedByDescending { it.currentPrice } // Default is High to Low
+        }
     }
     var selectedVariantIndex by remember { mutableStateOf(0) }
     // Create a dummy variant so the card always renders — even for products with no variants yet
@@ -2457,270 +2481,353 @@ fun CustomerAccountView(onLogoutClick: () -> Unit) {
 @Composable
 fun AWSMapPickerDialog(
     onDismiss: () -> Unit,
-    onLocationSelected: (LatLng, String) -> Unit
+    onLocationSelected: (MapLatLng, String) -> Unit
 ) {
     val context = LocalContext.current
-    var initialLatLng by remember { mutableStateOf<LatLng?>(null) }
-    var selectedLatLng by remember { mutableStateOf(LatLng(AppState.SHOP_LATITUDE, AppState.SHOP_LONGITUDE)) }
+    var selectedLatLng by remember { mutableStateOf(MapLatLng(AppState.SHOP_LATITUDE, AppState.SHOP_LONGITUDE)) }
     var addressText by remember { mutableStateOf("Fetching location...") }
     val scope = rememberCoroutineScope()
-    val mapView = remember {
-        AmplifyMapView(context)
-    }
-    val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Setup Location Detection
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+
+    fun updateAddress(latLng: MapLatLng) {
+        selectedLatLng = latLng
+        scope.launch(Dispatchers.IO) {
+            var resolvedAddress = ""
+            // 1. Try Android Native Geocoder for exact street address
+            try {
+                val geocoder = android.location.Geocoder(context, java.util.Locale.getDefault())
+                @Suppress("DEPRECATION")
+                val addresses = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1)
+                if (!addresses.isNullOrEmpty()) {
+                    val addr = addresses[0]
+                    val lines = (0..addr.maxAddressLineIndex).mapNotNull { addr.getAddressLine(it) }
+                    if (lines.isNotEmpty()) {
+                        resolvedAddress = lines.joinToString(", ")
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            // 2. Fallback to AWS Location Services if Geocoder returns empty
+            if (resolvedAddress.isBlank()) {
+                try {
+                    val options = GeoSearchByCoordinatesOptions.builder().maxResults(1).build()
+                    val latch = java.util.concurrent.CountDownLatch(1)
+                    Amplify.Geo.searchByCoordinates(
+                        Coordinates(latLng.latitude, latLng.longitude),
+                        options,
+                        { result ->
+                            val places = result.places
+                            if (places.isNotEmpty()) {
+                                val place = places[0]
+                                val labelMatch = Regex("label=(.*?),\\s*addressNumber=").find(place.toString())
+                                resolvedAddress = labelMatch?.groups?.get(1)?.value?.trim() ?: place.toString()
+                            }
+                            latch.countDown()
+                        },
+                        { error ->
+                            latch.countDown()
+                        }
+                    )
+                    latch.await(2, java.util.concurrent.TimeUnit.SECONDS)
+                } catch (_: Exception) {}
+            }
+
+            // 3. Fallback if address is still blank
+            if (resolvedAddress.isBlank()) {
+                resolvedAddress = "Lat: ${String.format("%.4f", latLng.latitude)}, Lon: ${String.format("%.4f", latLng.longitude)}"
+            }
+
+            withContext(Dispatchers.Main) {
+                addressText = resolvedAddress
+            }
+        }
+    }
+
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
             try {
-                fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                    if (location != null) {
-                        initialLatLng = LatLng(location.latitude, location.longitude)
-                        selectedLatLng = initialLatLng!!
-                    } else {
-                        initialLatLng = LatLng(AppState.SHOP_LATITUDE, AppState.SHOP_LONGITUDE)
+                fusedLocationClient.lastLocation
+                    .addOnSuccessListener { location ->
+                        if (location != null) {
+                            val currentLatLng = MapLatLng(location.latitude, location.longitude)
+                            updateAddress(currentLatLng)
+                        }
                     }
-                }
-            } catch (e: SecurityException) {
-                initialLatLng = LatLng(AppState.SHOP_LATITUDE, AppState.SHOP_LONGITUDE)
-            }
-        } else {
-            initialLatLng = LatLng(AppState.SHOP_LATITUDE, AppState.SHOP_LONGITUDE)
+                    .addOnFailureListener { }
+            } catch (_: SecurityException) {}
         }
     }
 
     LaunchedEffect(Unit) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             try {
-                fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                    if (location != null) {
-                        initialLatLng = LatLng(location.latitude, location.longitude)
-                        selectedLatLng = initialLatLng!!
-                    } else {
-                        initialLatLng = LatLng(AppState.SHOP_LATITUDE, AppState.SHOP_LONGITUDE)
+                fusedLocationClient.lastLocation
+                    .addOnSuccessListener { location ->
+                        if (location != null) {
+                            val currentLatLng = MapLatLng(location.latitude, location.longitude)
+                            updateAddress(currentLatLng)
+                        }
                     }
-                }
-            } catch (e: SecurityException) {
-                initialLatLng = LatLng(AppState.SHOP_LATITUDE, AppState.SHOP_LONGITUDE)
-            }
+                    .addOnFailureListener { }
+            } catch (_: SecurityException) {}
         } else {
             locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
 
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            try {
-                when (event) {
-                    Lifecycle.Event.ON_CREATE -> mapView.mapView.onCreate(null)
-                    Lifecycle.Event.ON_START -> mapView.mapView.onStart()
-                    Lifecycle.Event.ON_RESUME -> mapView.mapView.onResume()
-                    Lifecycle.Event.ON_PAUSE -> mapView.mapView.onPause()
-                    Lifecycle.Event.ON_STOP -> mapView.mapView.onStop()
-                    Lifecycle.Event.ON_DESTROY -> mapView.mapView.onDestroy()
-                    else -> {}
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
+    val dialogContext = LocalContext.current
+    var mapSearchQuery by remember { mutableStateOf("") }
+    var searchResultsList by remember { mutableStateOf<List<Pair<String, MapLatLng>>>(emptyList()) }
+    var isSearching by remember { mutableStateOf(false) }
+    var mapZoomLevel by remember { mutableStateOf(17.0) }
+    var isZoomedIn by remember { mutableStateOf(false) }
+    var isMapScrolling by remember { mutableStateOf(false) }
 
-    fun updateAddress(latLng: LatLng) {
-        selectedLatLng = latLng
-        scope.launch(Dispatchers.IO) {
-            try {
-                val options = GeoSearchByCoordinatesOptions.builder().maxResults(1).build()
-                Amplify.Geo.searchByCoordinates(
-                    Coordinates(latLng.latitude, latLng.longitude),
-                    options,
-                    { result ->
-                        val places = result.places
-                        if (places.isNotEmpty()) {
-                            val place = places[0]
-                            val labelMatch = Regex("label=(.*?),\\s*addressNumber=").find(place.toString())
-                            val line = labelMatch?.groups?.get(1)?.value?.trim() ?: place.toString()
-                            scope.launch(Dispatchers.Main) { addressText = line }
-                        } else {
-                            scope.launch(Dispatchers.Main) { addressText = "Lat: ${String.format("%.4f", latLng.latitude)}, Lon: ${String.format("%.4f", latLng.longitude)}" }
+    // Pin Drop Lift & Bounce Animations
+    val pinOffsetY by animateDpAsState(
+        targetValue = if (isMapScrolling) (-40).dp else (-26).dp,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+    )
+    val pinScale by animateFloatAsState(
+        targetValue = if (isMapScrolling) 1.2f else 1.0f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+    )
+    val shadowScale by animateFloatAsState(
+        targetValue = if (isMapScrolling) 0.5f else 1.0f,
+        animationSpec = tween(durationMillis = 150)
+    )
+
+    // Automatic Live Search Suggestions (Debounced as user types)
+    LaunchedEffect(mapSearchQuery) {
+        val query = mapSearchQuery.trim()
+        if (query.length >= 3) {
+            kotlinx.coroutines.delay(300) // 300ms debounce while typing
+            isSearching = true
+            withContext(Dispatchers.IO) {
+                try {
+                    val geocoder = android.location.Geocoder(context, java.util.Locale.getDefault())
+                    @Suppress("DEPRECATION")
+                    val addresses = geocoder.getFromLocationName(query, 5)
+                    if (!addresses.isNullOrEmpty()) {
+                        val list = addresses.mapNotNull { addr ->
+                            val line = (0..addr.maxAddressLineIndex).mapNotNull { addr.getAddressLine(it) }.joinToString(", ")
+                            val placeName = if (line.isNotBlank()) line else "${addr.featureName ?: ""}, ${addr.locality ?: ""}".trim(',', ' ')
+                            if (placeName.isNotBlank()) {
+                                Pair(placeName, MapLatLng(addr.latitude, addr.longitude))
+                            } else null
                         }
-                    },
-                    { error ->
-                        scope.launch(Dispatchers.Main) { addressText = "Lat: ${String.format("%.4f", latLng.latitude)}, Lon: ${String.format("%.4f", latLng.longitude)}" }
+                        withContext(Dispatchers.Main) {
+                            searchResultsList = list
+                        }
                     }
-                )
-            } catch (e: Exception) {
-                scope.launch(Dispatchers.Main) { addressText = "Lat: ${String.format("%.4f", latLng.latitude)}, Lon: ${String.format("%.4f", latLng.longitude)}" }
+                } catch (_: Exception) {
+                } finally {
+                    withContext(Dispatchers.Main) { isSearching = false }
+                }
             }
+        } else {
+            searchResultsList = emptyList()
         }
     }
+    
+    // Initialize OSMDroid Configuration
+    LaunchedEffect(Unit) {
+        try {
+            org.osmdroid.config.Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", android.content.Context.MODE_PRIVATE))
+            org.osmdroid.config.Configuration.getInstance().userAgentValue = context.packageName
+        } catch (_: Exception) {}
+    }
+    
+    BackHandler { onDismiss() }
 
-    if (initialLatLng != null) {
-        val dialogContext = LocalContext.current
-        var mapSearchQuery by remember { mutableStateOf("") }
-        
-        BackHandler { onDismiss() }
-
-            Surface(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .imePadding(),
-                color = Color.Transparent
+    Surface(
+        modifier = Modifier
+            .fillMaxSize()
+            .imePadding(),
+        color = Color.Transparent
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // 1. Fully Native Android OSMMapView Component with Pin Drop Animation
+            Box(
+                modifier = Modifier.fillMaxSize()
             ) {
-                Box(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    // 1. Map View takes the absolute full screen
-                    AndroidView(
-                        factory = {
-                            mapView.apply {
-                                // Hide built-in search field and controls to avoid overlapping with custom UI using reflection
-                                try {
-                                    val searchFieldMethod = mapView.javaClass.getMethod("getSearchField")
-                                    val searchField = searchFieldMethod.invoke(mapView) as? android.view.View
-                                    searchField?.visibility = android.view.View.GONE
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                }
+                AndroidView(
+                    factory = { ctx ->
+                        org.osmdroid.views.MapView(ctx).apply {
+                            setTileSource(org.osmdroid.tileprovider.tilesource.TileSourceFactory.MAPNIK)
+                            setMultiTouchControls(true)
+                            controller.setZoom(mapZoomLevel)
+                            controller.setCenter(org.osmdroid.util.GeoPoint(selectedLatLng.latitude, selectedLatLng.longitude))
 
-                                try {
-                                    val getControlsMethod = mapView.javaClass.getDeclaredMethod("getControls")
-                                    getControlsMethod.isAccessible = true
-                                    val controls = getControlsMethod.invoke(mapView) as? android.view.View
-                                    controls?.visibility = android.view.View.GONE
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                }
+                            addMapListener(object : org.osmdroid.events.MapListener {
+                                private var scrollJob: kotlinx.coroutines.Job? = null
 
-                                mapView.mapView.getMapAsync { map ->
-                                    val position = CameraPosition.Builder().target(initialLatLng).zoom(15.0).build()
-                                    map.moveCamera(CameraUpdateFactory.newCameraPosition(position))
-                                    map.addOnCameraIdleListener {
-                                        map.cameraPosition.target?.let { targetLatLng ->
-                                            updateAddress(targetLatLng)
+                                override fun onScroll(event: org.osmdroid.events.ScrollEvent?): Boolean {
+                                    scope.launch(Dispatchers.Main) { isMapScrolling = true }
+                                    scrollJob?.cancel()
+                                    scrollJob = scope.launch(Dispatchers.Main) {
+                                        kotlinx.coroutines.delay(250) // Settle delay for pin drop
+                                        isMapScrolling = false
+                                    }
+
+                                    val center = mapCenter
+                                    if (center != null) {
+                                        val newLatLng = MapLatLng(center.latitude, center.longitude)
+                                        if (Math.abs(selectedLatLng.latitude - newLatLng.latitude) > 0.0001 || Math.abs(selectedLatLng.longitude - newLatLng.longitude) > 0.0001) {
+                                            updateAddress(newLatLng)
                                         }
                                     }
+                                    return true
+                                }
+
+                                override fun onZoom(event: org.osmdroid.events.ZoomEvent?): Boolean {
+                                    return true
+                                }
+                            })
+                        }
+                    },
+                    update = { mapView ->
+                        if (!isMapScrolling) {
+                            val currentCenter = mapView.mapCenter
+                            if (currentCenter != null) {
+                                if (Math.abs(currentCenter.latitude - selectedLatLng.latitude) > 0.0005 || Math.abs(currentCenter.longitude - selectedLatLng.longitude) > 0.0005) {
+                                    mapView.controller.animateTo(org.osmdroid.util.GeoPoint(selectedLatLng.latitude, selectedLatLng.longitude))
                                 }
                             }
-                        },
-                        modifier = Modifier.fillMaxSize()
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                // Google Maps Style Center Pin Marker (Lifts during drag, drops onto location on stop)
+                Box(
+                    modifier = Modifier.align(Alignment.Center),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Dynamic Ground Shadow Oval
+                    Box(
+                        modifier = Modifier
+                            .size(14.dp, 5.dp)
+                            .graphicsLayer {
+                                scaleX = shadowScale
+                                scaleY = shadowScale
+                            }
+                            .background(Color.Black.copy(alpha = 0.25f), CircleShape)
                     )
 
-                    // 2. Stationary pin icon locked in the absolute center of the map
+                    // Pin Icon with Lift & Bounce Animation
                     Icon(
                         imageVector = Icons.Default.LocationOn,
-                        contentDescription = "Center Pin",
-                        tint = Color.Red,
+                        contentDescription = "Selected Location Pin",
+                        tint = RoyalEmerald,
                         modifier = Modifier
-                            .size(44.dp)
-                            .align(Alignment.Center)
-                            .padding(bottom = 22.dp) // Offset to align pin tip exactly to target center
-                    )
-
-                    // 3. Compact Floating Search Bar Card at the top (underneath status bar)
-                    Card(
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .statusBarsPadding()
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
-                            .fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 4.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(onClick = onDismiss) {
-                                Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurface)
+                            .size(52.dp)
+                            .graphicsLayer {
+                                scaleX = pinScale
+                                scaleY = pinScale
                             }
-                            
-                            OutlinedTextField(
-                                value = mapSearchQuery,
-                                onValueChange = { mapSearchQuery = it },
-                                placeholder = { Text("Search area or paste Lat,Lon...", fontSize = 14.sp) },
-                                singleLine = true,
-                                modifier = Modifier.weight(1f),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = Color.Transparent,
-                                    unfocusedBorderColor = Color.Transparent,
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent
-                                )
-                            )
+                            .offset(y = pinOffsetY)
+                    )
+                }
+            }
 
+            // 2. Compact Floating Search Bar Card at top
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .fillMaxWidth()
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = onDismiss) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurface)
+                        }
+                        
+                        OutlinedTextField(
+                            value = mapSearchQuery,
+                            onValueChange = { newQuery ->
+                                mapSearchQuery = newQuery
+                            },
+                            placeholder = { Text("Search area, place, pincode...", fontSize = 14.sp) },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color.Transparent,
+                                unfocusedBorderColor = Color.Transparent,
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent
+                            )
+                        )
+
+                        if (isSearching) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp).padding(4.dp), strokeWidth = 2.dp, color = RoyalEmerald)
+                        } else {
                             IconButton(
                                 onClick = {
                                     val query = mapSearchQuery.trim()
                                     if (query.isNotEmpty()) {
-                                        // 1. Check if it's coordinates: e.g. "18.4482, 83.6616"
                                         val parts = query.split(",")
                                         if (parts.size == 2) {
                                             val lat = parts[0].trim().toDoubleOrNull()
                                             val lon = parts[1].trim().toDoubleOrNull()
                                             if (lat != null && lon != null) {
-                                                val newLatLng = LatLng(lat, lon)
-                                                selectedLatLng = newLatLng
-                                                mapView.mapView.getMapAsync { map ->
-                                                    map.animateCamera(CameraUpdateFactory.newLatLngZoom(newLatLng, 15.0))
-                                                }
+                                                val newLatLng = MapLatLng(lat, lon)
                                                 updateAddress(newLatLng)
+                                                searchResultsList = emptyList()
                                                 return@IconButton
                                             }
                                         }
                                         
-                                        // 2. Otherwise search by text
+                                        isSearching = true
                                         scope.launch(Dispatchers.IO) {
                                             try {
-                                                Amplify.Geo.searchByText(
-                                                    query,
-                                                    { result ->
-                                                        val places = result.places
-                                                        if (places.isNotEmpty()) {
-                                                            val firstPlace = places[0]
-                                                            val coords = firstPlace.geometry as? Coordinates
-                                                            if (coords != null) {
-                                                                val newLatLng = LatLng(coords.latitude, coords.longitude)
-                                                                selectedLatLng = newLatLng
-                                                                val labelMatch = Regex("label=(.*?),\\s*addressNumber=").find(firstPlace.toString())
-                                                                val line = labelMatch?.groups?.get(1)?.value?.trim() ?: firstPlace.toString()
-                                                                scope.launch(Dispatchers.Main) {
-                                                                    addressText = line
-                                                                    mapView.mapView.getMapAsync { map ->
-                                                                        map.animateCamera(CameraUpdateFactory.newLatLngZoom(newLatLng, 15.0))
-                                                                    }
-                                                                }
-                                                            } else {
-                                                                    scope.launch(Dispatchers.Main) {
-                                                                        Toast.makeText(dialogContext, "Coordinates not found for this location", Toast.LENGTH_SHORT).show()
-                                                                    }
-                                                            }
-                                                        } else {
-                                                            scope.launch(Dispatchers.Main) {
-                                                                Toast.makeText(dialogContext, "Location not found", Toast.LENGTH_SHORT).show()
-                                                            }
-                                                        }
-                                                    },
-                                                    { error ->
-                                                        scope.launch(Dispatchers.Main) {
-                                                                Toast.makeText(dialogContext, "Search failed", Toast.LENGTH_SHORT).show()
+                                                val geocoder = android.location.Geocoder(context, java.util.Locale.getDefault())
+                                                @Suppress("DEPRECATION")
+                                                val addresses = geocoder.getFromLocationName(query, 5)
+                                                if (!addresses.isNullOrEmpty()) {
+                                                    val list = addresses.mapNotNull { addr ->
+                                                        val line = (0..addr.maxAddressLineIndex).mapNotNull { addr.getAddressLine(it) }.joinToString(", ")
+                                                        val placeName = if (line.isNotBlank()) line else "${addr.featureName ?: ""}, ${addr.locality ?: ""}".trim(',', ' ')
+                                                        if (placeName.isNotBlank()) {
+                                                            Pair(placeName, MapLatLng(addr.latitude, addr.longitude))
+                                                        } else null
+                                                    }
+                                                    withContext(Dispatchers.Main) {
+                                                        searchResultsList = list
+                                                        if (list.isNotEmpty()) {
+                                                            updateAddress(list[0].second)
                                                         }
                                                     }
-                                                )
-                                            } catch (e: Exception) {
-                                                scope.launch(Dispatchers.Main) {
-                                                    Toast.makeText(dialogContext, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                                                } else {
+                                                    withContext(Dispatchers.Main) {
+                                                        Toast.makeText(dialogContext, "Location not found", Toast.LENGTH_SHORT).show()
+                                                    }
                                                 }
+                                            } catch (e: Exception) {
+                                                withContext(Dispatchers.Main) {
+                                                    Toast.makeText(dialogContext, "Search error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                                                }
+                                            } finally {
+                                                withContext(Dispatchers.Main) { isSearching = false }
                                             }
                                         }
                                     }
@@ -2730,127 +2837,162 @@ fun AWSMapPickerDialog(
                             }
                         }
                     }
+                }
 
-                    // 4. My Location FAB placed floating above bottom card
-                    FloatingActionButton(
-                        onClick = {
-                            if (ContextCompat.checkSelfPermission(dialogContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                                try {
-                                    fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                                        if (location != null) {
-                                            val currentLatLng = LatLng(location.latitude, location.longitude)
-                                            selectedLatLng = currentLatLng
-                                            mapView.mapView.getMapAsync { map ->
-                                                map.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 15.0))
-                                            }
-                                            updateAddress(currentLatLng)
-                                        } else {
-                                            Toast.makeText(dialogContext, "Unable to get current location", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                } catch (e: SecurityException) {
-                                    Toast.makeText(dialogContext, "Location permission required", Toast.LENGTH_SHORT).show()
-                                }
-                            } else {
-                                locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-                            }
-                        },
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(end = 16.dp, bottom = 270.dp)
-                            .size(48.dp),
-                        containerColor = Color.White,
-                        contentColor = RoyalEmerald
-                    ) {
-                        Icon(Icons.Default.MyLocation, contentDescription = "My Location", modifier = Modifier.size(20.dp))
-                    }
-
-                    // 5. Floating Bottom Panel Card (respecting navigation bars)
+                // Automatic Search Results Dropdown List (Appears as user types!)
+                if (searchResultsList.isNotEmpty()) {
+                    Spacer(Modifier.height(4.dp))
                     Card(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .navigationBarsPadding()
-                            .padding(start = 16.dp, end = 16.dp, bottom = 64.dp)
-                            .fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp),
+                        shape = RoundedCornerShape(12.dp),
                         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            // Address text
-                            Text(
-                                text = addressText,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            // Coordinates
-                            val coordsText = "Lat: ${String.format("%.6f", selectedLatLng.latitude)}, Lon: ${String.format("%.6f", selectedLatLng.longitude)}"
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
-                                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.LocationOn,
-                                    contentDescription = null,
-                                    tint = RoyalEmerald,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    text = coordsText,
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                IconButton(
-                                    onClick = {
-                                        val rawCoords = "${selectedLatLng.latitude},${selectedLatLng.longitude}"
-                                        val clipboard = dialogContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                        clipboard.setPrimaryClip(ClipData.newPlainText("GPS Coordinates", rawCoords))
-                                        Toast.makeText(dialogContext, "Raw coordinates copied!", Toast.LENGTH_SHORT).show()
-                                    },
-                                    modifier = Modifier.size(32.dp)
+                        LazyColumn(modifier = Modifier.fillMaxWidth().padding(4.dp)) {
+                            items(searchResultsList) { result ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            updateAddress(result.second)
+                                            mapSearchQuery = result.first
+                                            searchResultsList = emptyList()
+                                        }
+                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.ContentCopy,
-                                        contentDescription = "Copy coordinates",
-                                        tint = RoyalEmerald,
-                                        modifier = Modifier.size(18.dp)
+                                    Icon(Icons.Default.LocationOn, contentDescription = null, tint = RoyalEmerald, modifier = Modifier.size(20.dp))
+                                    Spacer(Modifier.width(10.dp))
+                                    Text(
+                                        text = result.first,
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
-                            }
-
-                            // Confirm Button
-                            Button(
-                                onClick = {
-                                    onLocationSelected(selectedLatLng, addressText)
-                                    onDismiss()
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp),
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald)
-                            ) {
-                                Text("Confirm Location", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
                             }
                         }
                     }
                 }
             }
+
+            // My Location FAB floating high above bottom card (Always centers map pin directly to fresh live GPS position)
+            FloatingActionButton(
+                onClick = {
+                    if (ContextCompat.checkSelfPermission(dialogContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                        try {
+                            fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
+                                if (loc != null) {
+                                    updateAddress(MapLatLng(loc.latitude, loc.longitude))
+                                }
+                            }
+                            fusedLocationClient.getCurrentLocation(com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY, null)
+                                .addOnSuccessListener { loc ->
+                                    if (loc != null) {
+                                        updateAddress(MapLatLng(loc.latitude, loc.longitude))
+                                    }
+                                }
+                        } catch (e: SecurityException) {
+                            Toast.makeText(dialogContext, "Location permission required", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = 250.dp)
+                    .size(48.dp),
+                containerColor = Color.White,
+                contentColor = RoyalEmerald
+            ) {
+                Icon(Icons.Default.MyLocation, contentDescription = "My Location", modifier = Modifier.size(20.dp))
+            }
+
+            // Floating Bottom Panel Card (Positioned neatly at the bottom with 12dp margin)
+            Card(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+                    .fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = addressText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    val coordsText = "Lat: ${String.format("%.6f", selectedLatLng.latitude)}, Lon: ${String.format("%.6f", selectedLatLng.longitude)}"
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = RoyalEmerald,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = coordsText,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(
+                            onClick = {
+                                val rawCoords = "${selectedLatLng.latitude},${selectedLatLng.longitude}"
+                                val clipboard = dialogContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                clipboard.setPrimaryClip(ClipData.newPlainText("GPS Coordinates", rawCoords))
+                                Toast.makeText(dialogContext, "Raw coordinates copied!", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = "Copy coordinates",
+                                tint = RoyalEmerald,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            onLocationSelected(selectedLatLng, addressText)
+                            onDismiss()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald)
+                    ) {
+                        Text("Confirm Location", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
         }
     }
+}
 
 @Composable
 fun GiftSelectionSection(selectedGiftId: String?, onGiftSelect: (String?) -> Unit) {

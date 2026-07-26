@@ -109,6 +109,8 @@ dependencies {
   implementation("com.amplifyframework:aws-geo-location:2.14.0")
   implementation("com.amplifyframework:maplibre-adapter:2.14.0")
   implementation("org.maplibre.gl:android-sdk:9.6.0")
+  implementation("androidx.core:core-splashscreen:1.0.1")
+  implementation("org.osmdroid:osmdroid-android:6.1.18")
   implementation("com.google.android.gms:play-services-location:21.0.1")
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)

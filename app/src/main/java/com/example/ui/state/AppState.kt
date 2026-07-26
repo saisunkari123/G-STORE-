@@ -1,6 +1,7 @@
 package com.example.ui.state
 
 import android.content.Context
+import android.util.Log
 import java.util.UUID
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -614,38 +615,32 @@ object AppState {
         
         ioScope.launch {
             try {
-                // Check if phone exists in database (userRepository) first
-                val matchedUser = userRepository.getAllUsers().first().find {
-                    it.phone == formattedPhone
-                }
-                
-                if (matchedUser == null) {
+                // Look up user by phone to find their actual Cognito username ID
+                val existingUser = getUserByPhoneRemote(formattedPhone)
+                if (existingUser == null) {
                     withContext(Dispatchers.Main) {
-                        authError = "This phone number is not registered. Please sign up first."
                         isNetworkLoading = false
+                        authError = "Phone number is not registered ($cleanPhone). Please sign up first."
                     }
                     return@launch
                 }
-                
-                // If it exists, initiate reset password flow in Cognito
+
+                val targetUsername = existingUser.id
+
                 Amplify.Auth.resetPassword(
-                    formattedPhone,
+                    targetUsername,
                     { result: AuthResetPasswordResult ->
                         ioScope.launch(Dispatchers.Main) {
                             isNetworkLoading = false
+                            val destination = result.nextStep.codeDeliveryDetails?.destination
+                            if (!destination.isNullOrBlank()) {
+                                authError = "Code sent to $destination"
+                            }
                             onSuccess()
                         }
                     },
                     { error: AuthException ->
-                        ioScope.launch(Dispatchers.Main) {
-                            isNetworkLoading = false
-                            val msg = error.message ?: ""
-                            authError = when {
-                                msg.contains("LimitExceededException", ignoreCase = true) ->
-                                    "Attempt limit exceeded. Please try again later."
-                                else -> "Failed to send reset code: ${error.message}"
-                            }
-                        }
+                        handleForgotPasswordError(error)
                     }
                 )
             } catch (e: Exception) {
@@ -654,6 +649,24 @@ object AppState {
                     authError = "Error: ${e.localizedMessage}"
                     isNetworkLoading = false
                 }
+            }
+        }
+    }
+
+    private fun handleForgotPasswordError(error: AuthException) {
+        ioScope.launch(Dispatchers.Main) {
+            isNetworkLoading = false
+            val msg = error.message ?: ""
+            authError = when {
+                msg.contains("LimitExceededException", ignoreCase = true) ->
+                    "Attempt limit exceeded. Please try again later."
+                msg.contains("UserNotFoundException", ignoreCase = true) || msg.contains("not found", ignoreCase = true) || msg.contains("User does not exist", ignoreCase = true) ->
+                    "Phone number is not registered. Please check the number or sign up."
+                msg.contains("UserNotConfirmedException", ignoreCase = true) || msg.contains("not confirmed", ignoreCase = true) ->
+                    "User account is not confirmed. Please confirm sign up first."
+                msg.contains("InvalidParameterException", ignoreCase = true) || msg.contains("cannot reset", ignoreCase = true) ->
+                    "Cannot reset password: No verified email or phone associated with this account."
+                else -> "Failed to send reset code: ${error.message}"
             }
         }
     }
@@ -682,43 +695,70 @@ object AppState {
         
         authError = null
         isNetworkLoading = true
-        try {
-            // Confirm password reset flow in AWS Cognito using phone number
-            Amplify.Auth.confirmResetPassword(
-                formattedPhone,
-                newPassword,
-                code,
-                {
-                    ioScope.launch(Dispatchers.Main) {
-                        isNetworkLoading = false
-                        onSuccess()
-                    }
-                },
-                { error: AuthException ->
-                    ioScope.launch(Dispatchers.Main) {
-                        isNetworkLoading = false
-                        val msg = error.message ?: ""
-                        val friendlyMsg = when {
-                            msg.contains("CodeMismatchException", ignoreCase = true) ||
-                            msg.contains("incorrect code", ignoreCase = true) ||
-                            msg.contains("invalid code", ignoreCase = true) ->
-                                "The verification code is incorrect. Please check your email and try again."
-                            msg.contains("ExpiredCodeException", ignoreCase = true) ||
-                            msg.contains("expired", ignoreCase = true) ->
-                                "The verification code has expired. Please request a new one."
-                            msg.contains("InvalidPasswordException", ignoreCase = true) ||
-                            msg.contains("password", ignoreCase = true) ->
-                                "Password does not conform to safety requirements. Use at least 8 characters, uppercase, lowercase, numbers, and symbols."
-                            else -> "Failed to reset password: ${error.message}"
+        
+        ioScope.launch {
+            try {
+                val existingUser = getUserByPhoneRemote(formattedPhone)
+                val targetUsername = existingUser?.id ?: formattedPhone
+                
+                Amplify.Auth.confirmResetPassword(
+                    targetUsername,
+                    newPassword,
+                    code,
+                    {
+                        ioScope.launch(Dispatchers.Main) {
+                            isNetworkLoading = false
+                            onSuccess()
                         }
-                        authError = friendlyMsg
+                    },
+                    { error: AuthException ->
+                        if (targetUsername != formattedPhone) {
+                            Amplify.Auth.confirmResetPassword(
+                                formattedPhone,
+                                newPassword,
+                                code,
+                                {
+                                    ioScope.launch(Dispatchers.Main) {
+                                        isNetworkLoading = false
+                                        onSuccess()
+                                    }
+                                },
+                                { error2: AuthException ->
+                                    handleConfirmResetError(error2)
+                                }
+                            )
+                        } else {
+                            handleConfirmResetError(error)
+                        }
                     }
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    authError = "Error: ${e.localizedMessage}"
+                    isNetworkLoading = false
                 }
-            )
-        } catch (e: Exception) {
-            e.printStackTrace()
-            authError = "Error: ${e.localizedMessage}"
+            }
+        }
+    }
+
+    private fun handleConfirmResetError(error: AuthException) {
+        ioScope.launch(Dispatchers.Main) {
             isNetworkLoading = false
+            val msg = error.message ?: ""
+            authError = when {
+                msg.contains("CodeMismatchException", ignoreCase = true) ||
+                msg.contains("incorrect code", ignoreCase = true) ||
+                msg.contains("invalid code", ignoreCase = true) ->
+                    "The verification code is incorrect. Please check your code and try again."
+                msg.contains("ExpiredCodeException", ignoreCase = true) ||
+                msg.contains("expired", ignoreCase = true) ->
+                    "The verification code has expired. Please request a new one."
+                msg.contains("InvalidPasswordException", ignoreCase = true) ||
+                msg.contains("password", ignoreCase = true) ->
+                    "Password does not conform to safety requirements. Use at least 8 characters, uppercase, lowercase, numbers, and symbols."
+                else -> "Failed to reset password: ${error.message}"
+            }
         }
     }
 
@@ -955,11 +995,24 @@ object AppState {
         }
     }
 
+    private var isAutoSeeding = false
+
     fun refreshProductsFromCloud() {
         ioScope.launch {
             try {
                 if (::productRepository.isInitialized) {
                     productRepository.forceRefreshFromCloud()
+                    
+                    // Switch to main thread to check Compose state productsList safely
+                    withContext(Dispatchers.Main) {
+                        if (productsList.isEmpty() && !isAutoSeeding) {
+                            isAutoSeeding = true
+                            Log.i("AppState", "Products list is empty. Triggering automatic database seeding...")
+                            seedTestData {
+                                isAutoSeeding = false
+                            }
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
