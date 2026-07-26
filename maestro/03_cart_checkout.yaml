@@ -2,8 +2,12 @@ appId: com.aistudio.ricemart.pkqmsx
 ---
 - launchApp
 
+# Wait for app to finish splash screen loading on slow CI emulator
+- extendedWaitUntil:
+    visible: "10 digit number"
+    timeout: 15000
+
 # Login first
-- assertVisible: "10 digit number"
 - tapOn: "10 digit number"
 - inputText: "6300028491"
 - tapOn: "••••••••"
@@ -13,4 +17,4 @@ appId: com.aistudio.ricemart.pkqmsx
 # Wait for Home Screen
 - extendedWaitUntil:
     visible: "G-STORE"
-    timeout: 10000
+    timeout: 15000
