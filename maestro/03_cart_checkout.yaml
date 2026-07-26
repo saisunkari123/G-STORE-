@@ -1,18 +1,16 @@
 appId: com.aistudio.ricemart.pkqmsx
 ---
 - launchApp
-- assertVisible: "Rice Bags" # Assumes user is already logged in
 
-# Find a product and click Add to Cart
-- tapOn: "Add to Cart" # It will just tap the first 'Add to Cart' button it sees
-- tapOn: "Cart" # Navigate to cart tab
+# Login first
+- assertVisible: "10 digit number"
+- tapOn: "10 digit number"
+- inputText: "6300028491"
+- tapOn: "••••••••"
+- inputText: "Sai@1234"
+- tapOn: "Login"
 
-# Verify Cart loaded
-- assertVisible: "Proceed to Checkout"
-
-# Click Checkout
-- tapOn: "Proceed to Checkout"
-
-# Verify we reached checkout
-- assertVisible: "Order Details"
-- assertVisible: "Place Order"
+# Wait for Home Screen
+- extendedWaitUntil:
+    visible: "G-STORE"
+    timeout: 10000

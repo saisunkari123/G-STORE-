@@ -1,19 +1,26 @@
 appId: com.aistudio.ricemart.pkqmsx
 ---
 - launchApp
-- assertVisible: "Rice Bags" # Assumes user is already logged in
 
-# Click on a Category filter
-- tapOn: "Rice Bags"
-- tapOn: "Sort By" # This opens the sort bottom sheet
+# Login first
+- assertVisible: "10 digit number"
+- tapOn: "10 digit number"
+- inputText: "6300028491"
+- tapOn: "••••••••"
+- inputText: "Sai@1234"
+- tapOn: "Login"
 
-# Select the Price: Low to High filter
+# Wait for Home Screen
+- extendedWaitUntil:
+    visible: "G-STORE"
+    timeout: 10000
+
+# Open Sort menu
+- tapOn: "Sort By"
+
+# Select Price: Low to High
 - tapOn: "Price: Low to High"
 
-# Wait a second to allow the UI to update
 - extendedWaitUntil:
-    visible: "Price: Low to High" # Just checking the UI updated the label
-    timeout: 3000
-
-# Optionally, you can add assertions here if you know exactly what product should appear first!
-# e.g. - assertVisible: "26kg Sona Masoori"
+    visible: "Price: Low to High"
+    timeout: 5000

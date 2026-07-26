@@ -1,10 +1,8 @@
 appId: com.aistudio.ricemart.pkqmsx
 ---
 - launchApp
-# Switch to the Login Tab (App opens to Register by default)
-- tapOn: "Already have an account.*"
 
-# Wait for Login screen to appear
+# Wait for Login screen to appear (App opens to Login form by default)
 - assertVisible: "10 digit number"
 
 # Type in Phone Number
@@ -19,4 +17,6 @@ appId: com.aistudio.ricemart.pkqmsx
 - tapOn: "Login"
 
 # Verify we reached the Customer Home Screen
-- assertVisible: "Rice Bags"
+- extendedWaitUntil:
+    visible: "G-STORE"
+    timeout: 10000
