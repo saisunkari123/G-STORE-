@@ -3,10 +3,22 @@
     <!-- Base app theme — no action bar -->
     <style name="Theme.MyApplication" parent="android:Theme.DeviceDefault.NoActionBar" />
 
-    <!-- Splash screen theme — shown for a split second while the app process boots -->
-    <!-- No image/icon here — just the solid dark green color. Compose renders the real text splash. -->
+    <!--
+        Splash screen theme.
+        On Android 12+ the system draws a mandatory splash window with an icon.
+        We set that icon to a fully transparent 1×1 vector so nothing is visible —
+        the user just sees the solid dark-green background.
+        On pre-12 devices, windowBackground does the same job.
+        Once Compose loads, our SplashScreen composable (pure text) takes over.
+    -->
     <style name="Theme.MyApplication.Starting" parent="Theme.MyApplication">
+        <!-- Android 12+ system splash: solid green background, invisible icon -->
         <item name="android:windowSplashScreenBackground" tools:targetApi="31">#005A3E</item>
+        <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="31">@drawable/splash_icon_transparent</item>
+        <item name="android:windowSplashScreenIconBackgroundColor" tools:targetApi="31">#005A3E</item>
+        <!-- Pre-Android 12: just a green window while loading -->
         <item name="android:windowBackground">@color/splash_bg_color</item>
+        <!-- After system splash dismisses, switch to the base theme -->
+        <item name="postSplashScreenTheme" tools:ignore="PrivateResource">@style/Theme.MyApplication</item>
     </style>
 </resources>
