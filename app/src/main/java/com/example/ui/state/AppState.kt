@@ -612,13 +612,32 @@ object AppState {
         
         ioScope.launch {
             try {
-                // Build candidate username list for AWS Cognito
-                // Primary: formattedPhone (+919876543210), Secondary: cleanPhone (9876543210), Tertiary: GraphQL/Room User ID
-                val candidates = mutableListOf(formattedPhone, cleanPhone)
-                try {
-                    val existingUser = getUserByPhoneRemote(formattedPhone)
-                    existingUser?.id?.let { if (it !in candidates) candidates.add(it) }
-                } catch (_: Exception) {}
+                // 1. Pre-check: Verify user is registered in remote AppSync DB or local Room DB
+                var existingUser = getUserByPhoneRemote(formattedPhone)
+                if (existingUser == null) {
+                    existingUser = getUserByPhoneRemote(cleanPhone)
+                }
+                if (existingUser == null) {
+                    val localUsers = userRepository.getAllUsers().firstOrNull() ?: emptyList()
+                    existingUser = localUsers.firstOrNull { 
+                        it.phone == formattedPhone || it.phone == cleanPhone || it.phone.endsWith(cleanPhone)
+                    }
+                }
+
+                if (existingUser == null) {
+                    withContext(Dispatchers.Main) {
+                        isNetworkLoading = false
+                        authError = "Phone number is not registered ($cleanPhone). Please check the number or sign up."
+                    }
+                    return@launch
+                }
+
+                // 2. Build candidate username list for AWS Cognito using verified user details
+                val candidates = mutableListOf<String>()
+                if (existingUser.phone.isNotBlank()) candidates.add(existingUser.phone)
+                if (formattedPhone !in candidates) candidates.add(formattedPhone)
+                if (cleanPhone !in candidates) candidates.add(cleanPhone)
+                if (existingUser.id.isNotBlank() && existingUser.id !in candidates) candidates.add(existingUser.id)
 
                 fun tryNextCandidate(index: Int) {
                     if (index >= candidates.size) {
@@ -639,7 +658,7 @@ object AppState {
                                 authError = if (!destination.isNullOrBlank()) {
                                     "Verification code sent to $destination"
                                 } else {
-                                    "Verification code sent via SMS/Email"
+                                    "Verification code sent via SMS"
                                 }
                                 onSuccess()
                             }
@@ -662,7 +681,7 @@ object AppState {
             } catch (e: Exception) {
                 e.printStackTrace()
                 withContext(Dispatchers.Main) {
-                    authError = "Error: ${e.localizedMessage}"
+                    authError = "Phone number is not registered ($cleanPhone). Please check the number or sign up."
                     isNetworkLoading = false
                 }
             }
