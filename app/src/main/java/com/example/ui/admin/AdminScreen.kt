@@ -2054,7 +2054,11 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
                                     saveProductWithImage(downloadUrl, nameEn, brand, descEn, selectedCategoryId, existingProduct, onDismiss)
                                 } catch (e: Exception) {
                                     e.printStackTrace()
-                                    uploadError = "Image upload failed: ${e.message ?: e.javaClass.simpleName}"
+                                    uploadError = if (com.example.util.NetworkUtils.isOfflineError(e)) {
+                                        "Device is offline. Please check your internet connection before uploading images."
+                                    } else {
+                                        "Image upload failed: ${e.message ?: e.javaClass.simpleName}"
+                                    }
                                 } finally {
                                     isUploading = false
                                 }

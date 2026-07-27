@@ -441,15 +441,7 @@ object AppState {
                                 Amplify.Auth.signOut { }
                                 authError = "Stale session detected. Please click login again."
                             } else {
-                                authError = when {
-                                    msg.contains("UserNotConfirmedException", ignoreCase = true) || msg.contains("not confirmed", ignoreCase = true) ->
-                                        "User is not confirmed. Please confirm sign up first."
-                                    msg.contains("UserNotFoundException", ignoreCase = true) || msg.contains("not found", ignoreCase = true) ->
-                                        "Email is not registered. Please create an account."
-                                    msg.contains("NotAuthorizedException", ignoreCase = true) || msg.contains("not authorized", ignoreCase = true) ->
-                                        "Password incorrect. Please try again."
-                                    else -> "Login failed: ${error.message}"
-                                }
+                                authError = com.example.util.NetworkUtils.getFriendlyAuthErrorMessage(error, "Login")
                             }
                         }
                     }
@@ -457,7 +449,7 @@ object AppState {
             } catch (e: Exception) {
                 e.printStackTrace()
                 withContext(Dispatchers.Main) {
-                    authError = "Unexpected error: ${e.localizedMessage}"
+                    authError = com.example.util.NetworkUtils.getFriendlyAuthErrorMessage(e, "Login")
                     isNetworkLoading = false
                 }
             }
@@ -595,7 +587,7 @@ object AppState {
             } catch (e: Exception) {
                 e.printStackTrace()
                 withContext(Dispatchers.Main) {
-                    authError = "Unexpected error: ${e.localizedMessage}"
+                    authError = com.example.util.NetworkUtils.getFriendlyAuthErrorMessage(e, "Registration")
                     isNetworkLoading = false
                 }
             }
@@ -847,20 +839,14 @@ object AppState {
                             Amplify.Auth.signOut { }
                             authError = "Stale session detected. Please click login again."
                         } else {
-                            authError = when {
-                                msg.contains("UserNotFoundException", ignoreCase = true) || msg.contains("not found", ignoreCase = true) ->
-                                    "Admin email is not registered."
-                                msg.contains("NotAuthorizedException", ignoreCase = true) || msg.contains("not authorized", ignoreCase = true) ->
-                                    "Password incorrect. Please try again."
-                                else -> "Admin login failed: ${error.message}"
-                            }
+                            authError = com.example.util.NetworkUtils.getFriendlyAuthErrorMessage(error, "Admin login")
                         }
                     }
                 }
             )
         } catch (e: Exception) {
             e.printStackTrace()
-            authError = "Unexpected error: ${e.localizedMessage}"
+            authError = com.example.util.NetworkUtils.getFriendlyAuthErrorMessage(e, "Admin login")
             isNetworkLoading = false
         }   }
 
