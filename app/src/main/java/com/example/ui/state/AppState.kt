@@ -76,6 +76,7 @@ object AppState {
                 giftConfigsList = emptyList()
                 addressesList = emptyList()
                 ordersList = emptyList()
+                cartItems = emptyMap()
             }
         }
     var isInitializingSession by mutableStateOf(true)
@@ -405,10 +406,8 @@ object AppState {
                                                                 authError = null
                                                                 isNetworkLoading = false
                                                                 appContext?.let {
-                                                                    val savedCart = com.example.util.CartStorageManager.loadCartItems(it)
-                                                                    if (savedCart.isNotEmpty()) {
-                                                                        cartItems = savedCart
-                                                                    }
+                                                                    val savedCart = com.example.util.CartStorageManager.loadCartItems(it, resolvedUser.id)
+                                                                    cartItems = savedCart
                                                                 }
                                                             }
                                                         }
@@ -1415,6 +1414,8 @@ object AppState {
                                     activeRole = resolvedUser.role
                                     showLoginScreen = false
                                     authError = null
+                                    val savedCart = com.example.util.CartStorageManager.loadCartItems(context.applicationContext, resolvedUser.id)
+                                    cartItems = savedCart
                                 }
                             } catch (e: Exception) {
                                 e.printStackTrace()
@@ -1454,7 +1455,7 @@ object AppState {
             val newMap = cartItems.toMutableMap()
             newMap[key] = currentQty + 1
             cartItems = newMap
-            appContext?.let { com.example.util.CartStorageManager.saveCartItems(it, newMap) }
+            appContext?.let { com.example.util.CartStorageManager.saveCartItems(it, currentUser?.id, newMap) }
         }
     }
 
@@ -1472,12 +1473,12 @@ object AppState {
             newMap[key] = safeQty
         }
         cartItems = newMap
-        appContext?.let { com.example.util.CartStorageManager.saveCartItems(it, newMap) }
+        appContext?.let { com.example.util.CartStorageManager.saveCartItems(it, currentUser?.id, newMap) }
     }
 
     fun clearCart() {
         cartItems = emptyMap()
-        appContext?.let { com.example.util.CartStorageManager.clearCart(it) }
+        appContext?.let { com.example.util.CartStorageManager.clearCart(it, currentUser?.id) }
     }
 
     fun addNewAddress(house: String, landmark: String, distance: Double, lat: Double = 0.0, lon: Double = 0.0) {
