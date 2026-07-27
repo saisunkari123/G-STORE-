@@ -1357,7 +1357,7 @@ object AppState {
                     }
                     flow.collect { list ->
                         withContext(Dispatchers.Main) {
-                            ordersList = list
+                            ordersList = list.sortedByDescending { it.createdAt }
                         }
                     }
                 }

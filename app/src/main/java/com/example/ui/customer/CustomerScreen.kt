@@ -1764,7 +1764,7 @@ fun CustomerOrdersView() {
                 }
             }
         } else {
-            items(AppState.ordersList) { order ->
+            items(AppState.ordersList.sortedByDescending { it.createdAt }) { order ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
