@@ -1,0 +1,50 @@
+{
+  "Policies": {
+    "PasswordPolicy": {
+      "MinimumLength": 8,
+      "RequireUppercase": false,
+      "RequireLowercase": false,
+      "RequireNumbers": false,
+      "RequireSymbols": false,
+      "TemporaryPasswordValidityDays": 7
+    },
+    "SignInPolicy": {
+      "AllowedFirstAuthFactors": [
+        "PASSWORD"
+      ]
+    }
+  },
+  "DeletionProtection": "ACTIVE",
+  "LambdaConfig": {
+    "PreSignUp": "arn:aws:lambda:us-east-1:359932033793:function:PreSignUpAutoConfirm"
+  },
+  "VerificationMessageTemplate": {
+    "DefaultEmailOption": "CONFIRM_WITH_CODE"
+  },
+  "MfaConfiguration": "OFF",
+  "EmailConfiguration": {
+    "EmailSendingAccount": "COGNITO_DEFAULT"
+  },
+  "SmsConfiguration": {
+    "SnsCallerArn": "arn:aws:iam::359932033793:role/service-role/CognitoIdpSNSServiceRole",
+    "ExternalId": "e682f869-8567-466c-9cdc-100f6996ca51",
+    "SnsRegion": "us-east-1"
+  },
+  "UserPoolTags": {},
+  "AdminCreateUserConfig": {
+    "AllowAdminCreateUserOnly": false,
+    "UnusedAccountValidityDays": 7
+  },
+  "AccountRecoverySetting": {
+    "RecoveryMechanisms": [
+      {
+        "Priority": 1,
+        "Name": "verified_email"
+      },
+      {
+        "Priority": 2,
+        "Name": "verified_phone_number"
+      }
+    ]
+  }
+}
