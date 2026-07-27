@@ -313,22 +313,12 @@ fun CustomerCatalogView(
 
     Scaffold(
         topBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(RoyalEmerald, Color(0xFF022C22))
-                        )
-                    )
-                    .statusBarsPadding()
-            ) {
-                val context = androidx.compose.ui.platform.LocalContext.current
-                val isOnline by androidx.compose.runtime.produceState(initialValue = true) {
-                    com.example.util.NetworkMonitor.observeNetworkStatus(context).collect { value = it }
-                }
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val isOnline by androidx.compose.runtime.produceState(initialValue = true) {
+                com.example.util.NetworkMonitor.observeNetworkStatus(context).collect { value = it }
+            }
 
+            Column(modifier = Modifier.fillMaxWidth()) {
                 androidx.compose.animation.AnimatedVisibility(visible = !isOnline) {
                     Surface(
                         color = Color(0xFFDC2626),
@@ -337,6 +327,7 @@ fun CustomerCatalogView(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .statusBarsPadding()
                                 .padding(vertical = 6.dp, horizontal = 16.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
@@ -351,18 +342,28 @@ fun CustomerCatalogView(
                     }
                 }
 
-                Column(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp)
+                        .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(RoyalEmerald, Color(0xFF022C22))
+                            )
+                        )
+                        .then(if (isOnline) Modifier.statusBarsPadding() else Modifier)
                 ) {
-                    // Top Row: Logo & Title + Cart & Logout Icons
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Top Row: Logo & Title + Cart & Logout Icons
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
                             Box(
                                 modifier = Modifier
                                     .size(32.dp)
