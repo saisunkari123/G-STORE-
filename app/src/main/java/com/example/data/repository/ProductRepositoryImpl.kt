@@ -60,4 +60,12 @@ class ProductRepositoryImpl(
     override suspend fun clearGiftConfigs() {
         // Not implemented for local DB yet
     }
+
+    override fun getAppConfig(): kotlinx.coroutines.flow.Flow<com.example.domain.model.AppConfig> =
+        kotlinx.coroutines.flow.flowOf(com.example.domain.model.AppConfig())
+
+    override suspend fun saveAppConfig(config: com.example.domain.model.AppConfig) {
+        // Not implemented for local DB — AWS handles app config
+    }
 }
+

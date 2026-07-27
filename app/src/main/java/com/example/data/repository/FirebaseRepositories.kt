@@ -117,6 +117,15 @@ class FirebaseProductRepositoryImpl(
     override suspend fun clearGiftConfigs() {
         // Dummy implementation since AWS is primarily used now
     }
+
+    override fun getAppConfig(): Flow<AppConfig> = kotlinx.coroutines.flow.flow {
+        // Dummy — Firebase repo not used; AWS handles app config
+        emit(AppConfig())
+    }
+
+    override suspend fun saveAppConfig(config: AppConfig) {
+        // Dummy — Firebase repo not used; AWS handles app config
+    }
 }
 
 class FirebaseOrderRepositoryImpl(

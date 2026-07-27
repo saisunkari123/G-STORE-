@@ -62,6 +62,9 @@ object AppState {
                 if (giftsJob == null || !giftsJob!!.isActive) {
                     observeGifts()
                 }
+                if (appConfigJob == null || !appConfigJob!!.isActive) {
+                    observeAppConfig()
+                }
                 observeAddresses(value.id)
                 observeOrders(value.id, value.role)
             } else {
@@ -69,6 +72,7 @@ object AppState {
                 productsJob?.cancel()
                 categoriesJob?.cancel()
                 giftsJob?.cancel()
+                appConfigJob?.cancel()
                 addressesJob?.cancel()
                 ordersJob?.cancel()
                 productsList = emptyList()
@@ -92,10 +96,13 @@ object AppState {
     // Role-based Passwords
     private val ADMIN_PASSWORD = com.example.BuildConfig.ADMIN_PASSWORD
 
-    // Shop Location & Delivery Boundaries (City Super Market, Rajam, Vizianagaram)
+    // Shop Location (City Super Market, Rajam, Vizianagaram)
     const val SHOP_LATITUDE = 18.4482
     const val SHOP_LONGITUDE = 83.6616
-    const val MAX_DELIVERY_DISTANCE_KM = 10.0
+
+    // Admin-configurable store settings (loaded from cloud; defaults shown)
+    var minimumOrderAmount by mutableStateOf(150.0)
+    var deliveryRadiusKm by mutableStateOf(10.0)
 
     // 3. Observed Lists connected to Room Database
     var productsList by mutableStateOf(emptyList<Product>())
@@ -924,6 +931,7 @@ object AppState {
 
     private var categoriesJob: Job? = null
     private var giftsJob: Job? = null
+    private var appConfigJob: Job? = null
 
     private fun observeProducts() {
         productsJob?.cancel()
@@ -969,6 +977,46 @@ object AppState {
                         withContext(Dispatchers.Main) {
                             giftConfigsList = list
                         }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    /** Observes the cloud-synced AppConfig flow and updates minimumOrderAmount + deliveryRadiusKm. */
+    private fun observeAppConfig() {
+        appConfigJob?.cancel()
+        appConfigJob = ioScope.launch {
+            try {
+                if (::productRepository.isInitialized) {
+                    productRepository.getAppConfig().collect { config ->
+                        withContext(Dispatchers.Main) {
+                            minimumOrderAmount = config.minimumOrderAmount
+                            deliveryRadiusKm = config.deliveryRadiusKm
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    /** Called by admin to persist updated store settings to cloud. */
+    fun saveStoreSettings(newMinimumOrder: Double, newRadiusKm: Double) {
+        ioScope.launch {
+            try {
+                if (::productRepository.isInitialized) {
+                    val config = com.example.domain.model.AppConfig(
+                        minimumOrderAmount = newMinimumOrder,
+                        deliveryRadiusKm = newRadiusKm
+                    )
+                    productRepository.saveAppConfig(config)
+                    withContext(Dispatchers.Main) {
+                        minimumOrderAmount = newMinimumOrder
+                        deliveryRadiusKm = newRadiusKm
                     }
                 }
             } catch (e: Exception) {
@@ -1563,11 +1611,20 @@ object AppState {
             return@withContext "No address selected"
         }
 
-        if (selectedAddr.distanceKm > MAX_DELIVERY_DISTANCE_KM) {
+        if (selectedAddr.distanceKm > deliveryRadiusKm) {
             withContext(Dispatchers.Main) {
                 isNetworkLoading = false
             }
-            return@withContext "Sorry, we only deliver within $MAX_DELIVERY_DISTANCE_KM km of the shop."
+            return@withContext "Sorry, we only deliver within ${deliveryRadiusKm.toInt()} km of the shop. Your address is ${String.format("%.1f", selectedAddr.distanceKm)} km away."
+        }
+
+        // Minimum order amount check
+        if (cartSubtotal < minimumOrderAmount) {
+            withContext(Dispatchers.Main) {
+                isNetworkLoading = false
+            }
+            val needed = minimumOrderAmount - cartSubtotal
+            return@withContext "Minimum order amount is ₹${minimumOrderAmount.toInt()}. Please add ₹${needed.toInt()} more to your cart."
         }
 
         val currentItems = mutableListOf<OrderItem>()

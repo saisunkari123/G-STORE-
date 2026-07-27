@@ -65,10 +65,15 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
     private val categoriesState = MutableStateFlow(persister.loadList("aws_categories.json", Category::class.java).ifEmpty { defaultCategories })
     private val giftConfigsState = MutableStateFlow(persister.loadList("aws_gifts.json", GiftItemConfig::class.java))
     private val productsState = MutableStateFlow(persister.loadList("aws_products.json", Product::class.java).ifEmpty { emptyList() })
+    private val appConfigState = MutableStateFlow(run {
+        // Load persisted AppConfig from local JSON; default to 150/10 if not found
+        val saved = persister.loadList("aws_app_config.json", AppConfig::class.java)
+        saved.firstOrNull() ?: AppConfig(minimumOrderAmount = 150.0, deliveryRadiusKm = 10.0)
+    })
     private val syncScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     init {
-        // Start background 5-second cloud sync so all devices always see fresh product list
+        // Start background 5-second cloud sync so all devices always see fresh product, gift, and config data
         startPeriodicCloudSync()
     }
 
@@ -186,24 +191,40 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
                              }
                              
                              // Look for sys_gifts configuration record
-                             val sysGiftsProd = cloudProducts.find { it.id == "sys_gifts" }
-                             if (sysGiftsProd != null) {
-                                 try {
-                                     val type = object : TypeToken<List<GiftItemConfig>>() {}.type
-                                     val gifts: List<GiftItemConfig> = gson.fromJson(sysGiftsProd.nameEn, type) ?: emptyList()
-                                     giftConfigsState.value = gifts
-                                     persister.saveList("aws_gifts.json", gifts)
-                                 } catch (e: Exception) {
-                                     Log.e("AwsProduct", "Failed to parse gifts from sys_gifts", e)
-                                 }
-                             } else {
-                                 if (giftConfigsState.value.isNotEmpty()) {
-                                     syncScope.launch { saveGiftConfigs(giftConfigsState.value) }
-                                 }
-                             }
-                             
-                             // Filter sys_categories and sys_gifts out of customer-facing products list
-                             val actualProducts = cloudProducts.filter { it.id != "sys_categories" && it.id != "sys_gifts" }
+                              val sysGiftsProd = cloudProducts.find { it.id == "sys_gifts" }
+                              if (sysGiftsProd != null) {
+                                  try {
+                                      val type = object : TypeToken<List<GiftItemConfig>>() {}.type
+                                      val gifts: List<GiftItemConfig> = gson.fromJson(sysGiftsProd.nameEn, type) ?: emptyList()
+                                      giftConfigsState.value = gifts
+                                      persister.saveList("aws_gifts.json", gifts)
+                                  } catch (e: Exception) {
+                                      Log.e("AwsProduct", "Failed to parse gifts from sys_gifts", e)
+                                  }
+                              } else {
+                                  if (giftConfigsState.value.isNotEmpty()) {
+                                      syncScope.launch { saveGiftConfigs(giftConfigsState.value) }
+                                  }
+                              }
+
+                              // Look for sys_config (admin store settings: minimum order, delivery radius)
+                              val sysConfigProd = cloudProducts.find { it.id == "sys_config" }
+                              if (sysConfigProd != null) {
+                                  try {
+                                      val config = gson.fromJson(sysConfigProd.nameEn, AppConfig::class.java)
+                                      if (config != null) {
+                                          appConfigState.value = config
+                                          persister.saveList("aws_app_config.json", listOf(config))
+                                      }
+                                  } catch (e: Exception) {
+                                      Log.e("AwsProduct", "Failed to parse app config from sys_config", e)
+                                  }
+                              }
+
+                              // Filter all system records out of customer-facing products list
+                              val actualProducts = cloudProducts.filter {
+                                  it.id != "sys_categories" && it.id != "sys_gifts" && it.id != "sys_config"
+                              }
                              productsState.value = actualProducts
                              persister.saveList("aws_products.json", actualProducts)
                              Log.i("AwsProduct", "Cloud sync: ${actualProducts.size} products loaded from AppSync")
@@ -252,6 +273,29 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
             deleteProduct("sys_categories")
         } catch (e: Exception) {
             Log.e("AwsProduct", "Failed to delete categories metadata from cloud", e)
+        }
+    }
+
+    override fun getAppConfig(): Flow<AppConfig> = appConfigState
+
+    override suspend fun saveAppConfig(config: AppConfig) {
+        appConfigState.value = config
+        persister.saveList("aws_app_config.json", listOf(config))
+        // Persist to AppSync as sys_config product so all devices get it on next poll
+        val sysProd = Product(
+            id = "sys_config",
+            categoryId = "metadata",
+            nameEn = gson.toJson(config),
+            brand = "System",
+            descriptionEn = "System App Config",
+            variants = emptyList(),
+            isEnabled = false,
+            isAvailable = false
+        )
+        try {
+            saveProduct(sysProd)
+        } catch (e: Exception) {
+            Log.e("AwsProduct", "Failed to save app config to cloud", e)
         }
     }
 
@@ -390,7 +434,118 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
 
 class AwsOrderRepositoryImpl(private val context: Context) : OrderRepository {
     private val persister = JsonPersister(context)
+    private val gson = Gson()
     private val ordersState = MutableStateFlow(persister.loadList("aws_orders.json", Order::class.java))
+    private val syncScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    init {
+        // Start polling AppSync for new orders every 10 seconds.
+        // This ensures admin sees new customer orders within 10s without relaunching the app.
+        startPeriodicOrderSync()
+    }
+
+    /** Polls AppSync listOrders every 10 seconds and merges results into ordersState. */
+    private fun startPeriodicOrderSync() {
+        syncScope.launch {
+            while (true) {
+                delay(10_000L)
+                try {
+                    fetchOrdersFromCloud()
+                } catch (e: Exception) {
+                    Log.w("AwsOrder", "Periodic order sync failed silently", e)
+                }
+            }
+        }
+    }
+
+    /**
+     * Fetches all orders from AppSync and merges them with local state.
+     * Remote wins on conflict (same id) — so admin sees the latest status from any device.
+     */
+    private suspend fun fetchOrdersFromCloud(): Unit = suspendCancellableCoroutine { cont ->
+        val query = """
+            query ListOrders {
+                listOrders(limit: 1000) {
+                    items {
+                        id
+                        userId
+                        customerName
+                        customerPhone
+                        addressHouseNo
+                        addressLandmark
+                        distanceKm
+                        subtotal
+                        deliveryFee
+                        totalAmount
+                        status
+                        createdAt
+                        itemsJson
+                    }
+                }
+            }
+        """.trimIndent()
+        val request = SimpleGraphQLRequest<String>(
+            query,
+            emptyMap<String, Any>(),
+            String::class.java,
+            GsonVariablesSerializer()
+        )
+        Amplify.API.query(request,
+            { response ->
+                try {
+                    val json = response.data
+                    if (json != null) {
+                        val root = gson.fromJson(json, Map::class.java)
+                        val listOrders = root["listOrders"] as? Map<*, *>
+                        val items = listOrders?.get("items") as? List<*>
+                        if (items != null) {
+                            val remoteOrders = items.mapNotNull { item ->
+                                try {
+                                    val itemJson = gson.toJson(item)
+                                    val raw = gson.fromJson(itemJson, Map::class.java)
+                                    val itemsJsonStr = raw["itemsJson"] as? String ?: "[]"
+                                    val itemsType = object : TypeToken<List<OrderItem>>() {}.type
+                                    val orderItems: List<OrderItem> = gson.fromJson(itemsJsonStr, itemsType) ?: emptyList()
+                                    val statusStr = raw["status"] as? String ?: "PENDING"
+                                    val status = try { OrderStatus.valueOf(statusStr) } catch (_: Exception) { OrderStatus.PENDING }
+                                    Order(
+                                        id = raw["id"] as? String ?: "",
+                                        userId = raw["userId"] as? String ?: "",
+                                        customerName = raw["customerName"] as? String ?: "",
+                                        customerPhone = raw["customerPhone"] as? String ?: "",
+                                        addressHouseNo = raw["addressHouseNo"] as? String ?: "",
+                                        addressLandmark = raw["addressLandmark"] as? String ?: "",
+                                        distanceKm = (raw["distanceKm"] as? Double) ?: 0.0,
+                                        subtotal = (raw["subtotal"] as? Double) ?: 0.0,
+                                        deliveryFee = (raw["deliveryFee"] as? Double) ?: 0.0,
+                                        totalAmount = (raw["totalAmount"] as? Double) ?: 0.0,
+                                        status = status,
+                                        createdAt = (raw["createdAt"] as? Double)?.toLong() ?: System.currentTimeMillis(),
+                                        items = orderItems
+                                    )
+                                } catch (e: Exception) { null }
+                            }
+                            // Merge: build map of local orders, overwrite/add remote orders
+                            val mergedMap = ordersState.value.associateBy { it.id }.toMutableMap()
+                            remoteOrders.forEach { mergedMap[it.id] = it }
+                            val mergedList = mergedMap.values.toList()
+                            ordersState.value = mergedList
+                            persister.saveList("aws_orders.json", mergedList)
+                            Log.i("AwsOrder", "Cloud sync: ${mergedList.size} orders merged from AppSync")
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.w("AwsOrder", "Order sync parse error", e)
+                } finally {
+                    cont.resume(Unit)
+                }
+            },
+            { error ->
+                Log.w("AwsOrder", "Order sync query failed", error)
+                cont.resume(Unit)
+            }
+        )
+    }
 
     override fun getAllOrders(): Flow<List<Order>> = ordersState
 

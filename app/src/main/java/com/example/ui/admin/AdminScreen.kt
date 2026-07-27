@@ -337,6 +337,7 @@ fun AdminSidePanelContent(onLogoutClicked: () -> Unit, onSeedClicked: () -> Unit
 
     var showGoalEditDialog by remember { mutableStateOf(false) }
     var newGoalText by remember { mutableStateOf("") }
+    var showStoreSettingsDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -676,6 +677,46 @@ fun AdminSidePanelContent(onLogoutClicked: () -> Unit, onSeedClicked: () -> Unit
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // ── Store Settings Card ──────────────────────────────────────────────────
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = RoyalEmerald.copy(alpha = 0.04f)),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(0.5.dp, RoyalEmerald.copy(alpha = 0.3f))
+        ) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("⚙ Store Settings", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+                    TextButton(
+                        onClick = { showStoreSettingsDialog = true },
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text("Edit", color = RoyalEmerald, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Min. Order", fontSize = 12.sp, color = Color.Gray)
+                    Text("₹${AppState.minimumOrderAmount.toInt()}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Delivery Radius", fontSize = 12.sp, color = Color.Gray)
+                    Text("${AppState.deliveryRadiusKm.toInt()} km", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         Button(
             onClick = onLogoutClicked,
             colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
@@ -686,6 +727,67 @@ fun AdminSidePanelContent(onLogoutClicked: () -> Unit, onSeedClicked: () -> Unit
             Spacer(modifier = Modifier.width(8.dp))
             Text("Log Out", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
         }
+    }
+
+    if (showStoreSettingsDialog) {
+        var minOrderText by remember { mutableStateOf(AppState.minimumOrderAmount.toInt().toString()) }
+        var radiusText by remember { mutableStateOf(AppState.deliveryRadiusKm.toInt().toString()) }
+        AlertDialog(
+            onDismissRequest = { showStoreSettingsDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Store Settings", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Changes save to cloud and reflect on all devices within 10 seconds.", fontSize = 12.sp, color = Color.Gray)
+                    OutlinedTextField(
+                        value = minOrderText,
+                        onValueChange = { minOrderText = it.filter { c -> c.isDigit() } },
+                        label = { Text("Minimum Order Amount (₹)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedBorderColor = RoyalEmerald,
+                            unfocusedBorderColor = Color.LightGray
+                        )
+                    )
+                    OutlinedTextField(
+                        value = radiusText,
+                        onValueChange = { radiusText = it.filter { c -> c.isDigit() } },
+                        label = { Text("Delivery Radius (km)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedBorderColor = RoyalEmerald,
+                            unfocusedBorderColor = Color.LightGray
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val newMin = minOrderText.toDoubleOrNull() ?: 150.0
+                        val newRadius = radiusText.toDoubleOrNull() ?: 10.0
+                        AppState.saveStoreSettings(newMin, newRadius)
+                        showStoreSettingsDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald)
+                ) {
+                    Text("Save to Cloud", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showStoreSettingsDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     if (showGoalEditDialog) {

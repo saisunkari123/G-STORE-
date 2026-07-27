@@ -103,3 +103,13 @@ data class GiftItemConfig(
     val imageUrl: String = "",
     val stockQuantity: Int = 0
 )
+
+/**
+ * Admin-configurable store-wide settings.
+ * Persisted as a special `sys_config` product in AppSync (nameEn = JSON).
+ * Synced to all devices via the 10-second product poll.
+ */
+data class AppConfig(
+    val minimumOrderAmount: Double = 150.0,
+    val deliveryRadiusKm: Double = 10.0
+)

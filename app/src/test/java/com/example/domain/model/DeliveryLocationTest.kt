@@ -20,17 +20,17 @@ class DeliveryLocationTest {
     }
 
     @Test
-    fun `location within 10km delivery radius is valid`() {
+    fun `location within delivery radius is valid`() {
         // Shop Location: Rajam (18.4482, 83.6616)
         // Customer Location: 2km away (18.4550, 83.6700)
         val distance = calculateDistanceKm(AppState.SHOP_LATITUDE, AppState.SHOP_LONGITUDE, 18.4550, 83.6700)
-        assertTrue("Distance $distance km should be within max delivery radius", distance <= AppState.MAX_DELIVERY_DISTANCE_KM)
+        assertTrue("Distance $distance km should be within delivery radius", distance <= AppState.deliveryRadiusKm)
     }
 
     @Test
-    fun `location beyond 10km delivery radius is rejected`() {
+    fun `location beyond delivery radius is rejected`() {
         // Customer Location: Vizianagaram city (~40km away)
         val distance = calculateDistanceKm(AppState.SHOP_LATITUDE, AppState.SHOP_LONGITUDE, 18.1124, 83.3976)
-        assertFalse("Distance $distance km should exceed max delivery radius", distance <= AppState.MAX_DELIVERY_DISTANCE_KM)
+        assertFalse("Distance $distance km should exceed delivery radius", distance <= AppState.deliveryRadiusKm)
     }
 }

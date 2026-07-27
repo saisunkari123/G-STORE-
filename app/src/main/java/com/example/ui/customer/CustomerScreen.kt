@@ -1446,8 +1446,9 @@ fun CheckoutBottomBar(selectedGiftId: String?) {
     val calendar = Calendar.getInstance()
     val hour = calendar.get(Calendar.HOUR_OF_DAY)
     val isClosed = (hour < 8 || hour >= 20) && !AppState.forceStoreOpen
-    // Button is enabled as long as store is open and not currently placing
-    val canCheckout = !isClosed && !AppState.isPlacingOrder
+    val isBelowMinimum = AppState.cartSubtotal < AppState.minimumOrderAmount
+    // Button enabled only when: store open, not placing, cart meets minimum order
+    val canCheckout = !isClosed && !AppState.isPlacingOrder && !isBelowMinimum
 
     var orderErrorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -1482,9 +1483,18 @@ fun CheckoutBottomBar(selectedGiftId: String?) {
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
+            } else if (isBelowMinimum) {
+                val needed = (AppState.minimumOrderAmount - AppState.cartSubtotal).toInt()
+                Text(
+                    "\u26a0 Minimum order \u20b9${AppState.minimumOrderAmount.toInt()} \u2014 Add \u20b9$needed more",
+                    color = DeepGold,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
             } else if (selectedAddress == null) {
                 Text(
-                    "⚠ Tap Place Order to add a delivery address",
+                    "\u26a0 Tap Place Order to add a delivery address",
                     color = DeepGold,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -1670,7 +1680,7 @@ fun AddressSelectionDialog(onDismiss: () -> Unit) {
                                                 .clickable { AppState.selectAddress(addr.id) }
                                         ) {
                                             Text(addr.houseNo, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
-                                            val isOutOfRange = addr.distanceKm > AppState.MAX_DELIVERY_DISTANCE_KM
+                                            val isOutOfRange = addr.distanceKm > AppState.deliveryRadiusKm
                                             if (isOutOfRange) {
                                                 Text(
                                                     text = "${addr.landmark} (${String.format("%.2f", addr.distanceKm)} KM) - Out of Delivery Range!",
