@@ -318,52 +318,29 @@ fun CustomerCatalogView(
                 com.example.util.NetworkMonitor.observeNetworkStatus(context).collect { value = it }
             }
 
-            Column(modifier = Modifier.fillMaxWidth()) {
-                androidx.compose.animation.AnimatedVisibility(visible = !isOnline) {
-                    Surface(
-                        color = Color(0xFFDC2626),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .statusBarsPadding()
-                                .padding(vertical = 6.dp, horizontal = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = "⚡ You are offline — displaying cached products",
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-
-                Box(
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(RoyalEmerald, Color(0xFF022C22))
+                        )
+                    )
+                    .statusBarsPadding()
+            ) {
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
-                        .background(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(RoyalEmerald, Color(0xFF022C22))
-                            )
-                        )
-                        .then(if (isOnline) Modifier.statusBarsPadding() else Modifier)
+                        .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp)
+                    // Top Row: Logo & Title + Compact Offline Badge + Cart & Logout Icons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        // Top Row: Logo & Title + Cart & Logout Icons
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
                                     .size(32.dp)
@@ -386,6 +363,23 @@ fun CustomerCatalogView(
                                     color = Color.White
                                 )
                             )
+                            androidx.compose.animation.AnimatedVisibility(visible = !isOnline) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Surface(
+                                        color = Color(0xFFDC2626),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "Offline",
+                                            color = Color.White,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                            }
                         }
                         
                         Row(verticalAlignment = Alignment.CenterVertically) {
