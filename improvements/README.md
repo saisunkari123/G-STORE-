@@ -17,11 +17,11 @@ Each sub-folder contains a detailed plan, root cause analysis, proposed implemen
 ## Status
 
 - [x] 01 — Real-Time Sync (Gifts + Orders)
-- [ ] 02 — Cloudinary Image Upload Fix
-- [ ] 03 — UI Text Scaling Fix
+- [x] 02 — Cloudinary Image Upload Fix
+- [x] 03 — UI Text Scaling Fix
 - [x] 04 — Minimum Order Amount
 - [x] 05 — Delivery Radius Config
-- [ ] 06 — Maps UI Improvement
+- [x] 06 — Maps UI Improvement
 
 ## Workflow
 1. Review plan in each sub-folder

@@ -839,6 +839,11 @@ fun AdminSidePanelContent(onLogoutClicked: () -> Unit, onSeedClicked: () -> Unit
 fun AdminOrdersView() {
     var searchQuery by remember { mutableStateOf("") }
     var selectedStatusFilter by remember { mutableStateOf<OrderStatus?>(null) }
+    var selectedOrderForMap by remember { mutableStateOf<Order?>(null) }
+
+    if (selectedOrderForMap != null) {
+        AdminOrderMapModal(order = selectedOrderForMap!!, onDismiss = { selectedOrderForMap = null })
+    }
 
     val filteredOrders = AppState.ordersList.filter { order ->
         val cleanQuery = searchQuery.replace("\\s".toRegex(), "").lowercase()
@@ -1041,15 +1046,30 @@ fun OrderCard(order: com.example.domain.model.Order) {
                 }
             }
 
-            Row(verticalAlignment = Alignment.Top, modifier = Modifier.padding(top = 4.dp)) {
-                Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp), tint = RoyalEmerald)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "${order.addressHouseNo}\n${order.addressLandmark}",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                    lineHeight = 18.sp
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.Top, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp), tint = RoyalEmerald)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "${order.addressHouseNo}\n${order.addressLandmark}",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        lineHeight = 18.sp
+                    )
+                }
+                TextButton(
+                    onClick = { selectedOrderForMap = order },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    modifier = Modifier.height(32.dp)
+                ) {
+                    Icon(Icons.Default.LocationOn, null, modifier = Modifier.size(14.dp), tint = RoyalEmerald)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("View Map", fontSize = 12.sp, color = RoyalEmerald, fontWeight = FontWeight.Bold)
+                }
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), thickness = 0.5.dp, color = Color.LightGray)
@@ -2145,9 +2165,14 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
                                         isUploading = false
                                         return@launch
                                     }
-                                    // Upload to Cloudinary on IO thread (blocking OkHttp call)
+                                    // Upload to Cloudinary with AWS S3 fallback on IO thread
                                     val downloadUrl = withContext(Dispatchers.IO) {
-                                        CloudinaryUploader.upload(tempFile)
+                                        try {
+                                            CloudinaryUploader.upload(tempFile)
+                                        } catch (cErr: Exception) {
+                                            android.util.Log.w("ProductEditor", "Cloudinary upload failed, falling back to AWS S3 Storage...", cErr)
+                                            com.example.data.repository.AwsStorageUploader.uploadProductImage(tempFile)
+                                        }
                                     }
                                     // Clean up temp file
                                     withContext(Dispatchers.IO) {
@@ -2382,3 +2407,111 @@ fun ManageGiftsDialog(onDismiss: () -> Unit) {
         }
     )
 }
+
+@Composable
+fun AdminOrderMapModal(order: Order, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val targetLat = if (order.latitude != 0.0) order.latitude else AppState.SHOP_LATITUDE
+    val targetLon = if (order.longitude != 0.0) order.longitude else AppState.SHOP_LONGITUDE
+    val hasExactCoords = order.latitude != 0.0 && order.longitude != 0.0
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier.fillMaxWidth().height(540.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 12.dp
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                // 1. Native OSMMapView showing exact location pin
+                AndroidView(
+                    factory = { ctx ->
+                        org.osmdroid.views.MapView(ctx).apply {
+                            setTileSource(org.osmdroid.tileprovider.tilesource.TileSourceFactory.MAPNIK)
+                            setMultiTouchControls(true)
+                            controller.setZoom(17.0) // House / street level zoom
+                            val point = org.osmdroid.util.GeoPoint(targetLat, targetLon)
+                            controller.setCenter(point)
+
+                            // Customer Location Marker (Red Pin)
+                            val customerMarker = org.osmdroid.views.overlay.Marker(this).apply {
+                                position = point
+                                title = "Customer: ${order.customerName}"
+                                snippet = "${order.addressHouseNo}, ${order.addressLandmark}"
+                                setAnchor(org.osmdroid.views.overlay.Marker.ANCHOR_CENTER, org.osmdroid.views.overlay.Marker.ANCHOR_BOTTOM)
+                            }
+                            overlays.add(customerMarker)
+
+                            // Shop Location Marker (Green Pin)
+                            val shopPoint = org.osmdroid.util.GeoPoint(AppState.SHOP_LATITUDE, AppState.SHOP_LONGITUDE)
+                            val shopMarker = org.osmdroid.views.overlay.Marker(this).apply {
+                                position = shopPoint
+                                title = "G-STORE Shop Location"
+                                setAnchor(org.osmdroid.views.overlay.Marker.ANCHOR_CENTER, org.osmdroid.views.overlay.Marker.ANCHOR_BOTTOM)
+                            }
+                            overlays.add(shopMarker)
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                // Top Header Overlay with Close Button
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp)
+                        .background(Color.White.copy(alpha = 0.92f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("📍 Customer Delivery Location", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = RoyalEmerald)
+                        Text(if (hasExactCoords) "Exact GPS Pin (17x Street Level Zoom)" else "Shop Area Location", fontSize = 11.sp, color = Color.Gray)
+                    }
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.Gray)
+                    }
+                }
+
+                // Bottom Floating Info & Open in Google Maps Button
+                Card(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("👤 ${order.customerName} (${order.customerPhone})", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                        Text("🏠 ${order.addressHouseNo}, ${order.addressLandmark}", fontSize = 12.sp, color = Color.Gray, maxLines = 2)
+                        Text("📏 Distance: ${String.format("%.2f", order.distanceKm)} km from store", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = RoyalEmerald)
+
+                        Button(
+                            onClick = {
+                                val uriStr = if (hasExactCoords) {
+                                    "https://www.google.com/maps/search/?api=1&query=${targetLat},${targetLon}"
+                                } else {
+                                    val q = java.net.URLEncoder.encode("${order.addressHouseNo}, ${order.addressLandmark}", "UTF-8")
+                                    "https://www.google.com/maps/search/?api=1&query=$q"
+                                }
+                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(uriStr))
+                                context.startActivity(intent)
+                            },
+                            modifier = Modifier.fillMaxWidth().height(44.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald)
+                        ) {
+                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Open in Google Maps App", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+

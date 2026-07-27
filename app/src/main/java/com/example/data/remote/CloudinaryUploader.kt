@@ -26,6 +26,12 @@ object CloudinaryUploader {
      * Throws an exception if the upload fails — the caller handles it.
      */
     fun upload(file: File): String {
+        if (CLOUD_NAME.isBlank() || CLOUD_NAME.startsWith("MY_CLOUDINARY") ||
+            API_KEY.isBlank() || API_KEY.startsWith("MY_CLOUDINARY") ||
+            API_SECRET.isBlank() || API_SECRET.startsWith("MY_CLOUDINARY")) {
+            throw Exception("Cloudinary credentials are not configured in BuildConfig. Please set valid Cloudinary API details in .env file.")
+        }
+
         val timestamp = (System.currentTimeMillis() / 1000).toString()
 
         // Cloudinary signing: sort params alphabetically, join as key=value&..., append secret
@@ -41,8 +47,8 @@ object CloudinaryUploader {
             doInput  = true
             doOutput = true
             useCaches = false
-            connectTimeout = 30_000
-            readTimeout    = 60_000
+            connectTimeout = 45_000
+            readTimeout    = 90_000
             setRequestProperty("Connection", "Keep-Alive")
             setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
         }
@@ -77,9 +83,12 @@ object CloudinaryUploader {
         val responseBody = if (responseCode in 200..299) {
             connection.inputStream.bufferedReader().readText()
         } else {
-            val err = try { connection.errorStream?.bufferedReader()?.readText() ?: "Unknown error" }
-                      catch (_: Exception) { "Unknown error" }
-            throw Exception("Cloudinary upload failed ($responseCode): $err")
+            val errRaw = try { connection.errorStream?.bufferedReader()?.readText() ?: "Unknown network error" }
+                          catch (_: Exception) { "Unknown network error" }
+            val formattedMsg = try {
+                JSONObject(errRaw).optJSONObject("error")?.optString("message") ?: errRaw
+            } catch (_: Exception) { errRaw }
+            throw Exception("Cloudinary upload failed ($responseCode): $formattedMsg")
         }
         connection.disconnect()
 

@@ -1684,6 +1684,8 @@ object AppState {
             addressHouseNo = selectedAddr.houseNo,
             addressLandmark = selectedAddr.landmark,
             distanceKm = selectedAddr.distanceKm,
+            latitude = selectedAddr.latitude,
+            longitude = selectedAddr.longitude,
             subtotal = cartSubtotal,
             deliveryFee = cartDeliveryFee,
             totalAmount = finalTotalAmount,

@@ -78,6 +78,8 @@ data class Order(
     val addressHouseNo: String = "",
     val addressLandmark: String = "",
     val distanceKm: Double = 0.0,
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
     val subtotal: Double = 0.0,
     val deliveryFee: Double = 0.0,
     val totalAmount: Double = 0.0,
