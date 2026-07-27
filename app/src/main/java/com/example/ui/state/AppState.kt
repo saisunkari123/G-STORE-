@@ -613,34 +613,53 @@ object AppState {
         
         ioScope.launch {
             try {
-                // Look up user by phone to find their actual Cognito username ID
-                val existingUser = getUserByPhoneRemote(formattedPhone)
-                if (existingUser == null) {
-                    withContext(Dispatchers.Main) {
-                        isNetworkLoading = false
-                        authError = "Phone number is not registered ($cleanPhone). Please sign up first."
-                    }
-                    return@launch
-                }
+                // Build candidate username list for AWS Cognito
+                // Primary: formattedPhone (+919876543210), Secondary: cleanPhone (9876543210), Tertiary: GraphQL/Room User ID
+                val candidates = mutableListOf(formattedPhone, cleanPhone)
+                try {
+                    val existingUser = getUserByPhoneRemote(formattedPhone)
+                    existingUser?.id?.let { if (it !in candidates) candidates.add(it) }
+                } catch (_: Exception) {}
 
-                val targetUsername = existingUser.id
-
-                Amplify.Auth.resetPassword(
-                    targetUsername,
-                    { result: AuthResetPasswordResult ->
+                fun tryNextCandidate(index: Int) {
+                    if (index >= candidates.size) {
                         ioScope.launch(Dispatchers.Main) {
                             isNetworkLoading = false
-                            val destination = result.nextStep.codeDeliveryDetails?.destination
-                            if (!destination.isNullOrBlank()) {
-                                authError = "Code sent to $destination"
-                            }
-                            onSuccess()
+                            authError = "Phone number is not registered ($cleanPhone). Please check the number or sign up."
                         }
-                    },
-                    { error: AuthException ->
-                        handleForgotPasswordError(error)
+                        return
                     }
-                )
+
+                    val targetUsername = candidates[index]
+                    Amplify.Auth.resetPassword(
+                        targetUsername,
+                        { result: AuthResetPasswordResult ->
+                            ioScope.launch(Dispatchers.Main) {
+                                isNetworkLoading = false
+                                val destination = result.nextStep.codeDeliveryDetails?.destination
+                                authError = if (!destination.isNullOrBlank()) {
+                                    "Verification code sent to $destination"
+                                } else {
+                                    "Verification code sent via SMS/Email"
+                                }
+                                onSuccess()
+                            }
+                        },
+                        { error: AuthException ->
+                            val msg = error.message ?: ""
+                            if (msg.contains("UserNotFoundException", ignoreCase = true) ||
+                                msg.contains("not found", ignoreCase = true) ||
+                                msg.contains("User does not exist", ignoreCase = true)) {
+                                // Try next candidate username format against Cognito
+                                tryNextCandidate(index + 1)
+                            } else {
+                                handleForgotPasswordError(error)
+                            }
+                        }
+                    )
+                }
+
+                tryNextCandidate(0)
             } catch (e: Exception) {
                 e.printStackTrace()
                 withContext(Dispatchers.Main) {
@@ -696,40 +715,47 @@ object AppState {
         
         ioScope.launch {
             try {
-                val existingUser = getUserByPhoneRemote(formattedPhone)
-                val targetUsername = existingUser?.id ?: formattedPhone
-                
-                Amplify.Auth.confirmResetPassword(
-                    targetUsername,
-                    newPassword,
-                    code,
-                    {
+                val candidates = mutableListOf(formattedPhone, cleanPhone)
+                try {
+                    val existingUser = getUserByPhoneRemote(formattedPhone)
+                    existingUser?.id?.let { if (it !in candidates) candidates.add(it) }
+                } catch (_: Exception) {}
+
+                fun tryConfirmNextCandidate(index: Int) {
+                    if (index >= candidates.size) {
                         ioScope.launch(Dispatchers.Main) {
                             isNetworkLoading = false
-                            onSuccess()
+                            authError = "Failed to reset password: Phone number format not recognized."
                         }
-                    },
-                    { error: AuthException ->
-                        if (targetUsername != formattedPhone) {
-                            Amplify.Auth.confirmResetPassword(
-                                formattedPhone,
-                                newPassword,
-                                code,
-                                {
-                                    ioScope.launch(Dispatchers.Main) {
-                                        isNetworkLoading = false
-                                        onSuccess()
-                                    }
-                                },
-                                { error2: AuthException ->
-                                    handleConfirmResetError(error2)
-                                }
-                            )
-                        } else {
-                            handleConfirmResetError(error)
-                        }
+                        return
                     }
-                )
+
+                    val targetUsername = candidates[index]
+                    Amplify.Auth.confirmResetPassword(
+                        targetUsername,
+                        newPassword,
+                        code,
+                        {
+                            ioScope.launch(Dispatchers.Main) {
+                                isNetworkLoading = false
+                                authError = "Password reset successfully! Please log in with your new password."
+                                onSuccess()
+                            }
+                        },
+                        { error: AuthException ->
+                            val msg = error.message ?: ""
+                            if (msg.contains("UserNotFoundException", ignoreCase = true) ||
+                                msg.contains("not found", ignoreCase = true) ||
+                                msg.contains("User does not exist", ignoreCase = true)) {
+                                tryConfirmNextCandidate(index + 1)
+                            } else {
+                                handleConfirmResetError(error)
+                            }
+                        }
+                    )
+                }
+
+                tryConfirmNextCandidate(0)
             } catch (e: Exception) {
                 e.printStackTrace()
                 withContext(Dispatchers.Main) {
