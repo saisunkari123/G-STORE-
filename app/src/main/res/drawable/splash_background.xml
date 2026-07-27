@@ -4,6 +4,6 @@
     <item
         android:drawable="@drawable/splash_text_logo"
         android:gravity="center"
-        android:width="380dp"
-        android:height="130dp" />
+        android:width="280dp"
+        android:height="80dp" />
 </layer-list>
