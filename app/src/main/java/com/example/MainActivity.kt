@@ -15,6 +15,7 @@ import com.amplifyframework.auth.cognito.AWSCognitoAuthPlugin
 import com.amplifyframework.core.Amplify
 import com.amplifyframework.geo.location.AWSLocationGeoPlugin
 import com.amplifyframework.storage.s3.AWSS3StoragePlugin
+import com.example.ui.SplashScreen
 import com.example.ui.admin.AdminScreen
 import com.example.ui.customer.CustomerScreen
 import com.example.ui.state.AppState
@@ -22,8 +23,9 @@ import com.example.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
+    // Dismiss the system splash immediately — Compose will handle the splash screen with real text
     val splashScreen = installSplashScreen()
-    splashScreen.setKeepOnScreenCondition { AppState.isInitializingSession }
+    splashScreen.setKeepOnScreenCondition { false }
 
     super.onCreate(savedInstanceState)
     try {
@@ -49,14 +51,17 @@ class MainActivity : ComponentActivity() {
               .fillMaxSize()
               .padding(innerPadding)
           ) {
-            if (AppState.showLoginScreen) {
-                com.example.ui.auth.LoginScreen()
+            if (AppState.isInitializingSession) {
+              // Show Compose splash (pure text, no image box) while session loads
+              SplashScreen()
+            } else if (AppState.showLoginScreen) {
+              com.example.ui.auth.LoginScreen()
             } else {
-                when (AppState.activeRole) {
-                  "CUSTOMER" -> CustomerScreen()
-                  "ADMIN" -> AdminScreen()
-                  else -> CustomerScreen()
-                }
+              when (AppState.activeRole) {
+                "CUSTOMER" -> CustomerScreen()
+                "ADMIN" -> AdminScreen()
+                else -> CustomerScreen()
+              }
             }
           }
         }
