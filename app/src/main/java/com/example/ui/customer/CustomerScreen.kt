@@ -324,6 +324,33 @@ fun CustomerCatalogView(
                     )
                     .statusBarsPadding()
             ) {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val isOnline by androidx.compose.runtime.produceState(initialValue = true) {
+                    com.example.util.NetworkMonitor.observeNetworkStatus(context).collect { value = it }
+                }
+
+                androidx.compose.animation.AnimatedVisibility(visible = !isOnline) {
+                    Surface(
+                        color = Color(0xFFDC2626),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp, horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "⚡ You are offline — displaying cached products",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1952,73 +1979,13 @@ fun CustomerOrdersView() {
 
 @Composable
 fun OrderProgressStepper(currentStep: Int) {
-    // Steps: 0 = Placed, 1 = Out for Delivery, 2 = Delivered
-    val steps = listOf("Placed", "Dispatched", "Delivered")
-    val icons = listOf(Icons.Default.CheckCircle, Icons.Default.LocalShipping, Icons.Default.Home)
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        steps.forEachIndexed { index, label ->
-            val isCompleted = index <= currentStep
-            val isCurrent = index == currentStep
-
-            // Step node
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.weight(1f)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Box(
-                        modifier = Modifier
-                            .size(if (isCurrent) 36.dp else 30.dp)
-                            .background(
-                                color = if (isCompleted) RoyalEmerald else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                                shape = CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = icons[index],
-                            contentDescription = null,
-                            tint = if (isCompleted) Color.White else Color.Gray,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                    // Pulse ring for current step
-                    if (isCurrent) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .background(RoyalEmerald.copy(alpha = 0.15f), CircleShape)
-                        )
-                    }
-                }
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = label,
-                    fontSize = 10.sp,
-                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isCompleted) RoyalEmerald else Color.Gray,
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            // Connector line between steps
-            if (index < steps.size - 1) {
-                Box(
-                    modifier = Modifier
-                        .weight(0.5f)
-                        .height(2.dp)
-                        .background(
-                            if (index < currentStep) RoyalEmerald
-                            else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                        )
-                )
-            }
-        }
+    val statusStr = when (currentStep) {
+        0 -> "PENDING"
+        1 -> "OUT_FOR_DELIVERY"
+        2 -> "DELIVERED"
+        else -> "PENDING"
     }
+    com.example.ui.components.OrderTrackingTimeline(orderStatus = statusStr)
 }
 
 
