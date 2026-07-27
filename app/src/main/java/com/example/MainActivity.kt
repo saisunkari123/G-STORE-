@@ -1,32 +1,30 @@
 package com.example
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import android.util.Log
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.amplifyframework.AmplifyException
 import com.amplifyframework.api.aws.AWSApiPlugin
 import com.amplifyframework.auth.cognito.AWSCognitoAuthPlugin
 import com.amplifyframework.core.Amplify
+import com.amplifyframework.geo.location.AWSLocationGeoPlugin
 import com.amplifyframework.storage.s3.AWSS3StoragePlugin
+import com.example.ui.SplashScreen
 import com.example.ui.admin.AdminScreen
 import com.example.ui.customer.CustomerScreen
 import com.example.ui.state.AppState
 import com.example.ui.theme.MyApplicationTheme
-import com.amplifyframework.geo.location.AWSLocationGeoPlugin
-import com.mapbox.mapboxsdk.Mapbox
-
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     val splashScreen = installSplashScreen()
-    splashScreen.setKeepOnScreenCondition { AppState.isInitializingSession }
+    splashScreen.setKeepOnScreenCondition { false }
 
     super.onCreate(savedInstanceState)
     try {
@@ -52,14 +50,14 @@ class MainActivity : ComponentActivity() {
               .fillMaxSize()
               .padding(innerPadding)
           ) {
-            if (AppState.showLoginScreen) {
+            if (AppState.isInitializingSession) {
+                SplashScreen()
+            } else if (AppState.showLoginScreen) {
                 com.example.ui.auth.LoginScreen()
             } else {
                 when (AppState.activeRole) {
                   "CUSTOMER" -> CustomerScreen()
                   "ADMIN" -> AdminScreen()
-                  // DELIVERY_BOY role is not implemented (local business — no riders).
-                  // Fallback to CustomerScreen to prevent a blank screen.
                   else -> CustomerScreen()
                 }
             }

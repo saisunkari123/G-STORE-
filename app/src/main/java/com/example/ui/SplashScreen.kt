@@ -1,38 +1,43 @@
 package com.example.ui
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.R
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun SplashScreen() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF005A3E),
-                        Color(0xFF003826)
-                    )
-                )
-            ),
+            .background(Color(0xFF005A3E)),
         contentAlignment = Alignment.Center
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.splash_text_logo),
-            contentDescription = "G-STORE A SIGN FOR QUALITY",
-            modifier = Modifier
-                .width(380.dp)
-                .height(130.dp)
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "G-STORE",
+                color = Color.White,
+                fontSize = 44.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "A SIGN FOR QUALITY",
+                color = Color(0xFFFBBF24),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 3.5.sp
+            )
+        }
     }
 }
