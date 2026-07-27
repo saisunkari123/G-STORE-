@@ -404,6 +404,12 @@ object AppState {
                                                                 showLoginScreen = false
                                                                 authError = null
                                                                 isNetworkLoading = false
+                                                                appContext?.let {
+                                                                    val savedCart = com.example.util.CartStorageManager.loadCartItems(it)
+                                                                    if (savedCart.isNotEmpty()) {
+                                                                        cartItems = savedCart
+                                                                    }
+                                                                }
                                                             }
                                                         }
                                                     }
@@ -1338,10 +1344,18 @@ object AppState {
     }
 
     private var isDbInitialized = false
+    private var appContext: Context? = null
 
     fun initializeDatabase(context: Context) {
         if (isDbInitialized) return
         isDbInitialized = true
+        appContext = context.applicationContext
+
+        // Restore saved cart items from SharedPreferences
+        val savedCart = com.example.util.CartStorageManager.loadCartItems(context.applicationContext)
+        if (savedCart.isNotEmpty()) {
+            cartItems = savedCart
+        }
 
         // Switched from Firebase to AWS Amplify Repositories
         productRepository = com.example.data.repository.AwsProductRepositoryImpl(context)
@@ -1414,6 +1428,7 @@ object AppState {
             val newMap = cartItems.toMutableMap()
             newMap[key] = currentQty + 1
             cartItems = newMap
+            appContext?.let { com.example.util.CartStorageManager.saveCartItems(it, newMap) }
         }
     }
 
@@ -1431,10 +1446,12 @@ object AppState {
             newMap[key] = safeQty
         }
         cartItems = newMap
+        appContext?.let { com.example.util.CartStorageManager.saveCartItems(it, newMap) }
     }
 
     fun clearCart() {
         cartItems = emptyMap()
+        appContext?.let { com.example.util.CartStorageManager.clearCart(it) }
     }
 
     fun addNewAddress(house: String, landmark: String, distance: Double, lat: Double = 0.0, lon: Double = 0.0) {
