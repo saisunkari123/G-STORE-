@@ -5,8 +5,10 @@
 
     <!-- Splash screen theme — shown while app loads -->
     <style name="Theme.MyApplication.Starting" parent="Theme.MyApplication">
+        <!-- Solid dark green background for both Android 12+ system splash and legacy windowBackground -->
         <item name="android:windowSplashScreenBackground" tools:targetApi="31">#005A3E</item>
-        <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="31">@drawable/transparent_splash_icon</item>
-        <item name="android:windowBackground">@drawable/transparent_splash_icon</item>
+        <!-- No animated icon on Android 12+ — the text can't appear inside the system circle icon -->
+        <!-- Legacy windowBackground: draws the green bg + G-STORE text logo on all Android versions -->
+        <item name="android:windowBackground">@drawable/splash_background</item>
     </style>
 </resources>
