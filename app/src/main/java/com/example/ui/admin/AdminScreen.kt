@@ -17,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import com.example.data.remote.CloudinaryUploader
+import com.example.domain.model.Order
 import com.example.domain.model.OrderStatus
 import com.example.domain.model.Product
 import com.example.domain.model.ProductVariant
@@ -939,7 +941,7 @@ fun AdminOrdersView() {
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(filteredOrders, key = { it.id }) { order ->
-                    OrderCard(order)
+                    OrderCard(order, onViewMap = { selectedOrderForMap = it })
                 }
             }
         }
@@ -947,7 +949,7 @@ fun AdminOrdersView() {
 }
 
 @Composable
-fun OrderCard(order: com.example.domain.model.Order) {
+fun OrderCard(order: com.example.domain.model.Order, onViewMap: (Order) -> Unit) {
     val context = LocalContext.current
 
     val friendlyStatus = when(order.status) {
@@ -1062,7 +1064,7 @@ fun OrderCard(order: com.example.domain.model.Order) {
                     )
                 }
                 TextButton(
-                    onClick = { selectedOrderForMap = order },
+                    onClick = { onViewMap(order) },
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                     modifier = Modifier.height(32.dp)
                 ) {

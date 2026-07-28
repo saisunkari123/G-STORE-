@@ -33,7 +33,9 @@ private val LightColorScheme = lightColorScheme(
   onSecondary = Color.Black,
   onTertiary = Color.Black,
   onBackground = Color.Black,
-  onSurface = Color.Black,
+  onSurface = Color.Black
+)
+
 @Composable
 fun MyApplicationTheme(
   content: @Composable () -> Unit

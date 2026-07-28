@@ -883,6 +883,7 @@ fun CustomerProductCard(product: Product, selectedSort: String = "Default") {
         modifier = Modifier
             .padding(horizontal = 16.dp, vertical = 12.dp)
             .fillMaxWidth()
+            .heightIn(min = 400.dp)
             .shadow(12.dp, RoundedCornerShape(24.dp), ambientColor = RoyalEmerald.copy(alpha = 0.1f)),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
