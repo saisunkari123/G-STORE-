@@ -3,7 +3,6 @@ package com.example.data.local.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.domain.model.Order
-import com.example.domain.model.OrderStatus
 
 @Entity(tableName = "orders")
 data class OrderEntity(
