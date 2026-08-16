@@ -21,7 +21,7 @@ android {
     versionName = "1.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    manifestPlaceholders["MAPS_API_KEY"] = "MY_MAPS_API_KEY"
+    manifestPlaceholders["MAPS_API_KEY"] = ""
   }
 
   signingConfigs {
@@ -112,6 +112,8 @@ dependencies {
   implementation("androidx.core:core-splashscreen:1.0.1")
   implementation("org.osmdroid:osmdroid-android:6.1.18")
   implementation("com.google.android.gms:play-services-location:21.0.1")
+  implementation("com.google.maps.android:maps-compose:4.3.0")
+  implementation("com.google.android.gms:play-services-maps:18.2.0")
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)

@@ -8,4 +8,5 @@ interface OrderRepository {
     fun getOrdersByUserId(userId: String): Flow<List<Order>>
     suspend fun saveOrder(order: Order)
     suspend fun updateOrderStatus(orderId: String, newStatus: String)
+    suspend fun forceRefreshFromCloud() { /* default no-op */ }
 }

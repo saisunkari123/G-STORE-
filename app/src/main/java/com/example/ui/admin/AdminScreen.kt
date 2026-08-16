@@ -842,6 +842,8 @@ fun AdminOrdersView() {
     var searchQuery by remember { mutableStateOf("") }
     var selectedStatusFilter by remember { mutableStateOf<OrderStatus?>(null) }
     var selectedOrderForMap by remember { mutableStateOf<Order?>(null) }
+    var isRefreshing by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     if (selectedOrderForMap != null) {
         AdminOrderMapModal(order = selectedOrderForMap!!, onDismiss = { selectedOrderForMap = null })
@@ -859,89 +861,102 @@ fun AdminOrdersView() {
         matchesSearch && matchesStatus
     }.sortedByDescending { it.createdAt }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            placeholder = { Text("Search by ID, name, or phone...", color = Color.Gray) },
-            leadingIcon = { Icon(Icons.Default.Search, null, tint = RoyalEmerald) },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            singleLine = true,
-            textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                focusedBorderColor = RoyalEmerald,
-                unfocusedBorderColor = Color.LightGray
-            )
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text("Filter by Status", style = MaterialTheme.typography.bodySmall, color = Color.Gray, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(4.dp))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            val isAllSelected = selectedStatusFilter == null
-            AssistChip(
-                onClick = { selectedStatusFilter = null },
-                label = { Text("All (${AppState.ordersList.size})") },
-                colors = AssistChipDefaults.assistChipColors(
-                    containerColor = if (isAllSelected) RoyalEmerald.copy(alpha = 0.15f) else Color.Transparent,
-                    labelColor = if (isAllSelected) RoyalEmerald else Color.Gray
-                ),
-                border = BorderStroke(1.dp, if (isAllSelected) RoyalEmerald else Color.LightGray.copy(alpha = 0.5f))
-            )
-
-            OrderStatus.values().forEach { status ->
-                val count = AppState.ordersList.count { it.status == status }
-                val isSelected = selectedStatusFilter == status
-                val label = when(status) {
-                    OrderStatus.PENDING -> "Pending"
-                    OrderStatus.OUT_FOR_DELIVERY -> "Out for Delivery"
-                    OrderStatus.DELIVERED -> "Delivered"
-                    OrderStatus.CANCELLED -> "Cancelled"
-                    OrderStatus.RETURN_REQUESTED -> "Return Req."
-                    OrderStatus.RETURN_ACCEPTED -> "Ret. Accepted"
-                    OrderStatus.RETURNED -> "Returned"
+    androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = {
+            coroutineScope.launch {
+                isRefreshing = true
+                AppState.refreshAllFromCloud {
+                    isRefreshing = false
                 }
-                AssistChip(
-                    onClick = { selectedStatusFilter = status },
-                    label = { Text("$label ($count)") },
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = if (isSelected) RoyalEmerald.copy(alpha = 0.15f) else Color.Transparent,
-                        labelColor = if (isSelected) RoyalEmerald else Color.Gray
-                    ),
-                    border = BorderStroke(1.dp, if (isSelected) RoyalEmerald else Color.LightGray.copy(alpha = 0.5f))
+            }
+        },
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text("Search by ID, name, or phone...", color = Color.Gray) },
+                leadingIcon = { Icon(Icons.Default.Search, null, tint = RoyalEmerald) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    focusedBorderColor = RoyalEmerald,
+                    unfocusedBorderColor = Color.LightGray
                 )
-            }
-        }
+            )
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-        if (filteredOrders.isEmpty()) {
-            Column(
+            Text("Filter by Status", style = MaterialTheme.typography.bodySmall, color = Color.Gray, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(64.dp), tint = RoyalEmerald.copy(alpha = 0.3f))
-                Text("No matching orders found", color = Color.Gray)
+                val isAllSelected = selectedStatusFilter == null
+                AssistChip(
+                    onClick = { selectedStatusFilter = null },
+                    label = { Text("All (${AppState.ordersList.size})") },
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = if (isAllSelected) RoyalEmerald.copy(alpha = 0.15f) else Color.Transparent,
+                        labelColor = if (isAllSelected) RoyalEmerald else Color.Gray
+                    ),
+                    border = BorderStroke(1.dp, if (isAllSelected) RoyalEmerald else Color.LightGray.copy(alpha = 0.5f))
+                )
+
+                OrderStatus.values().forEach { status ->
+                    val count = AppState.ordersList.count { it.status == status }
+                    val isSelected = selectedStatusFilter == status
+                    val label = when(status) {
+                        OrderStatus.PENDING -> "Pending"
+                        OrderStatus.OUT_FOR_DELIVERY -> "Out for Delivery"
+                        OrderStatus.DELIVERED -> "Delivered"
+                        OrderStatus.CANCELLED -> "Cancelled"
+                        OrderStatus.RETURN_REQUESTED -> "Return Req."
+                        OrderStatus.RETURN_ACCEPTED -> "Ret. Accepted"
+                        OrderStatus.RETURNED -> "Returned"
+                    }
+                    AssistChip(
+                        onClick = { selectedStatusFilter = status },
+                        label = { Text("$label ($count)") },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = if (isSelected) RoyalEmerald.copy(alpha = 0.15f) else Color.Transparent,
+                            labelColor = if (isSelected) RoyalEmerald else Color.Gray
+                        ),
+                        border = BorderStroke(1.dp, if (isSelected) RoyalEmerald else Color.LightGray.copy(alpha = 0.5f))
+                    )
+                }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(filteredOrders, key = { it.id }) { order ->
-                    OrderCard(order, onViewMap = { selectedOrderForMap = it })
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (filteredOrders.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(64.dp), tint = RoyalEmerald.copy(alpha = 0.3f))
+                    Text("No matching orders found", color = Color.Gray)
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(filteredOrders, key = { it.id }) { order ->
+                        OrderCard(order, onViewMap = { selectedOrderForMap = it })
+                    }
                 }
             }
         }
@@ -1277,115 +1292,131 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
         )
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("Product Catalog", fontSize = 20.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
-            Button(onClick = onAddProductClicked, colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald)) {
-                Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp), tint = Color.White)
-                Text("New Item", modifier = Modifier.padding(start = 4.dp), color = Color.White)
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(12.dp))
+    var isRefreshing by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            placeholder = { Text("Search catalog by name or brand...", color = Color.Gray) },
-            leadingIcon = { Icon(Icons.Default.Search, null, tint = RoyalEmerald) },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            singleLine = true,
-            textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                focusedBorderColor = RoyalEmerald,
-                unfocusedBorderColor = Color.LightGray
+    androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = {
+            coroutineScope.launch {
+                isRefreshing = true
+                AppState.refreshAllFromCloud {
+                    isRefreshing = false
+                }
+            }
+        },
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("Product Catalog", fontSize = 20.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
+                Button(onClick = onAddProductClicked, colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald)) {
+                    Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp), tint = Color.White)
+                    Text("New Item", modifier = Modifier.padding(start = 4.dp), color = Color.White)
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text("Search catalog by name or brand...", color = Color.Gray) },
+                leadingIcon = { Icon(Icons.Default.Search, null, tint = RoyalEmerald) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    focusedBorderColor = RoyalEmerald,
+                    unfocusedBorderColor = Color.LightGray
+                )
             )
-        )
 
-        Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-        // Filter Buttons Row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Category Filter Button
-            val catText = if (appliedCategories.isEmpty()) "Category" else "Category (${appliedCategories.size})"
-            Button(
-                onClick = {
-                    tempSelectedCategories = appliedCategories
-                    showCategoryFilterSheet = true
-                },
-                modifier = Modifier.weight(1f).height(40.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (appliedCategories.isNotEmpty()) RoyalEmerald else MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = if (appliedCategories.isNotEmpty()) Color.White else MaterialTheme.colorScheme.onSurface
-                ),
-                shape = RoundedCornerShape(10.dp),
-                contentPadding = PaddingValues(horizontal = 8.dp)
+            // Filter Buttons Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.FilterList, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(catText, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(16.dp))
+                // Category Filter Button
+                val catText = if (appliedCategories.isEmpty()) "Category" else "Category (${appliedCategories.size})"
+                Button(
+                    onClick = {
+                        tempSelectedCategories = appliedCategories
+                        showCategoryFilterSheet = true
+                    },
+                    modifier = Modifier.weight(1f).height(40.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (appliedCategories.isNotEmpty()) RoyalEmerald else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (appliedCategories.isNotEmpty()) Color.White else MaterialTheme.colorScheme.onSurface
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.FilterList, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(catText, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(16.dp))
+                    }
+                }
+
+                // Sort & Stock Filter Button
+                val isSortActive = selectedSort != "Default" || stockFilter != "All"
+                val sortStockText = when {
+                    selectedSort != "Default" && stockFilter != "All" -> "Filters (2)"
+                    selectedSort != "Default" -> "Sort: ${selectedSort.replace("Price: ", "")}"
+                    stockFilter != "All" -> "Stock: $stockFilter"
+                    else -> "Sort & Stock"
+                }
+                Button(
+                    onClick = {
+                        tempSort = selectedSort
+                        tempStockFilter = stockFilter
+                        showSortSheet = true
+                    },
+                    modifier = Modifier.weight(1f).height(40.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isSortActive) RoyalEmerald else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (isSortActive) Color.White else MaterialTheme.colorScheme.onSurface
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(sortStockText, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(16.dp))
+                    }
                 }
             }
 
-            // Sort & Stock Filter Button
-            val isSortActive = selectedSort != "Default" || stockFilter != "All"
-            val sortStockText = when {
-                selectedSort != "Default" && stockFilter != "All" -> "Filters (2)"
-                selectedSort != "Default" -> "Sort: ${selectedSort.replace("Price: ", "")}"
-                stockFilter != "All" -> "Stock: $stockFilter"
-                else -> "Sort & Stock"
-            }
-            Button(
-                onClick = {
-                    tempSort = selectedSort
-                    tempStockFilter = stockFilter
-                    showSortSheet = true
-                },
-                modifier = Modifier.weight(1f).height(40.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isSortActive) RoyalEmerald else MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = if (isSortActive) Color.White else MaterialTheme.colorScheme.onSurface
-                ),
-                shape = RoundedCornerShape(10.dp),
-                contentPadding = PaddingValues(horizontal = 8.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(sortStockText, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            if (filteredProducts.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("No items found", color = Color.Gray)
                 }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        if (filteredProducts.isEmpty()) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("No items found", color = Color.Gray)
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(filteredProducts, key = { it.id }) { product ->
-                    InventoryItemCard(product, onEditClicked = onEditProductClicked)
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(filteredProducts, key = { it.id }) { product ->
+                        InventoryItemCard(product, onEditClicked = onEditProductClicked)
+                    }
                 }
             }
         }
@@ -1597,36 +1628,53 @@ fun InventoryItemCard(product: Product, onEditClicked: (Product) -> Unit) {
                 )
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(product.nameEn, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Text(
+                        product.nameEn, 
+                        fontWeight = FontWeight.Bold, 
+                        fontSize = 18.sp, 
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(product.brand, fontSize = 12.sp, color = RoyalEmerald, fontWeight = FontWeight.Black)
                 }
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(color = Color(0xFFEEEEEE))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp), 
+                horizontalArrangement = Arrangement.SpaceBetween, 
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Listed toggle — hides/shows product from customer catalog, does NOT delete it
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Listed toggle — hides/shows product from customer catalog, does NOT delete it
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            "Listed",
-                            fontSize = 10.sp,
-                            color = if (isListed) RoyalEmerald else Color.Gray
-                        )
-                        Switch(
-                            checked = isListed,
-                            onCheckedChange = { checked ->
-                                if (checked) {
-                                    isListed = true
-                                    AppState.adminUpdateProduct(product.copy(isEnabled = true))
-                                } else {
-                                    showHideConfirmation = true
-                                }
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = RoyalEmerald
-                            ),
-                            modifier = Modifier.scale(0.8f)
-                        )
-                    }
+                    Text(
+                        "Listed",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isListed) RoyalEmerald else Color.Gray,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Switch(
+                        checked = isListed,
+                        onCheckedChange = { checked ->
+                            if (checked) {
+                                isListed = true
+                                AppState.adminUpdateProduct(product.copy(isEnabled = true))
+                            } else {
+                                showHideConfirmation = true
+                            }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = RoyalEmerald
+                        ),
+                        modifier = Modifier.scale(0.8f)
+                    )
+                }
 
-                    Spacer(Modifier.width(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { onEditClicked(product) }) {
                         Icon(Icons.Default.Edit, "Edit Product", tint = Color.Gray)
                     }
@@ -1636,7 +1684,7 @@ fun InventoryItemCard(product: Product, onEditClicked: (Product) -> Unit) {
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             if (showHideConfirmation) {
                 AlertDialog(

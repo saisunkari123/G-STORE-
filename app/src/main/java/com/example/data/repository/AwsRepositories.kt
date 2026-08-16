@@ -83,7 +83,9 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
             while (true) {
                 delay(5_000L)
                 try {
-                    fetchProductsFromCloud()
+                    kotlinx.coroutines.withTimeout(15_000L) {
+                        fetchProductsFromCloud()
+                    }
                 } catch (e: Exception) {
                     Log.w("AwsProduct", "Periodic sync failed silently", e)
                 }
@@ -106,7 +108,7 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
      */
     private suspend fun fetchProductsFromCloud(): Unit = suspendCancellableCoroutine { cont ->
         val query = """
-            query ListProducts {
+            query ListProducts_${System.currentTimeMillis()} {
                 listProducts(limit: 1000) {
                     items {
                         id
@@ -439,21 +441,33 @@ class AwsOrderRepositoryImpl(private val context: Context) : OrderRepository {
     private val syncScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     init {
-        // Start polling AppSync for new orders every 10 seconds.
-        // This ensures admin sees new customer orders within 10s without relaunching the app.
+        // Start polling AppSync for new orders every 3 seconds.
+        // This ensures admin sees new customer orders in real-time across devices.
         startPeriodicOrderSync()
     }
 
-    /** Polls AppSync listOrders every 10 seconds and merges results into ordersState. */
+    override suspend fun forceRefreshFromCloud() {
+        try {
+            kotlinx.coroutines.withTimeout(15_000L) {
+                fetchOrdersFromCloud()
+            }
+        } catch (e: Exception) {
+            Log.w("AwsOrder", "Force refresh failed silently", e)
+        }
+    }
+
+    /** Polls AppSync listOrders every 3 seconds and merges results into ordersState. */
     private fun startPeriodicOrderSync() {
         syncScope.launch {
             while (true) {
-                delay(10_000L)
                 try {
-                    fetchOrdersFromCloud()
+                    kotlinx.coroutines.withTimeout(15_000L) {
+                        fetchOrdersFromCloud()
+                    }
                 } catch (e: Exception) {
                     Log.w("AwsOrder", "Periodic order sync failed silently", e)
                 }
+                delay(3_000L)
             }
         }
     }
@@ -464,7 +478,7 @@ class AwsOrderRepositoryImpl(private val context: Context) : OrderRepository {
      */
     private suspend fun fetchOrdersFromCloud(): Unit = suspendCancellableCoroutine { cont ->
         val query = """
-            query ListOrders {
+            query ListOrders_${System.currentTimeMillis()} {
                 listOrders(limit: 1000) {
                     items {
                         id
@@ -508,6 +522,21 @@ class AwsOrderRepositoryImpl(private val context: Context) : OrderRepository {
                                     val orderItems: List<OrderItem> = gson.fromJson(itemsJsonStr, itemsType) ?: emptyList()
                                     val statusStr = raw["status"] as? String ?: "PENDING"
                                     val status = try { OrderStatus.valueOf(statusStr) } catch (_: Exception) { OrderStatus.PENDING }
+                                    
+                                    val rawCreatedAt = raw["createdAt"]
+                                    val createdAtVal = when (rawCreatedAt) {
+                                        is Number -> rawCreatedAt.toLong()
+                                        is String -> rawCreatedAt.toLongOrNull() ?: System.currentTimeMillis()
+                                        else -> System.currentTimeMillis()
+                                    }
+                                    
+                                    val distanceKmVal = (raw["distanceKm"] as? Number)?.toDouble() ?: (raw["distanceKm"] as? String)?.toDoubleOrNull() ?: 0.0
+                                    val subtotalVal = (raw["subtotal"] as? Number)?.toDouble() ?: (raw["subtotal"] as? String)?.toDoubleOrNull() ?: 0.0
+                                    val deliveryFeeVal = (raw["deliveryFee"] as? Number)?.toDouble() ?: (raw["deliveryFee"] as? String)?.toDoubleOrNull() ?: 0.0
+                                    val totalAmountVal = (raw["totalAmount"] as? Number)?.toDouble() ?: (raw["totalAmount"] as? String)?.toDoubleOrNull() ?: 0.0
+                                    val latVal = (raw["latitude"] as? Number)?.toDouble() ?: (raw["latitude"] as? String)?.toDoubleOrNull() ?: 0.0
+                                    val lngVal = (raw["longitude"] as? Number)?.toDouble() ?: (raw["longitude"] as? String)?.toDoubleOrNull() ?: 0.0
+
                                     Order(
                                         id = raw["id"] as? String ?: "",
                                         userId = raw["userId"] as? String ?: "",
@@ -515,15 +544,20 @@ class AwsOrderRepositoryImpl(private val context: Context) : OrderRepository {
                                         customerPhone = raw["customerPhone"] as? String ?: "",
                                         addressHouseNo = raw["addressHouseNo"] as? String ?: "",
                                         addressLandmark = raw["addressLandmark"] as? String ?: "",
-                                        distanceKm = (raw["distanceKm"] as? Double) ?: 0.0,
-                                        subtotal = (raw["subtotal"] as? Double) ?: 0.0,
-                                        deliveryFee = (raw["deliveryFee"] as? Double) ?: 0.0,
-                                        totalAmount = (raw["totalAmount"] as? Double) ?: 0.0,
+                                        distanceKm = distanceKmVal,
+                                        latitude = latVal,
+                                        longitude = lngVal,
+                                        subtotal = subtotalVal,
+                                        deliveryFee = deliveryFeeVal,
+                                        totalAmount = totalAmountVal,
                                         status = status,
-                                        createdAt = (raw["createdAt"] as? Double)?.toLong() ?: System.currentTimeMillis(),
+                                        createdAt = createdAtVal,
                                         items = orderItems
                                     )
-                                } catch (e: Exception) { null }
+                                } catch (e: Exception) { 
+                                    Log.w("AwsOrder", "Single order parse error", e)
+                                    null 
+                                }
                             }
                             // Merge: build map of local orders, overwrite/add remote orders
                             val mergedMap = ordersState.value.associateBy { it.id }.toMutableMap()
@@ -598,7 +632,10 @@ class AwsOrderRepositoryImpl(private val context: Context) : OrderRepository {
                 GsonVariablesSerializer()
             )
             Amplify.API.mutate(request,
-                { response -> Log.i("AwsOrder", "Order synced to AWS successfully: ${response.data}") },
+                { response -> 
+                    Log.i("AwsOrder", "Order synced to AWS successfully: ${response.data}")
+                    syncScope.launch { fetchOrdersFromCloud() }
+                },
                 { error -> Log.e("AwsOrder", "AWS Order sync failed", error) }
             )
         } catch (e: Exception) {
@@ -631,7 +668,10 @@ class AwsOrderRepositoryImpl(private val context: Context) : OrderRepository {
                     GsonVariablesSerializer()
                 )
                 Amplify.API.mutate(request,
-                    { response -> Log.i("AwsOrder", "Order status synced to AWS successfully: ${response.data}") },
+                    { response -> 
+                        Log.i("AwsOrder", "Order status synced to AWS successfully: ${response.data}")
+                        syncScope.launch { fetchOrdersFromCloud() }
+                    },
                     { error -> Log.e("AwsOrder", "AWS Order status sync failed", error) }
                 )
             } catch (e: Exception) {

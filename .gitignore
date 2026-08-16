@@ -21,4 +21,5 @@ debug.keystore
 .antigravity/
 summarize the project in simple dont deep analyze files.md
 gradle-9.3.1-bin.zip
-gradle-install/
+secrets.properties
+.secrets/

@@ -498,9 +498,9 @@ fun CustomerCatalogView(
             onRefresh = {
                 coroutineScope.launch {
                     isRefreshing = true
-                    AppState.refreshProductsFromCloud()
-                    kotlinx.coroutines.delay(1000)
-                    isRefreshing = false
+                    AppState.refreshAllFromCloud {
+                        isRefreshing = false
+                    }
                 }
             },
             modifier = Modifier
@@ -1734,23 +1734,39 @@ fun AddressSelectionDialog(onDismiss: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomerOrdersView() {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .testTag("orders_tracking_view"),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+    var isRefreshing by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+
+    androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = {
+            coroutineScope.launch {
+                isRefreshing = true
+                AppState.refreshAllFromCloud {
+                    isRefreshing = false
+                }
+            }
+        },
+        modifier = Modifier.fillMaxSize()
     ) {
-        item {
-            Text(
-                text = "Order History & Tracking",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .testTag("orders_tracking_view"),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item {
+                Text(
+                    text = "Order History & Tracking",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
 
         if (AppState.ordersList.isEmpty()) {
             item {
@@ -1981,6 +1997,7 @@ fun CustomerOrdersView() {
             }
         }
     }
+}
 }
 
 @Composable
@@ -2519,9 +2536,12 @@ fun AWSMapPickerDialog(
         }
     }
 
+    var locationPermissionGranted by remember { mutableStateOf(androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED) }
+
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
+        locationPermissionGranted = isGranted
         if (isGranted) {
             try {
                 fusedLocationClient.lastLocation
@@ -2631,82 +2651,43 @@ fun AWSMapPickerDialog(
             Box(
                 modifier = Modifier.fillMaxSize()
             ) {
-                AndroidView(
-                    factory = { ctx ->
-                        org.osmdroid.views.MapView(ctx).apply {
-                            setTileSource(org.osmdroid.tileprovider.tilesource.TileSourceFactory.MAPNIK)
-                            setMultiTouchControls(true)
-                            controller.setZoom(mapZoomLevel)
-                            controller.setCenter(org.osmdroid.util.GeoPoint(selectedLatLng.latitude, selectedLatLng.longitude))
-
-                            addMapListener(object : org.osmdroid.events.MapListener {
-                                private var scrollJob: kotlinx.coroutines.Job? = null
-
-                                override fun onScroll(event: org.osmdroid.events.ScrollEvent?): Boolean {
-                                    scope.launch(Dispatchers.Main) { isMapScrolling = true }
-                                    scrollJob?.cancel()
-                                    scrollJob = scope.launch(Dispatchers.Main) {
-                                        kotlinx.coroutines.delay(250) // Settle delay for pin drop
-                                        isMapScrolling = false
-                                    }
-
-                                    val center = mapCenter
-                                    if (center != null) {
-                                        val newLatLng = MapLatLng(center.latitude, center.longitude)
-                                        if (Math.abs(selectedLatLng.latitude - newLatLng.latitude) > 0.0001 || Math.abs(selectedLatLng.longitude - newLatLng.longitude) > 0.0001) {
-                                            updateAddress(newLatLng)
-                                        }
-                                    }
-                                    return true
-                                }
-
-                                override fun onZoom(event: org.osmdroid.events.ZoomEvent?): Boolean {
-                                    return true
-                                }
-                            })
-                        }
-                    },
-                    update = { mapView ->
-                        if (!isMapScrolling) {
-                            val currentCenter = mapView.mapCenter
-                            if (currentCenter != null) {
-                                if (Math.abs(currentCenter.latitude - selectedLatLng.latitude) > 0.0005 || Math.abs(currentCenter.longitude - selectedLatLng.longitude) > 0.0005) {
-                                    mapView.controller.animateTo(org.osmdroid.util.GeoPoint(selectedLatLng.latitude, selectedLatLng.longitude))
-                                }
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
-
-                // Google Maps Style Center Pin Marker (Lifts during drag, drops onto location on stop)
-                Box(
-                    modifier = Modifier.align(Alignment.Center),
-                    contentAlignment = Alignment.Center
-                ) {
-                    // Dynamic Ground Shadow Oval
-                    Box(
-                        modifier = Modifier
-                            .size(14.dp, 5.dp)
-                            .graphicsLayer {
-                                scaleX = shadowScale
-                                scaleY = shadowScale
-                            }
-                            .background(Color.Black.copy(alpha = 0.25f), CircleShape)
+                val cameraPositionState = com.google.maps.android.compose.rememberCameraPositionState {
+                    position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(
+                        com.google.android.gms.maps.model.LatLng(selectedLatLng.latitude, selectedLatLng.longitude), 
+                        19f
                     )
+                }
 
-                    // Pin Icon with Lift & Bounce Animation
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = "Selected Location Pin",
-                        tint = RoyalEmerald,
-                        modifier = Modifier
-                            .size(52.dp)
-                            .graphicsLayer {
-                                scaleX = pinScale
-                                scaleY = pinScale
-                            }
-                            .offset(y = pinOffsetY)
+                LaunchedEffect(selectedLatLng) {
+                    val currentTarget = cameraPositionState.position.target
+                    if (Math.abs(currentTarget.latitude - selectedLatLng.latitude) > 0.0005 || Math.abs(currentTarget.longitude - selectedLatLng.longitude) > 0.0005) {
+                        cameraPositionState.animate(
+                            com.google.android.gms.maps.CameraUpdateFactory.newLatLngZoom(
+                                com.google.android.gms.maps.model.LatLng(selectedLatLng.latitude, selectedLatLng.longitude),
+                                19f
+                            )
+                        )
+                    }
+                }
+
+                com.google.maps.android.compose.GoogleMap(
+                    modifier = Modifier.fillMaxSize(),
+                    cameraPositionState = cameraPositionState,
+                    properties = com.google.maps.android.compose.MapProperties(
+                        mapType = com.google.maps.android.compose.MapType.NORMAL,
+                        isMyLocationEnabled = locationPermissionGranted
+                    ),
+                    uiSettings = com.google.maps.android.compose.MapUiSettings(
+                        zoomControlsEnabled = true,
+                        myLocationButtonEnabled = false
+                    ),
+                    onMapClick = { latLng ->
+                        updateAddress(MapLatLng(latLng.latitude, latLng.longitude))
+                    }
+                ) {
+                    com.google.maps.android.compose.Marker(
+                        state = com.google.maps.android.compose.MarkerState(position = com.google.android.gms.maps.model.LatLng(selectedLatLng.latitude, selectedLatLng.longitude)),
+                        onClick = { true }
                     )
                 }
             }
@@ -2716,12 +2697,12 @@ fun AWSMapPickerDialog(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp)
                     .fillMaxWidth()
             ) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = CircleShape,
                     elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
@@ -2851,10 +2832,10 @@ fun AWSMapPickerDialog(
                 }
             }
 
-            // My Location FAB floating high above bottom card (Always centers map pin directly to fresh live GPS position)
+            // Small location icon on the side with some color
             FloatingActionButton(
                 onClick = {
-                    if (ContextCompat.checkSelfPermission(dialogContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                    if (locationPermissionGranted) {
                         try {
                             fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
                                 if (loc != null) {
@@ -2876,10 +2857,11 @@ fun AWSMapPickerDialog(
                 },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = 250.dp)
-                    .size(48.dp),
-                containerColor = Color.White,
-                contentColor = RoyalEmerald
+                    .padding(end = 16.dp, bottom = 150.dp)
+                    .size(44.dp),
+                containerColor = RoyalEmerald,
+                contentColor = Color.White,
+                shape = CircleShape
             ) {
                 Icon(Icons.Default.MyLocation, contentDescription = "My Location", modifier = Modifier.size(20.dp))
             }

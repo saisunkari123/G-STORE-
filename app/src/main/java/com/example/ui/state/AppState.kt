@@ -1079,6 +1079,24 @@ object AppState {
         }
     }
 
+    fun refreshAllFromCloud(onComplete: () -> Unit = {}) {
+        ioScope.launch {
+            try {
+                val jobs = listOf(
+                    async { if (::productRepository.isInitialized) productRepository.forceRefreshFromCloud() },
+                    async { if (::orderRepository.isInitialized) orderRepository.forceRefreshFromCloud() }
+                )
+                jobs.awaitAll()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                withContext(Dispatchers.Main) {
+                    onComplete()
+                }
+            }
+        }
+    }
+
     private var isAutoSeeding = false
 
     fun refreshProductsFromCloud() {
