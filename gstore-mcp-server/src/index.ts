@@ -1,8 +1,8 @@
-import express, { Request, Response } from "express";
+import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -12,7 +12,17 @@ import { executeGraphQL } from "./appsync.js";
 dotenv.config();
 
 const app = express();
-app.use(cors());
+
+// Full CORS & header support for Gemini Spark & remote MCP clients
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "OPTIONS", "HEAD"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-session-id", "mcp-session-id", "Accept"],
+    exposedHeaders: ["x-session-id", "mcp-session-id"],
+  })
+);
+
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
@@ -531,62 +541,53 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
-// Multi-client SSE Session Map
-const transports: Record<string, SSEServerTransport> = {};
+// Modern Streamable HTTP Transport for MCP
+const transport = new StreamableHTTPServerTransport({
+  sessionIdGenerator: undefined, // Stateless mode for maximum client compatibility
+});
 
-// Helper to establish SSE connection
-async function handleSseConnect(endpointPath: string, req: Request, res: Response) {
-  console.log(`Establishing SSE stream on ${endpointPath}`);
-  const transport = new SSEServerTransport(endpointPath, res);
-  const sessionId = transport.sessionId;
-  transports[sessionId] = transport;
+// Connect transport to MCP Server
+await server.connect(transport);
 
-  req.on("close", () => {
-    console.log(`SSE connection closed for session: ${sessionId}`);
-    delete transports[sessionId];
-  });
-
-  await server.connect(transport);
-}
-
-// Helper to handle POST messages
-async function handlePostMsg(req: Request, res: Response) {
-  const sessionId = (req.query.sessionId as string) || Object.keys(transports)[0];
-  const transport = transports[sessionId];
-
-  if (!transport) {
-    console.warn(`No active transport found for sessionId: ${sessionId}`);
-    res.status(400).json({ error: "No active SSE transport found for session" });
-    return;
+// Universal handler for /mcp, /sse, and fallback endpoints
+const mcpHandler = async (req: express.Request, res: express.Response) => {
+  try {
+    await transport.handleRequest(req, res, req.body);
+  } catch (err: any) {
+    console.error("Transport error handling request:", err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: err.message });
+    }
   }
+};
 
-  // Pass req.body as 3rd arg since express.json() already parsed the stream
-  await transport.handlePostMessage(req, res, req.body);
-}
-
-// Routes for SSE & MCP transports
-app.get("/sse", (req, res) => handleSseConnect("/message", req, res));
-app.post("/message", (req, res) => handlePostMsg(req, res));
-
-app.get("/mcp", (req, res) => handleSseConnect("/mcp", req, res));
-app.post("/mcp", (req, res) => handlePostMsg(req, res));
+app.all("/mcp", mcpHandler);
+app.all("/sse", mcpHandler);
+app.all("/mcp/message", mcpHandler);
+app.all("/message", mcpHandler);
 
 // Health check endpoint
 app.get("/", (req, res) => {
+  // If request asks for json or text/event-stream, pass to transport
+  const accept = req.headers.accept || "";
+  if (accept.includes("text/event-stream") || accept.includes("application/json-rpc")) {
+    return mcpHandler(req, res);
+  }
+
   res.json({
     status: "online",
-    name: "G-Store MCP Server",
+    name: "G-Store MCP Server (Streamable HTTP)",
     version: "1.0.0",
     endpoints: {
-      sse: "/sse",
-      message: "/message",
       mcp: "/mcp",
+      sse: "/sse",
     },
-    activeSessions: Object.keys(transports).length,
   });
 });
 
+app.post("/", mcpHandler);
+
 app.listen(PORT, () => {
   console.log(`🚀 G-Store MCP Server listening on http://localhost:${PORT}`);
-  console.log(`📡 MCP SSE endpoint ready at /sse and /mcp`);
+  console.log(`📡 Streamable MCP endpoints ready at /mcp, /sse, and /`);
 });
