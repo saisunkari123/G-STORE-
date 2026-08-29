@@ -26,13 +26,13 @@ const toolsList = [
   {
     name: "list_products",
     description:
-      "Retrieve all products available in G-Store, including category, description, and variants (sizes like 5kg, 10kg, 25kg, prices, and stock status).",
+      "Retrieve all products available in G-Store, including category, description, and variants (sizes like 5kg, 10kg, 26kg, selling price, MRP, and stock status).",
     inputSchema: {
       type: "object",
       properties: {
         category: {
           type: "string",
-          description: "Optional category filter (e.g., 'Rice Bags', 'Cooking Oils', 'Dals & Pulses')",
+          description: "Optional category filter (e.g., 'Rice Bags', 'c_rice', 'Cooking Oils', 'Dals & Pulses')",
         },
       },
     },
@@ -45,7 +45,7 @@ const toolsList = [
       properties: {
         productId: {
           type: "string",
-          description: "The unique ID of the product",
+          description: "The unique ID of the product (e.g., 'p_rice_sona', 'p_rice_basmati')",
         },
       },
       required: ["productId"],
@@ -54,25 +54,25 @@ const toolsList = [
   {
     name: "update_product_price_or_stock",
     description:
-      "Update the price or in-stock status of a specific product variant (e.g., set 25kg Basmati price to ₹1850 or set out-of-stock).",
+      "Update the price or stock quantity of a specific product variant (e.g., set 26kg Sona Masuri price to ₹1400 or stock to 40).",
     inputSchema: {
       type: "object",
       properties: {
         productId: {
           type: "string",
-          description: "The product ID",
+          description: "The product ID (e.g. 'p_rice_sona')",
         },
         variantSize: {
           type: "string",
-          description: "The variant size (e.g., '5kg', '10kg', '25kg')",
+          description: "The variant weight/size (e.g., '26kg', '10kg', '5kg')",
         },
         newPrice: {
           type: "number",
-          description: "Optional new selling price",
+          description: "Optional new selling price in ₹",
         },
-        inStock: {
-          type: "boolean",
-          description: "Optional stock availability flag",
+        stock: {
+          type: "number",
+          description: "Optional new stock bag quantity",
         },
       },
       required: ["productId"],
@@ -155,6 +155,49 @@ const toolsList = [
   },
 ];
 
+// Helper to format variants from raw AppSync representation
+function formatVariants(rawVariants: any[] = []) {
+  return rawVariants.map((v) => {
+    const rawSize = v.size || "";
+    const parts = rawSize.split(":::");
+    if (parts.length >= 2) {
+      const weight = `${parts[0]} ${parts[1]}`;
+      const mrp = parts[2] ? Number(parts[2]) : v.price;
+      const sku = parts[3] || "";
+      const variantId = parts[4] || "";
+      return {
+        variantId,
+        weight,
+        sellingPrice: `₹${v.price}`,
+        mrp: `₹${mrp}`,
+        priceNumber: v.price,
+        mrpNumber: mrp,
+        stock: v.stock,
+        inStock: v.stock > 0,
+        sku,
+        rawSize,
+      };
+    }
+    return {
+      size: rawSize,
+      price: `₹${v.price}`,
+      priceNumber: v.price,
+      stock: v.stock,
+      inStock: v.stock > 0,
+      rawSize,
+    };
+  });
+}
+
+// Category mapping helper
+const categoryNames: Record<string, string> = {
+  c_rice: "Rice Bags",
+  c_oil: "Cooking Oils",
+  c_dal: "Dals & Pulses",
+  c_dairy: "Dairy Essentials",
+  c_spices: "Spices & Masalas",
+};
+
 // Tool execution logic querying live AWS AppSync backend
 async function executeToolCall(name: string, args: any) {
   switch (name) {
@@ -171,24 +214,34 @@ async function executeToolCall(name: string, args: any) {
               variants {
                 size
                 price
-                mrp
-                inStock
-                weight
+                stock
               }
             }
           }
         }
       `;
       const data = await executeGraphQL(query);
-      let products = data?.listProducts?.items || [];
+      let rawItems = data?.listProducts?.items || [];
+
+      // Filter out metadata records
+      rawItems = rawItems.filter((p: any) => p.category !== "metadata");
 
       if (args?.category) {
-        const categoryFilter = String(args.category).toLowerCase();
-        products = products.filter(
+        const filter = String(args.category).toLowerCase();
+        rawItems = rawItems.filter(
           (p: any) =>
-            p.category && p.category.toLowerCase().includes(categoryFilter)
+            (p.category && p.category.toLowerCase().includes(filter)) ||
+            (categoryNames[p.category] && categoryNames[p.category].toLowerCase().includes(filter))
         );
       }
+
+      const products = rawItems.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        category: categoryNames[p.category] || p.category,
+        description: p.description,
+        variants: formatVariants(p.variants),
+      }));
 
       return { count: products.length, products };
     }
@@ -205,15 +258,22 @@ async function executeToolCall(name: string, args: any) {
             variants {
               size
               price
-              mrp
-              inStock
-              weight
+              stock
             }
           }
         }
       `;
       const data = await executeGraphQL(query, { id: args?.productId });
-      return data?.getProduct || { message: "Product not found" };
+      const p = data?.getProduct;
+      if (!p) return { message: "Product not found" };
+
+      return {
+        id: p.id,
+        name: p.name,
+        category: categoryNames[p.category] || p.category,
+        description: p.description,
+        variants: formatVariants(p.variants),
+      };
     }
 
     case "update_product_price_or_stock": {
@@ -228,9 +288,7 @@ async function executeToolCall(name: string, args: any) {
             variants {
               size
               price
-              mrp
-              inStock
-              weight
+              stock
             }
           }
         }
@@ -243,11 +301,15 @@ async function executeToolCall(name: string, args: any) {
       }
 
       let updatedVariants = (product.variants || []).map((v: any) => {
-        if (!args?.variantSize || v.size === args.variantSize) {
+        const isMatch =
+          !args?.variantSize ||
+          v.size.toLowerCase().includes(String(args.variantSize).toLowerCase());
+
+        if (isMatch) {
           return {
             ...v,
             price: args?.newPrice !== undefined ? args.newPrice : v.price,
-            inStock: args?.inStock !== undefined ? args.inStock : v.inStock,
+            stock: args?.stock !== undefined ? args.stock : v.stock,
           };
         }
         return v;
@@ -261,7 +323,7 @@ async function executeToolCall(name: string, args: any) {
             variants {
               size
               price
-              inStock
+              stock
             }
           }
         }
@@ -274,7 +336,14 @@ async function executeToolCall(name: string, args: any) {
         },
       });
 
-      return { message: "Product updated successfully", product: updateResult?.updateProduct };
+      return {
+        message: "Product updated successfully",
+        product: {
+          id: updateResult?.updateProduct?.id,
+          name: updateResult?.updateProduct?.name,
+          variants: formatVariants(updateResult?.updateProduct?.variants),
+        },
+      };
     }
 
     case "list_orders": {
