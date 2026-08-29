@@ -77,6 +77,7 @@ const categoryPlaceholders: Record<string, string> = {
   c_dal: "https://images.unsplash.com/photo-1585994192701-f1a505c8574a?w=600&auto=format&fit=crop",
   c_dairy: "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=600&auto=format&fit=crop",
   c_spices: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=600&auto=format&fit=crop",
+  c_snacks: "https://images.unsplash.com/photo-1621996346565-e3d5d6281290?w=600&auto=format&fit=crop",
 };
 
 // Category mapping helper
@@ -86,6 +87,7 @@ const categoryNames: Record<string, string> = {
   c_dal: "Dals & Pulses",
   c_dairy: "Dairy Essentials",
   c_spices: "Spices & Masalas",
+  c_snacks: "Snacks & Beverages",
 };
 
 function normalizeCategory(cat: string): string {
@@ -95,6 +97,7 @@ function normalizeCategory(cat: string): string {
   if (lower.includes("dal") || lower.includes("pulse") || lower === "c_dal") return "c_dal";
   if (lower.includes("dairy") || lower.includes("milk") || lower.includes("curd") || lower.includes("ghee") || lower.includes("paneer") || lower === "c_dairy") return "c_dairy";
   if (lower.includes("spice") || lower.includes("masala") || lower === "c_spices") return "c_spices";
+  if (lower.includes("snack") || lower.includes("biscuit") || lower.includes("beverage") || lower.includes("drink") || lower.includes("tea") || lower.includes("coffee") || lower.includes("noodle") || lower === "c_snacks") return "c_snacks";
   return "c_rice"; // default
 }
 

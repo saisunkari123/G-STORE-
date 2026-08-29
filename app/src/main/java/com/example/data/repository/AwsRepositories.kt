@@ -60,7 +60,8 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
         Category(id = "c_dal", nameEn = "Dals & Pulses", imageUrl = "android.resource://com.aistudio.ricemart.pkqmsx/drawable/dals_pulses_preview"),
         Category(id = "c_oil", nameEn = "Cooking Oils", imageUrl = "android.resource://com.aistudio.ricemart.pkqmsx/drawable/cooking_oils_preview"),
         Category(id = "c_dairy", nameEn = "Dairy Essentials", imageUrl = "android.resource://com.aistudio.ricemart.pkqmsx/drawable/dairy_essentials_preview"),
-        Category(id = "c_spices", nameEn = "Spices & Masalas", imageUrl = "android.resource://com.aistudio.ricemart.pkqmsx/drawable/spices_masalas_preview")
+        Category(id = "c_spices", nameEn = "Spices & Masalas", imageUrl = "android.resource://com.aistudio.ricemart.pkqmsx/drawable/spices_masalas_preview"),
+        Category(id = "c_snacks", nameEn = "Snacks & Beverages", imageUrl = "https://images.unsplash.com/photo-1621996346565-e3d5d6281290?w=600&auto=format&fit=crop")
     )
     private val categoriesState = MutableStateFlow(persister.loadList("aws_categories.json", Category::class.java).ifEmpty { defaultCategories })
     private val giftConfigsState = MutableStateFlow(persister.loadList("aws_gifts.json", GiftItemConfig::class.java))
