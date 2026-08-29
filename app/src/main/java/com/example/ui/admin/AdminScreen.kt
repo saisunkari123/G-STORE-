@@ -863,10 +863,9 @@ fun AdminOrdersView() {
         AdminOrderDetailModal(
             order = selectedOrderForDetail!!,
             onDismiss = { selectedOrderForDetail = null },
-            onViewMap = {
-                val ord = selectedOrderForDetail
+            onViewMap = { orderToMap ->
                 selectedOrderForDetail = null
-                selectedOrderForMap = ord
+                selectedOrderForMap = orderToMap
             }
         )
     }
@@ -1024,8 +1023,8 @@ fun AdminOrderGridCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Header: #ID + Status Badge
             Row(
@@ -1037,7 +1036,7 @@ fun AdminOrderGridCard(
                     text = "#${order.id.takeLast(6).uppercase()}",
                     fontWeight = FontWeight.Black,
                     color = DeepGold,
-                    fontSize = 13.sp
+                    fontSize = 13.5.sp
                 )
                 Surface(
                     color = when(order.status) {
@@ -1052,7 +1051,7 @@ fun AdminOrderGridCard(
                 ) {
                     Text(
                         text = friendlyStatus,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.5.dp),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
@@ -1070,11 +1069,11 @@ fun AdminOrderGridCard(
             // Time
             Text(
                 text = sdf.format(java.util.Date(order.createdAt)),
-                fontSize = 10.sp,
+                fontSize = 10.5.sp,
                 color = Color.Gray
             )
 
-            // Customer Name & Phone Call icon
+            // Customer Name + Map & Call Quick Action Icons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1083,38 +1082,80 @@ fun AdminOrderGridCard(
                 Text(
                     text = order.customerName.ifBlank { "Customer" },
                     fontWeight = FontWeight.Bold,
-                    fontSize = 12.5.sp,
+                    fontSize = 13.sp,
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
-                if (order.customerPhone.isNotBlank()) {
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Map Icon Button on Card
                     IconButton(
-                        onClick = {
-                            val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
-                                data = android.net.Uri.parse("tel:${order.customerPhone}")
-                            }
-                            context.startActivity(intent)
-                        },
-                        modifier = Modifier.size(24.dp)
+                        onClick = { onViewMap(order) },
+                        modifier = Modifier
+                            .size(26.dp)
+                            .background(
+                                (if (isDark) Color(0xFF34D399) else RoyalEmerald).copy(alpha = 0.12f),
+                                CircleShape
+                            )
                     ) {
                         Icon(
-                            Icons.Default.Call,
-                            contentDescription = "Call",
+                            Icons.Default.LocationOn,
+                            contentDescription = "Map Location",
                             tint = if (isDark) Color(0xFF34D399) else RoyalEmerald,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(15.dp)
                         )
                     }
+
+                    // Call Icon Button on Card
+                    if (order.customerPhone.isNotBlank()) {
+                        IconButton(
+                            onClick = {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
+                                    data = android.net.Uri.parse("tel:${order.customerPhone}")
+                                }
+                                context.startActivity(intent)
+                            },
+                            modifier = Modifier
+                                .size(26.dp)
+                                .background(
+                                    (if (isDark) Color(0xFF34D399) else RoyalEmerald).copy(alpha = 0.12f),
+                                    CircleShape
+                                )
+                        ) {
+                            Icon(
+                                Icons.Default.Call,
+                                contentDescription = "Call",
+                                tint = if (isDark) Color(0xFF34D399) else RoyalEmerald,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
                 }
+            }
+
+            // Address summary snippet
+            val addressSnippet = listOfNotNull(order.addressHouseNo.takeIf { it.isNotBlank() }, order.addressLandmark.takeIf { it.isNotBlank() }).joinToString(", ")
+            if (addressSnippet.isNotBlank()) {
+                Text(
+                    text = "📍 $addressSnippet",
+                    fontSize = 10.5.sp,
+                    color = Color.Gray,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
             }
 
             // Items Count Snippet
             val itemsCount = order.items.sumOf { it.quantity }
             Text(
                 text = "$itemsCount item(s) • ${order.items.firstOrNull()?.productName ?: "Items"}",
-                fontSize = 10.5.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                 maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
             )
@@ -1127,21 +1168,21 @@ fun AdminOrderGridCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Bill", fontSize = 10.sp, color = Color.Gray)
+                    Text("Total Bill", fontSize = 10.5.sp, color = Color.Gray)
                     Text(
                         "₹${order.totalAmount.toInt()}",
                         fontWeight = FontWeight.Black,
-                        fontSize = 13.5.sp,
+                        fontSize = 14.sp,
                         color = if (isDark) Color(0xFF34D399) else RoyalEmerald
                     )
                 }
             }
 
-            // Action Button
+            // Action Button (Taller and clean)
             if (order.status == OrderStatus.PENDING) {
                 Button(
                     onClick = {
@@ -1150,16 +1191,16 @@ fun AdminOrderGridCard(
                             isUpdatingStatus = false
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald),
-                    shape = RoundedCornerShape(6.dp),
-                    modifier = Modifier.fillMaxWidth().height(30.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = if (isDark) Color(0xFF34D399) else RoyalEmerald),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth().height(34.dp),
                     contentPadding = PaddingValues(0.dp),
                     enabled = !isUpdatingStatus
                 ) {
                     if (isUpdatingStatus) {
-                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp)
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(14.dp), strokeWidth = 1.5.dp)
                     } else {
-                        Text("Dispatch", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("Dispatch", fontSize = 11.5.sp, color = Color.White, fontWeight = FontWeight.Bold)
                     }
                 }
             } else if (order.status == OrderStatus.OUT_FOR_DELIVERY) {
@@ -1171,26 +1212,26 @@ fun AdminOrderGridCard(
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = DeepGold),
-                    shape = RoundedCornerShape(6.dp),
-                    modifier = Modifier.fillMaxWidth().height(30.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth().height(34.dp),
                     contentPadding = PaddingValues(0.dp),
                     enabled = !isUpdatingStatus
                 ) {
                     if (isUpdatingStatus) {
-                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp)
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(14.dp), strokeWidth = 1.5.dp)
                     } else {
-                        Text("Mark Delivered", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("Mark Delivered", fontSize = 11.5.sp, color = Color.White, fontWeight = FontWeight.Bold)
                     }
                 }
             } else {
                 OutlinedButton(
                     onClick = onClick,
-                    shape = RoundedCornerShape(6.dp),
-                    modifier = Modifier.fillMaxWidth().height(28.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth().height(32.dp),
                     contentPadding = PaddingValues(0.dp),
                     border = BorderStroke(0.5.dp, if (isDark) Color(0xFF4B5563) else Color(0xFFD1D5DB))
                 ) {
-                    Text("View Details", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium)
+                    Text("View Details", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium)
                 }
             }
         }
@@ -1205,39 +1246,8 @@ fun AdminOrderDetailModal(
     onViewMap: (Order) -> Unit
 ) {
     val context = LocalContext.current
-    var isUpdatingStatus by remember { mutableStateOf(false) }
     val isDark = AppState.isDarkMode
-
-    val friendlyStatus = when(order.status) {
-        OrderStatus.PENDING -> "Pending"
-        OrderStatus.OUT_FOR_DELIVERY -> "Out for Delivery"
-        OrderStatus.DELIVERED -> "Delivered"
-        OrderStatus.CANCELLED -> "Cancelled"
-        OrderStatus.RETURN_REQUESTED -> "Return Requested"
-        OrderStatus.RETURN_ACCEPTED -> "Return Accepted"
-        OrderStatus.RETURNED -> "Returned"
-    }
-
-    val displayAddress = remember(order.addressHouseNo, order.addressLandmark, order.latitude, order.longitude) {
-        buildString {
-            val house = order.addressHouseNo.trim()
-            val landmark = order.addressLandmark.trim()
-            val hasValidHouse = house.isNotBlank() && !house.contains("Fetching location", ignoreCase = true)
-            val hasValidLandmark = landmark.isNotBlank() && !landmark.contains("Fetching location", ignoreCase = true)
-            if (hasValidHouse) append(house)
-            if (hasValidLandmark) {
-                if (isNotEmpty()) append("\n")
-                append(landmark)
-            }
-            if (isEmpty()) {
-                if (order.latitude != 0.0 && order.longitude != 0.0) {
-                    append(String.format(java.util.Locale.US, "Location: %.4f, %.4f", order.latitude, order.longitude))
-                } else {
-                    append("Customer Location")
-                }
-            }
-        }
-    }
+    var isUpdatingStatus by remember { mutableStateOf(false) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -1259,27 +1269,41 @@ fun AdminOrderDetailModal(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Order #${order.id}", fontWeight = FontWeight.Black, color = DeepGold, fontSize = 17.sp)
-                    val sdf = java.text.SimpleDateFormat("dd MMM yyyy, hh:mm a", java.util.Locale.ENGLISH)
-                    Text(sdf.format(java.util.Date(order.createdAt)), fontSize = 11.sp, color = Color.Gray)
+                    Text(
+                        text = "Order #${order.id.takeLast(6).uppercase()}",
+                        fontWeight = FontWeight.Black,
+                        fontSize = 18.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    val sdf = remember { java.text.SimpleDateFormat("dd MMM yyyy, hh:mm a", java.util.Locale.ENGLISH) }
+                    Text(
+                        text = sdf.format(java.util.Date(order.createdAt)),
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
                 }
+
                 Surface(
                     color = when(order.status) {
                         OrderStatus.PENDING -> if (isDark) DeepGold.copy(alpha = 0.25f) else Color(0xFFFFF4E5)
                         OrderStatus.OUT_FOR_DELIVERY -> (if (isDark) Color(0xFF34D399) else RoyalEmerald).copy(alpha = 0.2f)
                         OrderStatus.CANCELLED -> Color.Red.copy(alpha = 0.15f)
+                        OrderStatus.RETURN_REQUESTED -> DeepGold.copy(alpha = 0.2f)
+                        OrderStatus.RETURN_ACCEPTED -> DeepGold.copy(alpha = 0.3f)
                         else -> (if (isDark) Color(0xFF34D399) else RoyalEmerald).copy(alpha = 0.15f)
                     },
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
-                        text = friendlyStatus,
+                        text = order.status.name.replace("_", " "),
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = when(order.status) {
                             OrderStatus.PENDING -> DeepGold
                             OrderStatus.CANCELLED -> Color.Red
+                            OrderStatus.RETURN_REQUESTED -> DeepGold
+                            OrderStatus.RETURN_ACCEPTED -> DeepGold
                             else -> if (isDark) Color(0xFF34D399) else RoyalEmerald
                         }
                     )
@@ -1288,24 +1312,22 @@ fun AdminOrderDetailModal(
 
             HorizontalDivider(color = if (isDark) Color(0xFF333333) else Color(0xFFEEEEEE))
 
-            // Customer Details
-            Text("CUSTOMER DETAILS", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.Gray, letterSpacing = 1.sp)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(16.dp), tint = RoyalEmerald)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(order.customerName.ifBlank { "Customer" }, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
-            }
+            // Customer Info & Map
+            val displayAddress = listOfNotNull(
+                order.addressHouseNo.takeIf { it.isNotBlank() },
+                order.addressLandmark.takeIf { it.isNotBlank() }
+            ).joinToString(", ").ifBlank { "No address provided" }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(16.dp), tint = RoyalEmerald)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(order.customerPhone.ifBlank { "No phone" }, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(order.customerName.ifBlank { "Customer" }, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Text(order.customerPhone.ifBlank { "No phone number" }, fontSize = 13.sp, color = Color.Gray)
                 }
+
                 if (order.customerPhone.isNotBlank()) {
                     Button(
                         onClick = {
@@ -1314,9 +1336,9 @@ fun AdminOrderDetailModal(
                             }
                             context.startActivity(intent)
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = if (isDark) Color(0xFF34D399) else RoyalEmerald),
                         shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                         modifier = Modifier.height(32.dp)
                     ) {
                         Icon(Icons.Default.Call, null, modifier = Modifier.size(14.dp), tint = Color.White)
@@ -1332,12 +1354,16 @@ fun AdminOrderDetailModal(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.Top, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp), tint = RoyalEmerald)
+                    Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp), tint = if (isDark) Color(0xFF34D399) else RoyalEmerald)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(text = displayAddress, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f), lineHeight = 17.sp)
                 }
                 OutlinedButton(
-                    onClick = { onDismiss(); onViewMap(order) },
+                    onClick = { 
+                        val currentOrder = order
+                        onDismiss()
+                        onViewMap(currentOrder) 
+                    },
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.height(32.dp),
@@ -1575,7 +1601,7 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search catalog by name or brand...", color = Color.Gray, fontSize = 12.5.sp) },
+                    placeholder = null,
                     leadingIcon = { Icon(Icons.Default.Search, null, tint = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald, modifier = Modifier.size(18.dp)) },
                     modifier = Modifier.weight(1f).height(46.dp),
                     shape = RoundedCornerShape(10.dp),
@@ -1897,11 +1923,11 @@ fun AdminInventoryGridCard(
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Product Image Box (600x400 aspect ratio)
+            // Product Image Box (Taller 600x400 aspect ratio container)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(110.dp)
+                    .height(135.dp)
                     .background(if (isDark) Color(0xFF1E1E1E) else Color(0xFFF3F4F6))
             ) {
                 AsyncImage(
@@ -1937,17 +1963,17 @@ fun AdminInventoryGridCard(
                 }
             }
 
-            // Card Body (Uncluttered & Clean)
+            // Card Body (Spacious & Clean)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(8.dp),
-                verticalArrangement = Arrangement.spacedBy(3.dp)
+                    .padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 // Brand Name
                 Text(
                     text = product.brand.ifBlank { "G-STORE" },
-                    fontSize = 10.5.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Black,
                     color = if (isDark) Color(0xFF34D399) else RoyalEmerald,
                     maxLines = 1,
@@ -1958,12 +1984,12 @@ fun AdminInventoryGridCard(
                 Text(
                     text = formatAdminProductName(product.nameEn),
                     fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
+                    fontSize = 12.5.sp,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
-                    lineHeight = 15.sp,
+                    lineHeight = 16.sp,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    modifier = Modifier.heightIn(min = 30.dp)
+                    modifier = Modifier.heightIn(min = 34.dp)
                 )
 
                 // Bottom Row: Price & Sizes summary + Compact sleek pencil icon
@@ -1975,13 +2001,13 @@ fun AdminInventoryGridCard(
                     Column {
                         Text(
                             text = if (minPrice > 0) "₹${minPrice.toInt()}" else "₹0",
-                            fontSize = 12.5.sp,
+                            fontSize = 13.5.sp,
                             fontWeight = FontWeight.Black,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "${product.variants.size} size${if (product.variants.size == 1) "" else "s"}",
-                            fontSize = 9.5.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = Color.Gray
                         )
@@ -1991,7 +2017,7 @@ fun AdminInventoryGridCard(
                     IconButton(
                         onClick = onEditClicked,
                         modifier = Modifier
-                            .size(24.dp)
+                            .size(26.dp)
                             .background(
                                 (if (isDark) Color(0xFF34D399) else RoyalEmerald).copy(alpha = 0.12f),
                                 CircleShape
@@ -2001,7 +2027,7 @@ fun AdminInventoryGridCard(
                             Icons.Default.Edit,
                             contentDescription = "Edit",
                             tint = if (isDark) Color(0xFF34D399) else RoyalEmerald,
-                            modifier = Modifier.size(12.dp)
+                            modifier = Modifier.size(13.dp)
                         )
                     }
                 }
@@ -3111,11 +3137,15 @@ fun AdminOrderMapModal(order: Order, onDismiss: () -> Unit) {
     val targetLat = if (order.latitude != 0.0) order.latitude else AppState.SHOP_LATITUDE
     val targetLon = if (order.longitude != 0.0) order.longitude else AppState.SHOP_LONGITUDE
     val hasExactCoords = order.latitude != 0.0 && order.longitude != 0.0
+    val isDark = AppState.isDarkMode
 
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Surface(
-            modifier = Modifier.fillMaxWidth().height(540.dp),
-            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier.fillMaxWidth(0.94f).height(560.dp),
+            shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surface,
             shadowElevation = 12.dp
         ) {
@@ -3123,6 +3153,9 @@ fun AdminOrderMapModal(order: Order, onDismiss: () -> Unit) {
                 // 1. Native OSMMapView showing exact location pin
                 AndroidView(
                     factory = { ctx ->
+                        try {
+                            org.osmdroid.config.Configuration.getInstance().userAgentValue = ctx.packageName
+                        } catch (_: Exception) {}
                         org.osmdroid.views.MapView(ctx).apply {
                             setTileSource(org.osmdroid.tileprovider.tilesource.TileSourceFactory.MAPNIK)
                             setMultiTouchControls(true)
@@ -3157,17 +3190,32 @@ fun AdminOrderMapModal(order: Order, onDismiss: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(12.dp)
-                        .background(Color.White.copy(alpha = 0.92f), RoundedCornerShape(12.dp))
+                        .background(
+                            if (isDark) Color(0xFF1E1E1E).copy(alpha = 0.95f) else Color.White.copy(alpha = 0.95f),
+                            RoundedCornerShape(12.dp)
+                        )
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text("📍 Customer Delivery Location", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = RoyalEmerald)
-                        Text(if (hasExactCoords) "Exact GPS Pin (17x Street Level Zoom)" else "Shop Area Location", fontSize = 11.sp, color = Color.Gray)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "📍 Delivery Location",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = if (isDark) Color(0xFF34D399) else RoyalEmerald
+                        )
+                        Text(
+                            text = if (hasExactCoords) "GPS Pin • ${String.format("%.2f", order.distanceKm)} km from store" else "Shop Area Location",
+                            fontSize = 11.5.sp,
+                            color = Color.Gray
+                        )
                     }
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.Gray)
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurface)
                     }
                 }
 
@@ -3179,31 +3227,32 @@ fun AdminOrderMapModal(order: Order, onDismiss: () -> Unit) {
                         .padding(12.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(16.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF333333) else Color(0xFFE5E7EB))
                 ) {
                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("👤 ${order.customerName} (${order.customerPhone})", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
-                        Text("🏠 ${order.addressHouseNo}, ${order.addressLandmark}", fontSize = 12.sp, color = Color.Gray, maxLines = 2)
-                        Text("📏 Distance: ${String.format("%.2f", order.distanceKm)} km from store", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = RoyalEmerald)
+                        Text("👤 ${order.customerName} (${order.customerPhone})", fontWeight = FontWeight.Bold, fontSize = 13.5.sp, color = MaterialTheme.colorScheme.onSurface)
+                        val addressText = listOfNotNull(order.addressHouseNo.takeIf { it.isNotBlank() }, order.addressLandmark.takeIf { it.isNotBlank() }).joinToString(", ")
+                        Text("🏠 ${addressText.ifBlank { "Delivery address" }}", fontSize = 12.sp, color = Color.Gray, maxLines = 2)
 
                         Button(
                             onClick = {
                                 val uriStr = if (hasExactCoords) {
                                     "https://www.google.com/maps/search/?api=1&query=${targetLat},${targetLon}"
                                 } else {
-                                    val q = java.net.URLEncoder.encode("${order.addressHouseNo}, ${order.addressLandmark}", "UTF-8")
+                                    val q = java.net.URLEncoder.encode(addressText, "UTF-8")
                                     "https://www.google.com/maps/search/?api=1&query=$q"
                                 }
                                 val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(uriStr))
                                 context.startActivity(intent)
                             },
-                            modifier = Modifier.fillMaxWidth().height(44.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald)
+                            modifier = Modifier.fillMaxWidth().height(42.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = if (isDark) Color(0xFF34D399) else RoyalEmerald)
                         ) {
-                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Open in Google Maps App", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Open in Google Maps App", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
                         }
                     }
                 }
