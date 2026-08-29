@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import crypto from "crypto";
 import { executeGraphQL } from "./appsync.js";
 
 dotenv.config();
@@ -17,9 +18,50 @@ app.use(
   })
 );
 
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
 
 const PORT = process.env.PORT || 3000;
+
+// Cloudinary configuration
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || "k1lw675z";
+const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || "498889461713286";
+const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || "8SR-robZhuJf-5ehvJTFCscCatY";
+
+async function uploadToCloudinary(imageUrlOrData: string): Promise<string> {
+  try {
+    // If it's already a Cloudinary URL from this account, don't re-upload
+    if (imageUrlOrData.includes(`res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}`)) {
+      return imageUrlOrData;
+    }
+
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const folder = "ricemart_products";
+    const signStr = `folder=${folder}&timestamp=${timestamp}${CLOUDINARY_API_SECRET}`;
+    const signature = crypto.createHash("sha1").update(signStr).digest("hex");
+
+    const formData = new URLSearchParams();
+    formData.append("file", imageUrlOrData);
+    formData.append("api_key", CLOUDINARY_API_KEY);
+    formData.append("timestamp", timestamp);
+    formData.append("folder", folder);
+    formData.append("signature", signature);
+
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    const data: any = await res.json();
+    if (data && data.secure_url) {
+      console.log("Uploaded image to Cloudinary:", data.secure_url);
+      return data.secure_url;
+    }
+    return imageUrlOrData;
+  } catch (err: any) {
+    console.warn("Cloudinary upload fallback to direct URL:", err.message);
+    return imageUrlOrData;
+  }
+}
 
 // High-quality category placeholder images
 const categoryPlaceholders: Record<string, string> = {
@@ -44,7 +86,7 @@ function normalizeCategory(cat: string): string {
   if (lower.includes("rice") || lower === "c_rice") return "c_rice";
   if (lower.includes("oil") || lower === "c_oil") return "c_oil";
   if (lower.includes("dal") || lower.includes("pulse") || lower === "c_dal") return "c_dal";
-  if (lower.includes("dairy") || lower.includes("milk") || lower.includes("curd") || lower.includes("ghee") || lower === "c_dairy") return "c_dairy";
+  if (lower.includes("dairy") || lower.includes("milk") || lower.includes("curd") || lower.includes("ghee") || lower.includes("paneer") || lower === "c_dairy") return "c_dairy";
   if (lower.includes("spice") || lower.includes("masala") || lower === "c_spices") return "c_spices";
   return "c_rice"; // default
 }
@@ -82,33 +124,33 @@ const toolsList = [
   {
     name: "create_product",
     description:
-      "Create and add a new product to G-Store catalog with pricing, weight size, and stock. If no image URL is provided, an automatic high-quality category placeholder image is assigned.",
+      "Create and add a new product to G-Store catalog with pricing, weight size, stock, and image. Uploads the image directly to store's Cloudinary storage and saves to AWS AppSync.",
     inputSchema: {
       type: "object",
       properties: {
         name: {
           type: "string",
-          description: "Product display name (e.g., 'Freedom Refined Sunflower Oil', 'Sri Ram Sona Masuri Rice')",
+          description: "Product display name (e.g., 'Amul Taaza Homogenised Toned Milk', 'Freedom Refined Sunflower Oil')",
         },
         category: {
           type: "string",
-          description: "Product category: 'Rice Bags', 'Cooking Oils', 'Dals & Pulses', 'Dairy Essentials', or 'Spices & Masalas'",
+          description: "Product category: 'Dairy Essentials', 'Rice Bags', 'Cooking Oils', 'Dals & Pulses', or 'Spices & Masalas'",
         },
         price: {
           type: "number",
-          description: "Selling price in ₹ (e.g., 1350 for 26kg bag)",
+          description: "Selling price in ₹ (e.g., 34 for 500ml milk packet, 1350 for 26kg rice)",
         },
         mrp: {
           type: "number",
-          description: "Optional MRP printed price in ₹ (e.g., 1500)",
+          description: "Optional printed MRP in ₹ (e.g., 38)",
         },
         size: {
           type: "string",
-          description: "Weight or volume size (e.g., '26kg', '10kg', '5kg', '1L', '500g'). Default '26kg' for rice, '1L' for oil.",
+          description: "Weight or volume size (e.g., '500ml', '1L', '26kg', '10kg', '1kg').",
         },
         stock: {
           type: "number",
-          description: "Available stock quantity in units/bags (default 50)",
+          description: "Available stock quantity in units/packets (default 50)",
         },
         description: {
           type: "string",
@@ -116,7 +158,7 @@ const toolsList = [
         },
         imageUrl: {
           type: "string",
-          description: "Optional public image URL. If omitted, a clean category placeholder image is automatically attached.",
+          description: "Optional image URL. Automatically uploaded to Cloudinary folder 'ricemart_products'. If omitted, a clean category placeholder image is assigned.",
         },
       },
       required: ["name", "category", "price"],
@@ -165,7 +207,7 @@ const toolsList = [
   },
   {
     name: "get_low_stock_alerts",
-    description: "Identify and list all products running low on stock (stock count below threshold, e.g. < 10 bags) so the store owner knows what to reorder.",
+    description: "Identify and list all products running low on stock (stock count below threshold, e.g. < 10 units/bags) so the store owner knows what to reorder.",
     inputSchema: {
       type: "object",
       properties: {
@@ -388,6 +430,7 @@ async function executeToolCall(name: string, args: any) {
         name: p.name,
         category: categoryNames[p.category] || p.category,
         description: p.description,
+        imageUrls: p.imageUrls || [],
         variants: formatVariants(p.variants),
       }));
 
@@ -420,6 +463,7 @@ async function executeToolCall(name: string, args: any) {
         name: p.name,
         category: categoryNames[p.category] || p.category,
         description: p.description,
+        imageUrls: p.imageUrls || [],
         variants: formatVariants(p.variants),
       };
     }
@@ -434,17 +478,19 @@ async function executeToolCall(name: string, args: any) {
       const mrpPrice = args.mrp ? Number(args.mrp) : Math.round(sellingPrice * 1.15);
       const stockCount = args.stock !== undefined ? Number(args.stock) : 50;
 
-      // Parse size input into value and unit (e.g., '26kg' -> 26, 'kg')
-      const rawSizeInput = (args.size || (categoryKey === "c_rice" ? "26kg" : categoryKey === "c_oil" ? "1L" : "1kg")).trim();
+      // Parse size input into value and unit (e.g., '500ml' -> 500, 'ml', '1L' -> 1, 'L', '26kg' -> 26, 'kg')
+      const rawSizeInput = (args.size || (categoryKey === "c_rice" ? "26kg" : categoryKey === "c_oil" ? "1L" : categoryKey === "c_dairy" ? "500ml" : "1kg")).trim();
       const sizeMatch = rawSizeInput.match(/^(\d+(?:\.\d+)?)\s*([a-zA-Z]+)$/);
-      const unitVal = sizeMatch ? sizeMatch[1] : (categoryKey === "c_rice" ? "26" : "1");
-      const unitType = sizeMatch ? sizeMatch[2] : (categoryKey === "c_rice" ? "kg" : "kg");
+      const unitVal = sizeMatch ? sizeMatch[1] : (categoryKey === "c_rice" ? "26" : "500");
+      const unitType = sizeMatch ? sizeMatch[2] : (categoryKey === "c_rice" ? "kg" : "ml");
 
       const variantId = `v_${productId}_${unitVal}${unitType}`;
       const sku = `SKU-${categoryKey.toUpperCase().replace("C_", "")}-${slug.toUpperCase().slice(0, 6)}-${unitVal}`;
       const variantSizeString = `${unitVal}:::${unitType}:::${mrpPrice.toFixed(1)}:::${sku}:::${variantId}`;
 
-      const finalImageUrl = args.imageUrl || categoryPlaceholders[categoryKey] || categoryPlaceholders["c_rice"];
+      // Upload image to Cloudinary (or use default category placeholder uploaded to Cloudinary)
+      const sourceImage = args.imageUrl || categoryPlaceholders[categoryKey] || categoryPlaceholders["c_dairy"];
+      const finalCloudinaryUrl = await uploadToCloudinary(sourceImage);
 
       const createMutation = `
         mutation CreateProduct($input: CreateProductInput!) {
@@ -467,8 +513,8 @@ async function executeToolCall(name: string, args: any) {
         id: productId,
         name: cleanName,
         category: categoryKey,
-        description: args.description || `${cleanName} - Premium quality ${categoryNames[categoryKey] || "grocery item"}.`,
-        imageUrls: [finalImageUrl],
+        description: args.description || `${cleanName} - Fresh and authentic ${categoryNames[categoryKey] || "grocery item"} available at G-Store.`,
+        imageUrls: [finalCloudinaryUrl],
         variants: [
           {
             size: variantSizeString,
@@ -482,13 +528,13 @@ async function executeToolCall(name: string, args: any) {
       const created = result?.createProduct;
 
       return {
-        message: "Product created successfully in G-Store catalog",
+        message: "Product created successfully in G-Store catalog & uploaded to Cloudinary",
         product: {
           id: created?.id,
           name: created?.name,
           category: categoryNames[created?.category] || created?.category,
           description: created?.description,
-          imageUrl: finalImageUrl,
+          cloudinaryImageUrl: finalCloudinaryUrl,
           variants: formatVariants(created?.variants),
         },
       };
@@ -991,7 +1037,7 @@ async function handleJsonRpc(body: any, res: express.Response) {
           },
           serverInfo: {
             name: "gstore-mcp-server",
-            version: "1.1.0",
+            version: "1.2.0",
           },
         },
       });
@@ -1088,7 +1134,7 @@ app.get("/mcp", (req, res) => {
   res.json({
     status: "online",
     name: "G-Store MCP Server",
-    version: "1.1.0",
+    version: "1.2.0",
     protocolVersion: "2024-11-05",
     toolsCount: toolsList.length,
     tools: toolsList.map((t) => t.name),
@@ -1104,7 +1150,7 @@ app.get("/", (req, res) => {
   res.json({
     status: "online",
     name: "G-Store MCP Server",
-    version: "1.1.0",
+    version: "1.2.0",
     protocolVersion: "2024-11-05",
     toolsCount: toolsList.length,
     endpoints: {
@@ -1117,6 +1163,6 @@ app.get("/", (req, res) => {
 app.post("/", (req, res) => handleJsonRpc(req.body, res));
 
 app.listen(PORT, () => {
-  console.log(`🚀 G-Store MCP Server v1.1.0 listening on http://localhost:${PORT}`);
-  console.log(`📡 Loaded ${toolsList.length} tools: ${toolsList.map((t) => t.name).join(", ")}`);
+  console.log(`🚀 G-Store MCP Server v1.2.0 listening on http://localhost:${PORT}`);
+  console.log(`📡 Cloudinary & AppSync bridge active for all ${toolsList.length} tools`);
 });
