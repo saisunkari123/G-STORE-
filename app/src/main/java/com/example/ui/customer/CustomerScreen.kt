@@ -341,7 +341,7 @@ fun CustomerCatalogView(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+                    .clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))
                     .background(
                         brush = Brush.verticalGradient(
                             colors = listOf(RoyalEmerald, Color(0xFF022C22))
@@ -352,59 +352,92 @@ fun CustomerCatalogView(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp)
+                        .padding(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 10.dp)
                 ) {
-                    // Top Row: Logo & Title + Compact Offline Badge + Cart & Logout Icons
+                    // Row 1: Logo & Delivery Location + Cart & Logout Icons
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Left: Greeting & Clickable Delivery Location
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { onLocationClick() }
+                        ) {
                             Box(
                                 modifier = Modifier
-                                    .size(32.dp)
-                                    .background(Color.White.copy(alpha = 0.15f), shape = androidx.compose.foundation.shape.CircleShape),
+                                    .size(30.dp)
+                                    .background(Color.White.copy(alpha = 0.15f), CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = "G",
-                                    fontSize = 18.sp,
+                                    fontSize = 16.sp,
                                     fontWeight = FontWeight.Black,
                                     color = Color.White
                                 )
                             }
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                "G-STORE",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Black,
-                                    letterSpacing = (-0.5).sp,
-                                    color = Color.White
-                                )
-                            )
-                            androidx.compose.animation.AnimatedVisibility(visible = !isOnline) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                val userName = AppState.currentUser?.name ?: "Guest"
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Surface(
-                                        color = Color(0xFFDC2626),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Text(
-                                            text = "Offline",
-                                            color = Color.White,
-                                            fontSize = 10.sp,
+                                    Text(
+                                        text = "G-STORE • Hi, $userName",
+                                        style = MaterialTheme.typography.labelSmall.copy(
                                             fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            color = Color.White.copy(alpha = 0.85f),
+                                            fontSize = 11.sp
                                         )
+                                    )
+                                    androidx.compose.animation.AnimatedVisibility(visible = !isOnline) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Surface(
+                                                color = Color(0xFFDC2626),
+                                                shape = RoundedCornerShape(4.dp)
+                                            ) {
+                                                Text(
+                                                    text = "Offline",
+                                                    color = Color.White,
+                                                    fontSize = 8.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                )
+                                            }
+                                        }
                                     }
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.LocationOn,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFBBF24),
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                    Text(
+                                        text = "$addressDisplay ▼",
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White,
+                                            fontSize = 12.sp
+                                        ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
                             }
                         }
-                        
+
+                        // Right: Cart & Logout Action Icons
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            // Cart Icon with count badge
-                            IconButton(onClick = onCartClick) {
+                            IconButton(
+                                onClick = onCartClick,
+                                modifier = Modifier.size(32.dp)
+                            ) {
                                 val cartItemsCount = AppState.cartItems.values.sum()
                                 if (cartItemsCount > 0) {
                                     BadgedBox(
@@ -421,7 +454,7 @@ fun CustomerCatalogView(
                                             Icons.Default.ShoppingCart,
                                             contentDescription = "Cart",
                                             tint = Color.White,
-                                            modifier = Modifier.size(20.dp)
+                                            modifier = Modifier.size(18.dp)
                                         )
                                     }
                                 } else {
@@ -429,85 +462,80 @@ fun CustomerCatalogView(
                                         Icons.Default.ShoppingCart,
                                         contentDescription = "Cart",
                                         tint = Color.White,
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
                             }
-                            
-                            // Logout Button
-                            IconButton(onClick = onLogoutClick) {
+
+                            IconButton(
+                                onClick = onLogoutClick,
+                                modifier = Modifier.size(32.dp)
+                            ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                                     contentDescription = "Logout",
-                                    tint = Color.White.copy(alpha = 0.8f),
-                                    modifier = Modifier.size(20.dp)
+                                    tint = Color.White.copy(alpha = 0.85f),
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
                     }
-                    
-                    Spacer(modifier = Modifier.height(4.dp))
-                    
-                    // Greeting & Location Row (Side-by-Side to save vertical space)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    // Row 2: Sleek 38dp Search Bar with Clear Icon
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color.White)
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.CenterStart
                     ) {
-                        val userName = AppState.currentUser?.name ?: "Guest"
-                        Text(
-                            text = "Hello, $userName!",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        )
-                        
                         Row(
-                            modifier = Modifier.clickable { onLocationClick() },
+                            modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = Icons.Default.LocationOn,
-                                contentDescription = "Location Pin",
-                                tint = Color(0xFFFBBF24),
-                                modifier = Modifier.size(14.dp)
+                                Icons.Default.Search,
+                                contentDescription = null,
+                                tint = RoyalEmerald,
+                                modifier = Modifier.size(16.dp)
                             )
-                            Spacer(modifier = Modifier.width(2.dp))
-                            Text(
-                                text = "$addressDisplay ▼",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color.White.copy(alpha = 0.9f)
-                                ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.widthIn(max = 180.dp)
-                            )
+                            Spacer(Modifier.width(8.dp))
+                            Box(modifier = Modifier.weight(1f)) {
+                                if (searchQuery.isEmpty()) {
+                                    Text(
+                                        "Search for quality products...",
+                                        color = Color.Gray,
+                                        fontSize = 12.5.sp
+                                    )
+                                }
+                                androidx.compose.foundation.text.BasicTextField(
+                                    value = searchQuery,
+                                    onValueChange = { searchQuery = it },
+                                    singleLine = true,
+                                    textStyle = androidx.compose.ui.text.TextStyle(
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.Medium
+                                    ),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            if (searchQuery.isNotEmpty()) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Clear",
+                                    tint = Color.Gray,
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .clickable { searchQuery = "" }
+                                )
+                            }
                         }
                     }
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    // Search Bar contained fully inside the green background
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Search for quality products...", color = Color.Gray, fontSize = 13.sp) },
-                        leadingIcon = { Icon(Icons.Default.Search, null, tint = RoyalEmerald, modifier = Modifier.size(18.dp)) },
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true,
-                        textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White,
-                            focusedBorderColor = Color.Transparent,
-                            unfocusedBorderColor = Color.Transparent
-                        )
-                    )
                 }
             }
         }
@@ -534,7 +562,7 @@ fun CustomerCatalogView(
                     modifier = Modifier.fillMaxSize(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
-                    contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 100.dp)
+                    contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 90.dp)
                 ) {
                     // Full-width Category Carousel Chips
                     item(span = { GridItemSpan(2) }) {
@@ -542,7 +570,7 @@ fun CustomerCatalogView(
                         LazyRow(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp),
+                                .padding(vertical = 2.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(allCats) { cat ->
