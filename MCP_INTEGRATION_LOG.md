@@ -8,81 +8,53 @@ This document tracks all completed steps, technical implementations, architectur
 
 | Step | Phase | Status | Summary |
 |:---:|---|:---:|---|
-| **Step 1** | **Server Initialization & Core Tools** | ✅ **Completed** | Built Node.js/TypeScript MCP Server with AWS AppSync GraphQL bridge & 8 store tools |
+| **Step 1** | **Server Initialization & Core Tools** | ✅ **Completed** | Built Node.js/TypeScript MCP Server with AWS AppSync GraphQL bridge |
 | **Step 2** | **Render Deployment Configuration** | ✅ **Completed** | Created `render.yaml` blueprint, `.gitignore`, and production build scripts |
 | **Step 3** | **Cloud Deployment Execution (Render)** | ✅ **Completed** | Live on Render: [`https://gstore-mcp-server.onrender.com`](https://gstore-mcp-server.onrender.com) |
 | **Step 4** | **Connection to Gemini Spark** | ✅ **Completed** | Successfully connected and linked as a custom connected app |
-| **Step 5** | **Schema Alignment & All 8 Tools Verified** | ✅ **100% Operational** | Aligned order & config schemas (`sys_config`, `OrderItem`, `customerId`). All 8 tools tested live. |
+| **Step 5** | **13 Full Tools Deployed & Verified** | ✅ **100% Operational** | 13 tools deployed (Catalog, Inventory, Orders, Analytics, Low Stock Alerts, Customer Search, Top Sellers) |
 
 ---
 
-## 📝 Detailed Step-by-Step Execution Log
+## 🛠️ Complete Suite of 13 Live MCP Tools
 
-### ✅ Step 1: MCP Server Project Setup & Core Tools Implementation
-- **Timestamp**: `2026-08-29`
-- **Location**: [`gstore-mcp-server/`](file:///Users/saisunkari/antigravity/G-Store/gstore-mcp-server)
+### 🌾 1. Catalog & Product Management
+1. **`list_products`**: Retrieve all products, bag sizes, selling prices, MRPs, and stock status (with category filter).
+2. **`get_product_by_id`**: Get deep product details, variants, images, and descriptions for a specific product ID.
+3. **`create_product`**: Add new products directly via chat with auto category placeholders (Option 3) or custom image URLs.
+4. **`delete_product`**: Remove discontinued or outdated products by ID from the catalog.
+5. **`update_product_price_or_stock`**: Live price adjustments (₹) and stock quantities for any bag size or variant.
 
-#### 1. Project Initialization & Dependencies
-- Created `package.json` with `@modelcontextprotocol/sdk`, `express`, `cors`, `dotenv`, `node-fetch`, and `typescript`.
-- Configured `tsconfig.json` for ES2022 / NodeNext modules.
-- Installed and locked all npm dependencies.
+### 🚨 2. Inventory Alerts & Analytics
+6. **`get_low_stock_alerts`**: Instantly identify all products with stock below threshold (e.g., $< 10$ or $< 50$ bags) with urgent reorder tags.
+7. **`get_best_selling_products`**: Calculate the top best-selling items, total bags sold, and revenue generated from real customer orders.
+8. **`get_store_metrics`**: High-level store summary (total orders, total revenue, pending vs. preparing vs. delivered breakdown).
 
-#### 2. AWS AppSync GraphQL Bridge
-- Created [`src/appsync.ts`](file:///Users/saisunkari/antigravity/G-Store/gstore-mcp-server/src/appsync.ts) connecting directly to G-Store's live AWS AppSync backend:
-  - **Endpoint**: `https://gosrh7asubcb3i2qznf6niewd4.appsync-api.us-east-1.amazonaws.com/graphql`
-  - **Region**: `us-east-1`
-  - **Active Auth Key**: `da2-nk6kuao7yrcplhiytlhykr62qq`
+### 📦 3. Order Management & Customer Intelligence
+9. **`list_orders`**: Retrieve recent customer orders with customer names, phones, addresses, item quantities, and status.
+10. **`search_customer_orders`**: Search customer order history and lifetime total spending by customer phone number or name.
+11. **`update_order_status`**: Advance order fulfillment status (`PENDING` $\rightarrow$ `PREPARING` $\rightarrow$ `OUT_FOR_DELIVERY` $\rightarrow$ `DELIVERED`).
 
-#### 3. All 8 Registered & Verified Live MCP Tools in [`src/index.ts`](file:///Users/saisunkari/antigravity/G-Store/gstore-mcp-server/src/index.ts)
-1. `list_products`: Fetch live product catalog, category filters, weights, prices, and stock.
-2. `get_product_by_id`: Retrieve comprehensive details for a specific item.
-3. `update_product_price_or_stock`: Update variant price or mark stock status.
-4. `list_orders`: Retrieve customer orders with customer name, phone, items, address, and status filter.
-5. `update_order_status`: Advance order delivery fulfillment status (`PENDING` $\rightarrow$ `PREPARING` $\rightarrow$ `OUT_FOR_DELIVERY` $\rightarrow$ `DELIVERED`).
-6. `get_store_metrics`: Live business metrics: total orders (3), total revenue (₹4,690), breakdown of pending/delivered orders.
-7. `get_store_settings`: Fetch delivery radius (10 km) and minimum order value (₹150) from `sys_config`.
-8. `update_store_settings`: Modify store delivery radius and minimum order value in cloud.
+### ⚙️ 4. Store Operations & Policy
+12. **`get_store_settings`**: Fetch active store delivery radius (in km) and minimum order amount (in ₹) from cloud metadata (`sys_config`).
+13. **`update_store_settings`**: Change store operational settings (e.g. set delivery radius to 12 km or minimum order to ₹200).
 
 ---
 
-### ✅ Step 2: Render Deployment Configuration Setup
-- **Timestamp**: `2026-08-29`
-- Created [`gstore-mcp-server/render.yaml`](file:///Users/saisunkari/antigravity/G-Store/gstore-mcp-server/render.yaml) for 1-click cloud service provisioning.
-- Configured [`gstore-mcp-server/.gitignore`](file:///Users/saisunkari/antigravity/G-Store/gstore-mcp-server/.gitignore) to exclude `node_modules` and local environment files.
+## 💡 Example Questions for Gemini Spark
 
----
+- 🛍️ **Create & Manage Products**:
+  > *"Add a new product 'Fortune HMT Rice' in Rice Bags for ₹1,380 (MRP ₹1,550), 26kg bag, with stock of 40 bags."*
+  > *"Delete product `p_rice_fortune_hmt_...` from the store."*
 
-### ✅ Step 3: MCP Handshake & Protocol Optimization
-- **Timestamp**: `2026-08-29`
-- Implemented universal JSON-RPC 2.0 and SSE dispatcher conforming to MCP Protocol Version `2024-11-05`.
-- Live verified on Render:
-  - `initialize` handshake $\rightarrow$ `HTTP 200 OK`
-  - `tools/list` handshake $\rightarrow$ `HTTP 200 OK` (returning all 8 G-Store tools)
-  - `tools/call` with `list_products` $\rightarrow$ `HTTP 200 OK`
-  - `tools/call` with `list_orders` $\rightarrow$ `HTTP 200 OK` (3 real orders)
-  - `tools/call` with `get_store_metrics` $\rightarrow$ `HTTP 200 OK` (₹4,690 revenue)
-  - `tools/call` with `get_store_settings` $\rightarrow$ `HTTP 200 OK` (10 km / ₹150)
-  - Base URL: `https://gstore-mcp-server.onrender.com`
-  - MCP Endpoint: `https://gstore-mcp-server.onrender.com/mcp`
+- 🚨 **Inventory Alerts**:
+  > *"Which rice bags have fewer than 50 bags left in stock?"*
+  > *"What are our top 3 best-selling products this month?"*
 
----
+- 👥 **Customer Lookup**:
+  > *"Show all orders and lifetime spend for customer sunny or phone 9704173515."*
 
-### 💡 Example Prompts to Use with Gemini Spark
-
-You can now use all these prompts inside Gemini Spark:
-
-- 🌾 **Catalog Queries**:
-  > *"What rice products and bag sizes are available in G-Store?"*
-  > *"Show me all items under Cooking Oils category."*
-
-- 📊 **Business Analytics**:
-  > *"What is our total store revenue and how many orders are pending delivery?"*
-
-- 📦 **Order Management**:
-  > *"Show me the latest customer orders."*
-  > *"Are there any orders in PENDING status?"*
-  > *"Update the status of order G-1786896453001-823 to PREPARING."*
-
-- ⚙️ **Store Operations**:
-  > *"What are our current delivery radius and minimum order settings?"*
-  > *"Update the delivery radius to 12 km and minimum order amount to ₹200."*
+- 📊 **Business & Orders**:
+  > *"Show me all pending orders."*
+  > *"What is our total revenue today?"*
+  > *"Update order G-1786896453001-823 to PREPARING."*
