@@ -987,6 +987,7 @@ fun CustomerProductCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .height(236.dp)
             .shadow(2.dp, RoundedCornerShape(16.dp), ambientColor = Color.Black.copy(alpha = 0.04f))
             .clickable { onProductClick(product) },
         shape = RoundedCornerShape(16.dp),
@@ -994,9 +995,9 @@ fun CustomerProductCard(
         border = BorderStroke(1.dp, Color(0xFFF1F3F4))
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxSize()
         ) {
-            // 1. Top Image Box with Discount & Out of Stock Overlay
+            // 1. Top Image Box with Discount & Out of Stock Overlay (Fixed 115dp)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1071,88 +1072,111 @@ fun CustomerProductCard(
                 }
             }
 
-            // 2. Body Details: Title & Size ONLY (Clean & Uncluttered)
+            // 2. Body Details: Strictly Aligned Slots with SpaceBetween
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(8.dp)
+                    .weight(1f)
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Product Title (2 lines max)
-                Text(
-                    text = product.nameEn,
-                    fontSize = 12.5.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = 15.sp,
-                    modifier = Modifier.height(32.dp)
-                )
-
-                Spacer(Modifier.height(4.dp))
-
-                // Variant / Size chip (Tap to pick size directly or see count)
-                if (sortedVariants.size > 1) {
-                    Surface(
-                        onClick = { showVariantSheet = true },
-                        shape = RoundedCornerShape(6.dp),
-                        color = Color(0xFFF3F4F6),
-                        border = BorderStroke(0.5.dp, Color(0xFFD1D5DB)),
-                        modifier = Modifier.padding(vertical = 1.dp)
+                // Top section of body: Title & Size
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Product Title (Fixed 32dp container)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(32.dp),
+                        contentAlignment = Alignment.TopStart
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                "${currentVariant.weight}${currentVariant.unit}",
-                                fontSize = 10.5.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(Modifier.width(2.dp))
-                            Icon(
-                                Icons.Default.ArrowDropDown,
-                                contentDescription = "Select Variant",
-                                modifier = Modifier.size(13.dp),
-                                tint = Color.Gray
-                            )
+                        Text(
+                            text = product.nameEn,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            lineHeight = 15.sp
+                        )
+                    }
+
+                    Spacer(Modifier.height(2.dp))
+
+                    // Variant / Size chip (Fixed 22dp container)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(22.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        if (sortedVariants.size > 1) {
+                            Surface(
+                                onClick = { showVariantSheet = true },
+                                shape = RoundedCornerShape(5.dp),
+                                color = Color(0xFFF3F4F6),
+                                border = BorderStroke(0.5.dp, Color(0xFFD1D5DB))
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        "${currentVariant.weight}${currentVariant.unit}",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(Modifier.width(2.dp))
+                                    Icon(
+                                        Icons.Default.ArrowDropDown,
+                                        contentDescription = "Select Variant",
+                                        modifier = Modifier.size(12.dp),
+                                        tint = Color.Gray
+                                    )
+                                }
+                            }
+                        } else if (hasVariants) {
+                            Surface(
+                                shape = RoundedCornerShape(5.dp),
+                                color = Color(0xFFF9FAFB),
+                                border = BorderStroke(0.5.dp, Color(0xFFE5E7EB))
+                            ) {
+                                Text(
+                                    "${currentVariant.weight}${currentVariant.unit}",
+                                    fontSize = 10.sp,
+                                    color = Color.Gray,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                )
+                            }
                         }
                     }
-                } else if (hasVariants) {
-                    Text(
-                        "${currentVariant.weight}${currentVariant.unit}",
-                        fontSize = 10.5.sp,
-                        color = Color.Gray,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(vertical = 1.dp)
-                    )
-                } else {
-                    Spacer(Modifier.height(16.dp))
                 }
 
-                Spacer(Modifier.height(6.dp))
-
-                // Price & Add to Cart Action Row
+                // Bottom section: Price & Add to Cart Action Row (Fixed 30dp container)
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(30.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Price stack
-                    Column {
+                    Column(verticalArrangement = Arrangement.Center) {
                         Text(
                             "₹${currentVariant.currentPrice.toInt()}",
                             fontSize = 13.5.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            color = RoyalEmerald
+                            color = RoyalEmerald,
+                            lineHeight = 14.sp
                         )
                         if (hasVariants && currentVariant.mrp > currentVariant.currentPrice) {
                             Text(
                                 "₹${currentVariant.mrp.toInt()}",
-                                fontSize = 10.sp,
+                                fontSize = 9.5.sp,
                                 color = Color.Gray,
-                                textDecoration = TextDecoration.LineThrough
+                                textDecoration = TextDecoration.LineThrough,
+                                lineHeight = 10.sp
                             )
                         }
                     }
@@ -1160,20 +1184,20 @@ fun CustomerProductCard(
                     // Stepper / + ADD Button
                     if (isOutOfStock) {
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(7.dp),
                             color = Color(0xFFE5E7EB)
                         ) {
                             Text(
                                 "SOON",
-                                fontSize = 10.sp,
+                                fontSize = 9.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Gray,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
                     } else if (currentInCart > 0) {
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(7.dp),
                             color = RoyalEmerald,
                             shadowElevation = 2.dp
                         ) {
@@ -1191,7 +1215,7 @@ fun CustomerProductCard(
                                 }
                                 Text(
                                     text = "$currentInCart",
-                                    fontSize = 11.5.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = Color.White,
                                     modifier = Modifier.padding(horizontal = 3.dp)
@@ -1211,13 +1235,13 @@ fun CustomerProductCard(
                     } else {
                         Surface(
                             onClick = { AppState.addToCart(product.id, currentVariant.id) },
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(7.dp),
                             color = Color(0xFFECFDF5),
                             border = BorderStroke(1.dp, RoyalEmerald)
                         ) {
                             Text(
                                 "ADD",
-                                fontSize = 11.sp,
+                                fontSize = 10.5.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = RoyalEmerald,
                                 modifier = Modifier.padding(horizontal = 11.dp, vertical = 4.dp)
