@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: gstore-mcp-server
+    runtime: node
+    rootDir: gstore-mcp-server
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: APPSYNC_ENDPOINT
+        value: https://gosrh7asubcb3i2qznf6niewd4.appsync-api.us-east-1.amazonaws.com/graphql
+      - key: APPSYNC_API_KEY
+        value: da2-ko7gergfqrdslobaeu7jng6iiq
+      - key: AWS_REGION
+        value: us-east-1
