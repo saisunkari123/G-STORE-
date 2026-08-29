@@ -1,19 +1,13 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
 import { executeGraphQL } from "./appsync.js";
 
 dotenv.config();
 
 const app = express();
 
-// Full CORS support
+// Full CORS & header exposure
 app.use(
   cors({
     origin: "*",
@@ -27,20 +21,7 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
-// Create MCP Server Instance
-const server = new Server(
-  {
-    name: "gstore-mcp-server",
-    version: "1.0.0",
-  },
-  {
-    capabilities: {
-      tools: {},
-    },
-  }
-);
-
-// Define tool definitions list
+// G-Store MCP Tools List conforming to MCP Specification (2024-11-05)
 const toolsList = [
   {
     name: "list_products",
@@ -174,12 +155,7 @@ const toolsList = [
   },
 ];
 
-// Register Available Tools in MCP
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return { tools: toolsList };
-});
-
-// Tool execution logic
+// Tool execution logic querying live AWS AppSync backend
 async function executeToolCall(name: string, args: any) {
   switch (name) {
     case "list_products": {
@@ -453,107 +429,134 @@ async function executeToolCall(name: string, args: any) {
   }
 }
 
-// Handle Tool Executions through SDK
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
-  try {
-    const result = await executeToolCall(name, args);
-    return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-    };
-  } catch (error: any) {
-    return {
-      content: [{ type: "text", text: `Error executing ${name}: ${error.message}` }],
-      isError: true,
-    };
-  }
-});
-
-// Modern Streamable HTTP Transport for MCP
-const transport = new StreamableHTTPServerTransport({
-  sessionIdGenerator: undefined,
-  enableJsonResponse: true,
-});
-
-await server.connect(transport);
-
-// Universal handler with bulletproof JSON-RPC fallback
-const universalMcpHandler = async (req: express.Request, res: express.Response) => {
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
+// Master JSON-RPC MCP Dispatcher
+async function handleJsonRpc(body: any, res: express.Response) {
+  if (!body || typeof body !== "object") {
+    return res.status(400).json({ jsonrpc: "2.0", error: { code: -32700, message: "Parse error" }, id: null });
   }
 
-  // Rewrite rawHeaders and headers to satisfy strict SDK checks
-  req.headers["accept"] = "application/json, text/event-stream";
-  for (let i = 0; i < req.rawHeaders.length; i += 2) {
-    if (req.rawHeaders[i].toLowerCase() === "accept") {
-      req.rawHeaders[i + 1] = "application/json, text/event-stream";
-    }
-  }
+  const { id, method, params } = body;
 
-  try {
-    await transport.handleRequest(req, res, req.body);
-  } catch (err: any) {
-    console.warn("Transport handleRequest fallback triggered:", err.message);
+  switch (method) {
+    case "initialize":
+      return res.json({
+        jsonrpc: "2.0",
+        id: id ?? 1,
+        result: {
+          protocolVersion: params?.protocolVersion || "2024-11-05",
+          capabilities: {
+            tools: {
+              listChanged: false,
+            },
+          },
+          serverInfo: {
+            name: "gstore-mcp-server",
+            version: "1.0.0",
+          },
+        },
+      });
 
-    // Direct JSON-RPC Dispatcher
-    const body = req.body;
-    if (body && typeof body === "object") {
-      const { id, method, params } = body;
+    case "notifications/initialized":
+      return res.status(200).end();
 
-      if (method === "initialize") {
+    case "ping":
+      return res.json({
+        jsonrpc: "2.0",
+        id: id ?? 1,
+        result: {},
+      });
+
+    case "tools/list":
+      return res.json({
+        jsonrpc: "2.0",
+        id: id ?? 1,
+        result: {
+          tools: toolsList,
+        },
+      });
+
+    case "tools/call": {
+      try {
+        const toolResult = await executeToolCall(params?.name, params?.arguments);
         return res.json({
           jsonrpc: "2.0",
           id: id ?? 1,
           result: {
-            protocolVersion: params?.protocolVersion || "2024-11-05",
-            capabilities: { tools: {} },
-            serverInfo: { name: "gstore-mcp-server", version: "1.0.0" },
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(toolResult, null, 2),
+              },
+            ],
+          },
+        });
+      } catch (err: any) {
+        return res.json({
+          jsonrpc: "2.0",
+          id: id ?? 1,
+          result: {
+            content: [
+              {
+                type: "text",
+                text: `Error: ${err.message}`,
+              },
+            ],
+            isError: true,
           },
         });
       }
-
-      if (method === "tools/list") {
-        return res.json({
-          jsonrpc: "2.0",
-          id: id ?? 2,
-          result: { tools: toolsList },
-        });
-      }
-
-      if (method === "tools/call") {
-        try {
-          const toolResult = await executeToolCall(params?.name, params?.arguments);
-          return res.json({
-            jsonrpc: "2.0",
-            id: id ?? 3,
-            result: {
-              content: [{ type: "text", text: JSON.stringify(toolResult, null, 2) }],
-            },
-          });
-        } catch (callErr: any) {
-          return res.json({
-            jsonrpc: "2.0",
-            id: id ?? 3,
-            result: {
-              content: [{ type: "text", text: `Error: ${callErr.message}` }],
-              isError: true,
-            },
-          });
-        }
-      }
     }
 
-    if (!res.headersSent) {
-      res.status(200).json({ status: "online", name: "G-Store MCP Server" });
-    }
+    default:
+      return res.json({
+        jsonrpc: "2.0",
+        id: id ?? null,
+        error: {
+          code: -32601,
+          message: `Method not found: ${method}`,
+        },
+      });
   }
-};
+}
 
-app.all("/mcp", universalMcpHandler);
-app.all("/sse", universalMcpHandler);
-app.all("/message", universalMcpHandler);
-app.all("/mcp/message", universalMcpHandler);
+// SSE Connection Handler
+function handleSse(req: express.Request, res: express.Response) {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+
+  const sessionId = Math.random().toString(36).substring(2);
+  res.write(`event: endpoint\ndata: /mcp?sessionId=${sessionId}\n\n`);
+
+  const keepAlive = setInterval(() => {
+    res.write(": keepalive\n\n");
+  }, 15000);
+
+  req.on("close", () => {
+    clearInterval(keepAlive);
+  });
+}
+
+// Unified route handlers for /mcp, /sse, and root
+app.get("/sse", handleSse);
+app.get("/mcp", (req, res) => {
+  const accept = req.headers.accept || "";
+  if (accept.includes("text/event-stream")) {
+    return handleSse(req, res);
+  }
+  res.json({
+    status: "online",
+    name: "G-Store MCP Server",
+    version: "1.0.0",
+    protocolVersion: "2024-11-05",
+    toolsCount: toolsList.length,
+  });
+});
+
+app.post("/mcp", (req, res) => handleJsonRpc(req.body, res));
+app.post("/sse", (req, res) => handleJsonRpc(req.body, res));
+app.post("/message", (req, res) => handleJsonRpc(req.body, res));
 
 // Health check endpoint
 app.get("/", (req, res) => {
@@ -561,6 +564,8 @@ app.get("/", (req, res) => {
     status: "online",
     name: "G-Store MCP Server",
     version: "1.0.0",
+    protocolVersion: "2024-11-05",
+    toolsCount: toolsList.length,
     endpoints: {
       mcp: "/mcp",
       sse: "/sse",
@@ -568,9 +573,9 @@ app.get("/", (req, res) => {
   });
 });
 
-app.post("/", universalMcpHandler);
+app.post("/", (req, res) => handleJsonRpc(req.body, res));
 
 app.listen(PORT, () => {
   console.log(`🚀 G-Store MCP Server listening on http://localhost:${PORT}`);
-  console.log(`📡 Bulletproof MCP endpoints ready at /mcp and /sse`);
+  console.log(`📡 Clean MCP endpoints ready at /mcp, /sse, and /`);
 });
