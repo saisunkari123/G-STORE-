@@ -27,10 +27,19 @@ const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || "k1lw675z";
 const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || "498889461713286";
 const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || "8SR-robZhuJf-5ehvJTFCscCatY";
 
+function formatCloudinaryUrl(url: string): string {
+  if (url && url.includes("res.cloudinary.com") && url.includes("/upload/")) {
+    if (!url.includes("/upload/c_") && !url.includes("/upload/w_")) {
+      return url.replace("/upload/", "/upload/c_pad,w_600,h_600,b_white,f_auto,q_auto/");
+    }
+  }
+  return url;
+}
+
 async function uploadToCloudinary(imageUrlOrData: string): Promise<string> {
   try {
     if (imageUrlOrData.includes(`res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}`)) {
-      return imageUrlOrData;
+      return formatCloudinaryUrl(imageUrlOrData);
     }
 
     const timestamp = Math.floor(Date.now() / 1000).toString();
@@ -52,7 +61,7 @@ async function uploadToCloudinary(imageUrlOrData: string): Promise<string> {
 
     const data: any = await res.json();
     if (data && data.secure_url) {
-      return data.secure_url;
+      return formatCloudinaryUrl(data.secure_url);
     }
     return imageUrlOrData;
   } catch (err: any) {
@@ -252,6 +261,37 @@ const toolsList = [
         },
       },
       required: ["productId"],
+    },
+  },
+  {
+    name: "generate_and_upload_product_image",
+    description:
+      "Generate a photo-realistic, studio e-commerce grocery product image using AI or process a reference photo taken by the store owner, automatically formatting it to a 600x600 square on a clean white background and uploading it to Cloudinary. Optionally attaches it directly to a product.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        productName: {
+          type: "string",
+          description: "Name of the product (e.g. 'Lalitha Brand HMT Rice 26kg bag', 'Freedom Refined Sunflower Oil 1L')",
+        },
+        productId: {
+          type: "string",
+          description: "Optional product ID (e.g. 'p_rice_sona') to immediately update and attach this image in AWS AppSync.",
+        },
+        referenceImageUrlOrBase64: {
+          type: "string",
+          description: "Optional reference photo URL or base64 image taken on phone. If provided, uploads and formats this reference image.",
+        },
+        customPrompt: {
+          type: "string",
+          description: "Optional custom prompt describing visual packaging details (e.g. 'yellow woven bag with red Lalitha brand logo on pure white background, studio lighting')",
+        },
+        category: {
+          type: "string",
+          description: "Optional product category ('Rice Bags', 'Cooking Oils', 'Dals & Pulses', 'Dairy Essentials', 'Spices & Masalas')",
+        },
+      },
+      required: ["productName"],
     },
   },
   {
@@ -1004,6 +1044,78 @@ async function executeToolCall(name: string, args: any) {
           imageUrls: updated?.imageUrls || [],
           variants: formatVariants(updated?.variants),
         },
+      };
+    }
+
+    case "generate_and_upload_product_image": {
+      const productName = String(args.productName || "").trim();
+      const customPrompt = args.customPrompt ? String(args.customPrompt).trim() : "";
+      const category = args.category ? String(args.category).trim() : "Grocery";
+      const referenceImage = args.referenceImageUrlOrBase64 ? String(args.referenceImageUrlOrBase64).trim() : "";
+      const productId = args.productId ? String(args.productId).trim() : "";
+
+      let finalCloudinaryUrl = "";
+
+      if (referenceImage) {
+        // Case 1: Reference photo taken on phone or image URL provided
+        finalCloudinaryUrl = await uploadToCloudinary(referenceImage);
+      } else {
+        // Case 2: AI-generated commercial studio packaging photo
+        const promptDetails = customPrompt || `${productName}, retail grocery package, vibrant packaging labels, 4k sharp details`;
+        const fullPrompt = `Commercial studio product packaging photo of ${promptDetails}, ${category}, centered on pure clean white background, soft studio lighting, sharp focus, 8k ecommerce product photography`;
+        
+        const seed = Math.floor(Math.random() * 100000);
+        const aiImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=600&height=600&nologo=true&enhance=true&seed=${seed}`;
+        
+        finalCloudinaryUrl = await uploadToCloudinary(aiImageUrl);
+      }
+
+      // If productId is provided, automatically update the product in AWS AppSync
+      let updatedProductInfo: any = null;
+      if (productId) {
+        try {
+          const getQuery = `
+            query GetProduct($id: ID!) {
+              getProduct(id: $id) {
+                id
+                name
+                imageUrls
+              }
+            }
+          `;
+          const existingData = await executeGraphQL(getQuery, { id: productId });
+          const product = existingData?.getProduct;
+          if (product) {
+            const updateMutation = `
+              mutation UpdateProduct($input: UpdateProductInput!) {
+                updateProduct(input: $input) {
+                  id
+                  name
+                  imageUrls
+                }
+              }
+            `;
+            const updateRes = await executeGraphQL(updateMutation, {
+              input: {
+                id: product.id,
+                imageUrls: [finalCloudinaryUrl],
+              },
+            });
+            updatedProductInfo = updateRes?.updateProduct;
+          }
+        } catch (err: any) {
+          console.warn("Failed to attach image to productId:", err.message);
+        }
+      }
+
+      return {
+        message: updatedProductInfo
+          ? `Image generated and successfully attached to product '${updatedProductInfo.name}' (${productId}) in G-Store catalog`
+          : `Image generated and successfully uploaded to Cloudinary CDN`,
+        cloudinaryImageUrl: finalCloudinaryUrl,
+        productId: productId || undefined,
+        productName: productName || undefined,
+        modeUsed: referenceImage ? "Reference Photo Format & Square 600x600 Pad" : "AI Studio E-Commerce Generation",
       };
     }
 
