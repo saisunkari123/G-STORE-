@@ -352,7 +352,7 @@ fun CustomerCatalogView(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 10.dp)
+                        .padding(start = 14.dp, end = 14.dp, top = 2.dp, bottom = 10.dp)
                 ) {
                     // Row 1: Top Branding & Greeting + Actions (Cart & Logout)
                     Row(
@@ -973,6 +973,14 @@ fun SectionHeader(title: String) {
     }
 }
 
+fun formatProductNameNoOrphan(name: String): String {
+    val words = name.trim().split(Regex("\\s+"))
+    if (words.size <= 2) return name
+    val prefix = words.subList(0, words.size - 2).joinToString(" ")
+    val lastTwo = words.subList(words.size - 2, words.size).joinToString("\u00A0")
+    return if (prefix.isEmpty()) lastTwo else "$prefix $lastTwo"
+}
+
 @Composable
 fun CustomerProductCard(
     product: Product,
@@ -1106,7 +1114,7 @@ fun CustomerProductCard(
                         contentAlignment = Alignment.TopStart
                     ) {
                         Text(
-                            text = product.nameEn,
+                            text = formatProductNameNoOrphan(product.nameEn),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -1429,23 +1437,13 @@ fun ProductDetailBottomSheet(
 
             Spacer(Modifier.height(16.dp))
 
-            // 2. Product Name & Telugu Name
+            // 2. Product Name & Brand Tag
             Text(
                 text = product.nameEn,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
-
-            if (product.nameTe.isNotBlank()) {
-                Text(
-                    text = product.nameTe,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isDark) Color(0xFF34D399) else RoyalEmerald,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-            }
 
             if (product.brand.isNotBlank()) {
                 Spacer(Modifier.height(6.dp))
@@ -1525,7 +1523,7 @@ fun ProductDetailBottomSheet(
             }
 
             // 4. Product Details / Description
-            if (product.descriptionEn.isNotBlank() || product.descriptionTe.isNotBlank()) {
+            if (product.descriptionEn.isNotBlank()) {
                 Text(
                     text = "Product Details",
                     fontSize = 14.sp,
@@ -1533,23 +1531,12 @@ fun ProductDetailBottomSheet(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(Modifier.height(6.dp))
-                if (product.descriptionEn.isNotBlank()) {
-                    Text(
-                        text = product.descriptionEn,
-                        fontSize = 13.sp,
-                        color = if (AppState.isDarkMode) Color(0xFFCCCCCC) else Color.Gray,
-                        lineHeight = 18.sp
-                    )
-                }
-                if (product.descriptionTe.isNotBlank()) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = product.descriptionTe,
-                        fontSize = 13.sp,
-                        color = if (AppState.isDarkMode) Color(0xFFCCCCCC) else Color.Gray,
-                        lineHeight = 18.sp
-                    )
-                }
+                Text(
+                    text = product.descriptionEn,
+                    fontSize = 13.sp,
+                    color = if (AppState.isDarkMode) Color(0xFFCCCCCC) else Color.Gray,
+                    lineHeight = 18.sp
+                )
                 Spacer(Modifier.height(16.dp))
             }
 
