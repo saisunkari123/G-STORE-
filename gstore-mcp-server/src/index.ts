@@ -21,7 +21,35 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
-// G-Store MCP Tools List conforming to MCP Specification (2024-11-05)
+// High-quality category placeholder images
+const categoryPlaceholders: Record<string, string> = {
+  c_rice: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&auto=format&fit=crop",
+  c_oil: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&auto=format&fit=crop",
+  c_dal: "https://images.unsplash.com/photo-1585994192701-f1a505c8574a?w=600&auto=format&fit=crop",
+  c_dairy: "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=600&auto=format&fit=crop",
+  c_spices: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=600&auto=format&fit=crop",
+};
+
+// Category mapping helper
+const categoryNames: Record<string, string> = {
+  c_rice: "Rice Bags",
+  c_oil: "Cooking Oils",
+  c_dal: "Dals & Pulses",
+  c_dairy: "Dairy Essentials",
+  c_spices: "Spices & Masalas",
+};
+
+function normalizeCategory(cat: string): string {
+  const lower = (cat || "").toLowerCase().trim();
+  if (lower.includes("rice") || lower === "c_rice") return "c_rice";
+  if (lower.includes("oil") || lower === "c_oil") return "c_oil";
+  if (lower.includes("dal") || lower.includes("pulse") || lower === "c_dal") return "c_dal";
+  if (lower.includes("dairy") || lower.includes("milk") || lower.includes("curd") || lower.includes("ghee") || lower === "c_dairy") return "c_dairy";
+  if (lower.includes("spice") || lower.includes("masala") || lower === "c_spices") return "c_spices";
+  return "c_rice"; // default
+}
+
+// Master Tools List conforming to MCP Specification (2024-11-05)
 const toolsList = [
   {
     name: "list_products",
@@ -32,7 +60,7 @@ const toolsList = [
       properties: {
         category: {
           type: "string",
-          description: "Optional category filter (e.g., 'Rice Bags', 'c_rice', 'Cooking Oils', 'Dals & Pulses')",
+          description: "Optional category filter (e.g., 'Rice Bags', 'Cooking Oils', 'Dals & Pulses', 'Dairy Essentials', 'Spices & Masalas')",
         },
       },
     },
@@ -46,6 +74,63 @@ const toolsList = [
         productId: {
           type: "string",
           description: "The unique ID of the product (e.g., 'p_rice_sona', 'p_rice_basmati')",
+        },
+      },
+      required: ["productId"],
+    },
+  },
+  {
+    name: "create_product",
+    description:
+      "Create and add a new product to G-Store catalog with pricing, weight size, and stock. If no image URL is provided, an automatic high-quality category placeholder image is assigned.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          description: "Product display name (e.g., 'Freedom Refined Sunflower Oil', 'Sri Ram Sona Masuri Rice')",
+        },
+        category: {
+          type: "string",
+          description: "Product category: 'Rice Bags', 'Cooking Oils', 'Dals & Pulses', 'Dairy Essentials', or 'Spices & Masalas'",
+        },
+        price: {
+          type: "number",
+          description: "Selling price in ₹ (e.g., 1350 for 26kg bag)",
+        },
+        mrp: {
+          type: "number",
+          description: "Optional MRP printed price in ₹ (e.g., 1500)",
+        },
+        size: {
+          type: "string",
+          description: "Weight or volume size (e.g., '26kg', '10kg', '5kg', '1L', '500g'). Default '26kg' for rice, '1L' for oil.",
+        },
+        stock: {
+          type: "number",
+          description: "Available stock quantity in units/bags (default 50)",
+        },
+        description: {
+          type: "string",
+          description: "Optional product description or brand notes",
+        },
+        imageUrl: {
+          type: "string",
+          description: "Optional public image URL. If omitted, a clean category placeholder image is automatically attached.",
+        },
+      },
+      required: ["name", "category", "price"],
+    },
+  },
+  {
+    name: "delete_product",
+    description: "Delete or remove a product from the G-Store catalog by its ID.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        productId: {
+          type: "string",
+          description: "The ID of the product to delete (e.g., 'p_rice_sona')",
         },
       },
       required: ["productId"],
@@ -79,6 +164,19 @@ const toolsList = [
     },
   },
   {
+    name: "get_low_stock_alerts",
+    description: "Identify and list all products running low on stock (stock count below threshold, e.g. < 10 bags) so the store owner knows what to reorder.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        threshold: {
+          type: "number",
+          description: "Stock threshold to trigger low stock alert (default is 10 units/bags)",
+        },
+      },
+    },
+  },
+  {
     name: "list_orders",
     description:
       "Fetch recent customer orders from G-Store. Allows filtering by status (PENDING, PREPARING, OUT_FOR_DELIVERY, DELIVERED, CANCELLED).",
@@ -95,6 +193,20 @@ const toolsList = [
           description: "Maximum number of orders to return (default 20)",
         },
       },
+    },
+  },
+  {
+    name: "search_customer_orders",
+    description: "Search customer orders, delivery history, and lifetime spending by customer phone number or customer name.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Customer mobile number (e.g., '9704173515') or customer name (e.g., 'sunny')",
+        },
+      },
+      required: ["query"],
     },
   },
   {
@@ -115,6 +227,19 @@ const toolsList = [
         },
       },
       required: ["orderId", "newStatus"],
+    },
+  },
+  {
+    name: "get_best_selling_products",
+    description: "Calculate the top best-selling products in G-Store ranked by total bags/units sold and revenue generated from completed orders.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        limit: {
+          type: "number",
+          description: "Number of top products to return (default is 5)",
+        },
+      },
     },
   },
   {
@@ -188,15 +313,6 @@ function formatVariants(rawVariants: any[] = []) {
     };
   });
 }
-
-// Category mapping helper
-const categoryNames: Record<string, string> = {
-  c_rice: "Rice Bags",
-  c_oil: "Cooking Oils",
-  c_dal: "Dals & Pulses",
-  c_dairy: "Dairy Essentials",
-  c_spices: "Spices & Masalas",
-};
 
 // Helper to format orders
 function formatOrder(o: any) {
@@ -308,6 +424,95 @@ async function executeToolCall(name: string, args: any) {
       };
     }
 
+    case "create_product": {
+      const categoryKey = normalizeCategory(args?.category);
+      const cleanName = String(args.name).trim();
+      const slug = cleanName.toLowerCase().replace(/[^a-z0-9]+/g, "_").slice(0, 20);
+      const productId = `p_${categoryKey.replace("c_", "")}_${slug}_${Date.now().toString().slice(-4)}`;
+
+      const sellingPrice = Number(args.price);
+      const mrpPrice = args.mrp ? Number(args.mrp) : Math.round(sellingPrice * 1.15);
+      const stockCount = args.stock !== undefined ? Number(args.stock) : 50;
+
+      // Parse size input into value and unit (e.g., '26kg' -> 26, 'kg')
+      const rawSizeInput = (args.size || (categoryKey === "c_rice" ? "26kg" : categoryKey === "c_oil" ? "1L" : "1kg")).trim();
+      const sizeMatch = rawSizeInput.match(/^(\d+(?:\.\d+)?)\s*([a-zA-Z]+)$/);
+      const unitVal = sizeMatch ? sizeMatch[1] : (categoryKey === "c_rice" ? "26" : "1");
+      const unitType = sizeMatch ? sizeMatch[2] : (categoryKey === "c_rice" ? "kg" : "kg");
+
+      const variantId = `v_${productId}_${unitVal}${unitType}`;
+      const sku = `SKU-${categoryKey.toUpperCase().replace("C_", "")}-${slug.toUpperCase().slice(0, 6)}-${unitVal}`;
+      const variantSizeString = `${unitVal}:::${unitType}:::${mrpPrice.toFixed(1)}:::${sku}:::${variantId}`;
+
+      const finalImageUrl = args.imageUrl || categoryPlaceholders[categoryKey] || categoryPlaceholders["c_rice"];
+
+      const createMutation = `
+        mutation CreateProduct($input: CreateProductInput!) {
+          createProduct(input: $input) {
+            id
+            name
+            category
+            description
+            imageUrls
+            variants {
+              size
+              price
+              stock
+            }
+          }
+        }
+      `;
+
+      const input = {
+        id: productId,
+        name: cleanName,
+        category: categoryKey,
+        description: args.description || `${cleanName} - Premium quality ${categoryNames[categoryKey] || "grocery item"}.`,
+        imageUrls: [finalImageUrl],
+        variants: [
+          {
+            size: variantSizeString,
+            price: sellingPrice,
+            stock: stockCount,
+          },
+        ],
+      };
+
+      const result = await executeGraphQL(createMutation, { input });
+      const created = result?.createProduct;
+
+      return {
+        message: "Product created successfully in G-Store catalog",
+        product: {
+          id: created?.id,
+          name: created?.name,
+          category: categoryNames[created?.category] || created?.category,
+          description: created?.description,
+          imageUrl: finalImageUrl,
+          variants: formatVariants(created?.variants),
+        },
+      };
+    }
+
+    case "delete_product": {
+      const mutation = `
+        mutation DeleteProduct($input: DeleteProductInput!) {
+          deleteProduct(input: $input) {
+            id
+            name
+          }
+        }
+      `;
+      const result = await executeGraphQL(mutation, {
+        input: { id: args?.productId },
+      });
+
+      return {
+        message: `Product ${args?.productId} deleted successfully from G-Store catalog`,
+        deletedProduct: result?.deleteProduct,
+      };
+    }
+
     case "update_product_price_or_stock": {
       const getQuery = `
         query GetProduct($id: ID!) {
@@ -378,6 +583,61 @@ async function executeToolCall(name: string, args: any) {
       };
     }
 
+    case "get_low_stock_alerts": {
+      const threshold = typeof args?.threshold === "number" ? args.threshold : 10;
+      const query = `
+        query ListProducts {
+          listProducts(limit: 1000) {
+            items {
+              id
+              name
+              category
+              variants {
+                size
+                price
+                stock
+              }
+            }
+          }
+        }
+      `;
+      const data = await executeGraphQL(query);
+      const rawItems = (data?.listProducts?.items || []).filter(
+        (p: any) => !p.id.startsWith("sys_") && p.category !== "metadata"
+      );
+
+      const lowStockItems: any[] = [];
+
+      for (const prod of rawItems) {
+        const formatted = formatVariants(prod.variants);
+        for (const variant of formatted) {
+          if (variant.stock <= threshold) {
+            lowStockItems.push({
+              productId: prod.id,
+              productName: prod.name,
+              category: categoryNames[prod.category] || prod.category,
+              weight: variant.weight || variant.size,
+              price: variant.sellingPrice || variant.price,
+              currentStock: variant.stock,
+              alertStatus: variant.stock === 0 ? "🚨 OUT OF STOCK" : "⚠️ LOW STOCK",
+            });
+          }
+        }
+      }
+
+      lowStockItems.sort((a, b) => a.currentStock - b.currentStock);
+
+      return {
+        alertCount: lowStockItems.length,
+        thresholdUsed: threshold,
+        summary:
+          lowStockItems.length === 0
+            ? "All products have sufficient stock levels!"
+            : `Found ${lowStockItems.length} product variants with stock <= ${threshold} units`,
+        lowStockItems,
+      };
+    }
+
     case "list_orders": {
       const limit = typeof args?.limit === "number" ? args.limit : 50;
       const query = `
@@ -420,6 +680,55 @@ async function executeToolCall(name: string, args: any) {
       return { count: formattedOrders.length, orders: formattedOrders };
     }
 
+    case "search_customer_orders": {
+      const queryStr = String(args?.query || "").toLowerCase().trim();
+      const query = `
+        query ListOrders {
+          listOrders(limit: 1000) {
+            items {
+              id
+              customerId
+              customerName
+              deliveryAddress
+              deliveryFee
+              status
+              subtotal
+              total
+              createdAt
+              items {
+                productId
+                productName
+                quantity
+                price
+                variantSize
+              }
+            }
+          }
+        }
+      `;
+      const data = await executeGraphQL(query);
+      const allOrders = (data?.listOrders?.items || []).map(formatOrder);
+
+      const matched = allOrders.filter(
+        (o: any) =>
+          o.customerName?.toLowerCase().includes(queryStr) ||
+          o.customerPhone?.includes(queryStr) ||
+          o.customerId?.toLowerCase().includes(queryStr) ||
+          o.orderId?.toLowerCase().includes(queryStr)
+      );
+
+      const totalSpend = matched.reduce((sum: number, o: any) => sum + (o.totalAmount || 0), 0);
+
+      return {
+        query: args?.query,
+        matchedOrdersCount: matched.length,
+        customerLifetimeSpend: `₹${totalSpend.toFixed(2)}`,
+        customerName: matched[0]?.customerName || undefined,
+        customerPhone: matched[0]?.customerPhone || undefined,
+        orders: matched,
+      };
+    }
+
     case "update_order_status": {
       const mutation = `
         mutation UpdateOrder($input: UpdateOrderInput!) {
@@ -438,6 +747,70 @@ async function executeToolCall(name: string, args: any) {
       });
 
       return { message: "Order status updated successfully", order: result?.updateOrder };
+    }
+
+    case "get_best_selling_products": {
+      const limit = typeof args?.limit === "number" ? args.limit : 5;
+      const query = `
+        query ListOrders {
+          listOrders(limit: 1000) {
+            items {
+              id
+              status
+              items {
+                productId
+                productName
+                quantity
+                price
+                variantSize
+              }
+            }
+          }
+        }
+      `;
+      const data = await executeGraphQL(query);
+      const orders = (data?.listOrders?.items || []).filter((o: any) => o.status !== "CANCELLED");
+
+      const productSalesMap: Record<
+        string,
+        { productId: string; productName: string; variantSize: string; totalQuantitySold: number; totalRevenue: number; ordersCount: number }
+      > = {};
+
+      for (const order of orders) {
+        for (const item of order.items || []) {
+          const key = `${item.productId}_${item.variantSize || "std"}`;
+          if (!productSalesMap[key]) {
+            productSalesMap[key] = {
+              productId: item.productId,
+              productName: item.productName,
+              variantSize: item.variantSize || "Standard",
+              totalQuantitySold: 0,
+              totalRevenue: 0,
+              ordersCount: 0,
+            };
+          }
+          productSalesMap[key].totalQuantitySold += Number(item.quantity) || 1;
+          productSalesMap[key].totalRevenue += (Number(item.price) || 0) * (Number(item.quantity) || 1);
+          productSalesMap[key].ordersCount += 1;
+        }
+      }
+
+      const leaderboard = Object.values(productSalesMap)
+        .sort((a, b) => b.totalQuantitySold - a.totalQuantitySold)
+        .slice(0, limit)
+        .map((p, idx) => ({
+          rank: idx + 1,
+          productName: p.productName,
+          size: p.variantSize,
+          totalQuantitySold: `${p.totalQuantitySold} units/bags`,
+          totalRevenueGenerated: `₹${p.totalRevenue.toFixed(2)}`,
+          orderAppearances: p.ordersCount,
+        }));
+
+      return {
+        topBestSellersCount: leaderboard.length,
+        leaderboard,
+      };
     }
 
     case "get_store_metrics": {
@@ -618,7 +991,7 @@ async function handleJsonRpc(body: any, res: express.Response) {
           },
           serverInfo: {
             name: "gstore-mcp-server",
-            version: "1.0.0",
+            version: "1.1.0",
           },
         },
       });
@@ -715,9 +1088,10 @@ app.get("/mcp", (req, res) => {
   res.json({
     status: "online",
     name: "G-Store MCP Server",
-    version: "1.0.0",
+    version: "1.1.0",
     protocolVersion: "2024-11-05",
     toolsCount: toolsList.length,
+    tools: toolsList.map((t) => t.name),
   });
 });
 
@@ -730,7 +1104,7 @@ app.get("/", (req, res) => {
   res.json({
     status: "online",
     name: "G-Store MCP Server",
-    version: "1.0.0",
+    version: "1.1.0",
     protocolVersion: "2024-11-05",
     toolsCount: toolsList.length,
     endpoints: {
@@ -743,6 +1117,6 @@ app.get("/", (req, res) => {
 app.post("/", (req, res) => handleJsonRpc(req.body, res));
 
 app.listen(PORT, () => {
-  console.log(`🚀 G-Store MCP Server listening on http://localhost:${PORT}`);
-  console.log(`📡 Clean MCP endpoints ready at /mcp, /sse, and /`);
+  console.log(`🚀 G-Store MCP Server v1.1.0 listening on http://localhost:${PORT}`);
+  console.log(`📡 Loaded ${toolsList.length} tools: ${toolsList.map((t) => t.name).join(", ")}`);
 });
