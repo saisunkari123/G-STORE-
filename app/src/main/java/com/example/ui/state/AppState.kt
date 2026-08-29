@@ -67,6 +67,23 @@ object AppState {
                 }
                 observeAddresses(value.id)
                 observeOrders(value.id, value.role)
+
+                // Restore saved cart items for this logged-in user
+                appContext?.let { ctx ->
+                    val userCart = com.example.util.CartStorageManager.loadCartItems(ctx, value.id)
+                    if (userCart.isNotEmpty()) {
+                        cartItems = userCart
+                    } else {
+                        val guestCart = com.example.util.CartStorageManager.loadCartItems(ctx, "guest")
+                        if (guestCart.isNotEmpty()) {
+                            cartItems = guestCart
+                            com.example.util.CartStorageManager.saveCartItems(ctx, value.id, guestCart)
+                            com.example.util.CartStorageManager.clearCart(ctx, "guest")
+                        } else {
+                            cartItems = emptyMap()
+                        }
+                    }
+                }
             } else {
                 // BUG-F3 FIX: Also cancel the products listener on logout — prevents Firestore read leak.
                 productsJob?.cancel()
@@ -1866,18 +1883,17 @@ object AppState {
         updateOrderStatus(orderId, OrderStatus.RETURN_REQUESTED)
     }
 
-    fun updateOrderStatus(orderId: String, newStatus: OrderStatus) {
+    fun updateOrderStatus(orderId: String, newStatus: OrderStatus, onComplete: () -> Unit = {}) {
         isNetworkLoading = true
         ioScope.launch {
             try {
                 orderRepository.updateOrderStatus(orderId, newStatus.name)
-                withContext(Dispatchers.Main) {
-                    isNetworkLoading = false
-                }
             } catch (e: Exception) {
                 e.printStackTrace()
+            } finally {
                 withContext(Dispatchers.Main) {
                     isNetworkLoading = false
+                    onComplete()
                 }
             }
         }

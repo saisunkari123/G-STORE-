@@ -104,7 +104,7 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
 
     /**
      * Queries AppSync listProducts and completely replaces the local state.
-     * Admin-created products on other devices will appear within 5s automatically.
+     * Admin-created products on other devices will appear within 3s automatically.
      */
     private suspend fun fetchProductsFromCloud(): Unit = suspendCancellableCoroutine { cont ->
         val query = """
@@ -112,17 +112,17 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
                 listProducts(limit: 1000) {
                     items {
                         id
-                        categoryId
-                        nameEn
-                        nameTe
-                        brand
-                        descriptionEn
-                        descriptionTe
-                        shortDescriptionEn
-                        shortDescriptionTe
-                        variantsJson
-                        enabled
-                        available
+                        name
+                        category
+                        description
+                        imageUrls
+                        variants {
+                            size
+                            price
+                            stock
+                        }
+                        createdAt
+                        updatedAt
                     }
                 }
             }
@@ -147,24 +147,64 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
                                 try {
                                     val itemJson = gson.toJson(item)
                                     val raw = gson.fromJson(itemJson, Map::class.java)
-                                    val variantsJsonStr = raw["variantsJson"] as? String ?: "[]"
-                                    val variantType = object : com.google.gson.reflect.TypeToken<List<ProductVariant>>() {}.type
-                                    val variants: List<ProductVariant> = gson.fromJson(variantsJsonStr, variantType) ?: emptyList()
+                                    val id = raw["id"] as? String ?: ""
+                                    val name = raw["name"] as? String ?: ""
+                                    val category = raw["category"] as? String ?: ""
+                                    val description = raw["description"] as? String ?: ""
+                                    val imageUrlsRaw = raw["imageUrls"] as? List<*> ?: emptyList<Any>()
+                                    val imageUrls = imageUrlsRaw.mapNotNull { it as? String }
+                                    
+                                    val variantsRaw = raw["variants"] as? List<*> ?: emptyList<Any>()
+                                    val variants = variantsRaw.mapNotNull { v ->
+                                        val vMap = v as? Map<*, *> ?: return@mapNotNull null
+                                        val sizeStr = vMap["size"] as? String ?: ""
+                                        val parts = sizeStr.split(":::")
+                                        val weight = parts.getOrNull(0) ?: sizeStr
+                                        val unit = parts.getOrNull(1) ?: "Kg"
+                                        val mrp = parts.getOrNull(2)?.toDoubleOrNull() ?: ((vMap["price"] as? Number)?.toDouble() ?: 0.0)
+                                        val sku = parts.getOrNull(3) ?: ""
+                                        val vId = parts.getOrNull(4) ?: UUID.randomUUID().toString()
+                                        val curPrice = (vMap["price"] as? Number)?.toDouble() ?: 0.0
+                                        val stock = (vMap["stock"] as? Number)?.toInt() ?: 0
+                                        ProductVariant(
+                                            id = vId,
+                                            weight = weight,
+                                            unit = unit,
+                                            currentPrice = curPrice,
+                                            mrp = mrp,
+                                            stockQuantity = stock,
+                                            sku = sku
+                                        )
+                                    }
+
+                                    val descParts = description.split(" ::: ")
+                                    val brand = descParts.getOrNull(0) ?: ""
+                                    val nameTe = descParts.getOrNull(1) ?: ""
+                                    val shortDescEn = descParts.getOrNull(2) ?: ""
+                                    val shortDescTe = descParts.getOrNull(3) ?: ""
+                                    val fullDescEn = descParts.getOrNull(4) ?: description
+                                    val fullDescTe = descParts.getOrNull(5) ?: ""
+                                    val isEnabled = descParts.getOrNull(6)?.toBooleanStrictOrNull() ?: true
+
                                     Product(
-                                        id = raw["id"] as? String ?: "",
-                                        categoryId = raw["categoryId"] as? String ?: "",
-                                        nameEn = raw["nameEn"] as? String ?: "",
-                                        nameTe = raw["nameTe"] as? String ?: "",
-                                        brand = raw["brand"] as? String ?: "",
-                                        descriptionEn = raw["descriptionEn"] as? String ?: "",
-                                        descriptionTe = raw["descriptionTe"] as? String ?: "",
-                                        shortDescriptionEn = raw["shortDescriptionEn"] as? String ?: "",
-                                        shortDescriptionTe = raw["shortDescriptionTe"] as? String ?: "",
+                                        id = id,
+                                        categoryId = category,
+                                        nameEn = name,
+                                        nameTe = nameTe,
+                                        brand = brand,
+                                        descriptionEn = fullDescEn,
+                                        descriptionTe = fullDescTe,
+                                        shortDescriptionEn = shortDescEn,
+                                        shortDescriptionTe = shortDescTe,
+                                        imageUrls = imageUrls,
                                         variants = variants,
-                                        isEnabled = raw["enabled"] as? Boolean ?: true,
-                                        isAvailable = raw["available"] as? Boolean ?: true
+                                        isEnabled = isEnabled,
+                                        isAvailable = isEnabled
                                     )
-                                } catch (e: Exception) { null }
+                                } catch (e: Exception) {
+                                    Log.w("AwsProduct", "Single product parse error", e)
+                                    null
+                                }
                              }
                              
                              // Look for the categories configuration record in the raw items list
@@ -172,7 +212,8 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
                              if (sysCatProd != null) {
                                  try {
                                      val type = object : TypeToken<List<Category>>() {}.type
-                                     val categories: List<Category> = gson.fromJson(sysCatProd.nameEn, type) ?: emptyList()
+                                     val jsonStr = if (sysCatProd.descriptionEn.isNotBlank() && sysCatProd.descriptionEn != "System Categories") sysCatProd.descriptionEn else sysCatProd.nameEn
+                                     val categories: List<Category> = gson.fromJson(jsonStr, type) ?: emptyList()
                                      if (categories.isNotEmpty()) {
                                          categoriesState.value = categories
                                          persister.saveList("aws_categories.json", categories)
@@ -187,7 +228,6 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
                                      persister.saveList("aws_categories.json", defaultCategories)
                                      syncScope.launch { saveCategories(defaultCategories) }
                                  } else {
-                                     // Local categories exist but cloud doesn't, so sync them up
                                      syncScope.launch { saveCategories(categoriesState.value) }
                                  }
                              }
@@ -197,7 +237,8 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
                               if (sysGiftsProd != null) {
                                   try {
                                       val type = object : TypeToken<List<GiftItemConfig>>() {}.type
-                                      val gifts: List<GiftItemConfig> = gson.fromJson(sysGiftsProd.nameEn, type) ?: emptyList()
+                                      val jsonStr = if (sysGiftsProd.descriptionEn.isNotBlank() && sysGiftsProd.descriptionEn != "System Gifts") sysGiftsProd.descriptionEn else sysGiftsProd.nameEn
+                                      val gifts: List<GiftItemConfig> = gson.fromJson(jsonStr, type) ?: emptyList()
                                       giftConfigsState.value = gifts
                                       persister.saveList("aws_gifts.json", gifts)
                                   } catch (e: Exception) {
@@ -213,10 +254,12 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
                               val sysConfigProd = cloudProducts.find { it.id == "sys_config" }
                               if (sysConfigProd != null) {
                                   try {
-                                      val config = gson.fromJson(sysConfigProd.nameEn, AppConfig::class.java)
+                                      val jsonStr = if (sysConfigProd.descriptionEn.isNotBlank() && sysConfigProd.descriptionEn != "System App Config") sysConfigProd.descriptionEn else sysConfigProd.nameEn
+                                      val config = gson.fromJson(jsonStr, AppConfig::class.java)
                                       if (config != null) {
                                           appConfigState.value = config
                                           persister.saveList("aws_app_config.json", listOf(config))
+                                          Log.i("AwsProduct", "Cloud sync: Updated app config (deliveryRadiusKm = ${config.deliveryRadiusKm})")
                                       }
                                   } catch (e: Exception) {
                                       Log.e("AwsProduct", "Failed to parse app config from sys_config", e)
@@ -254,9 +297,9 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
         val sysProd = Product(
             id = "sys_categories",
             categoryId = "metadata",
-            nameEn = gson.toJson(categories),
+            nameEn = "System Categories",
             brand = "System",
-            descriptionEn = "System Metadata",
+            descriptionEn = gson.toJson(categories),
             variants = emptyList(),
             isEnabled = false,
             isAvailable = false
@@ -287,9 +330,9 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
         val sysProd = Product(
             id = "sys_config",
             categoryId = "metadata",
-            nameEn = gson.toJson(config),
+            nameEn = "System App Config",
             brand = "System",
-            descriptionEn = "System App Config",
+            descriptionEn = gson.toJson(config),
             variants = emptyList(),
             isEnabled = false,
             isAvailable = false
@@ -310,9 +353,9 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
         val sysProd = Product(
             id = "sys_gifts",
             categoryId = "metadata",
-            nameEn = gson.toJson(configs),
+            nameEn = "System Gifts",
             brand = "System",
-            descriptionEn = "System Metadata for Gifts",
+            descriptionEn = gson.toJson(configs),
             variants = emptyList(),
             isEnabled = false,
             isAvailable = false
@@ -349,7 +392,7 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
         val idToUse = product.id.ifEmpty { UUID.randomUUID().toString() }
         val prodWithId = product.copy(id = idToUse)
 
-        if (prodWithId.id != "sys_categories" && prodWithId.id != "sys_gifts") {
+        if (prodWithId.id != "sys_categories" && prodWithId.id != "sys_gifts" && prodWithId.id != "sys_config") {
             val currentList = productsState.value.toMutableList()
             val index = currentList.indexOfFirst { it.id == product.id }
             if (index != -1) {
@@ -363,38 +406,91 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
 
         // Asynchronously sync to AWS AppSync Product Table
         try {
-            val gson = Gson()
-            val variantsJson = gson.toJson(prodWithId.variants)
-            val mutation = """
-                mutation CreateProduct(${"$"}id: ID!, ${"$"}categoryId: String!, ${"$"}nameEn: String!, ${"$"}nameTe: String!, ${"$"}brand: String!, ${"$"}descriptionEn: String!, ${"$"}descriptionTe: String!, ${"$"}shortDescriptionEn: String!, ${"$"}shortDescriptionTe: String!, ${"$"}variantsJson: String!) {
-                    createProduct(input: {id: ${"$"}id, categoryId: ${"$"}categoryId, nameEn: ${"$"}nameEn, nameTe: ${"$"}nameTe, brand: ${"$"}brand, descriptionEn: ${"$"}descriptionEn, descriptionTe: ${"$"}descriptionTe, shortDescriptionEn: ${"$"}shortDescriptionEn, shortDescriptionTe: ${"$"}shortDescriptionTe, variantsJson: ${"$"}variantsJson}) {
+            val variantsInput = prodWithId.variants.map { v ->
+                mapOf(
+                    "size" to "${v.weight}:::${v.unit}:::${v.mrp}:::${v.sku}:::${v.id}",
+                    "price" to v.currentPrice.toFloat(),
+                    "stock" to v.stockQuantity
+                )
+            }
+            val descPayload = if (prodWithId.id.startsWith("sys_")) {
+                prodWithId.descriptionEn
+            } else {
+                "${prodWithId.brand} ::: ${prodWithId.nameTe} ::: ${prodWithId.shortDescriptionEn} ::: ${prodWithId.shortDescriptionTe} ::: ${prodWithId.descriptionEn} ::: ${prodWithId.descriptionTe} ::: ${prodWithId.isEnabled}"
+            }
+            val inputMap = mapOf(
+                "id" to prodWithId.id,
+                "name" to prodWithId.nameEn,
+                "category" to prodWithId.categoryId,
+                "description" to descPayload,
+                "imageUrls" to prodWithId.imageUrls,
+                "variants" to variantsInput
+            )
+
+            val updateMutation = """
+                mutation UpdateProduct(${"$"}input: UpdateProductInput!) {
+                    updateProduct(input: ${"$"}input) {
                         id
                     }
                 }
             """.trimIndent()
-            val request = SimpleGraphQLRequest<String>(
-                mutation,
-                mapOf(
-                    "id" to prodWithId.id,
-                    "categoryId" to prodWithId.categoryId,
-                    "nameEn" to prodWithId.nameEn,
-                    "nameTe" to prodWithId.nameTe,
-                    "brand" to prodWithId.brand,
-                    "descriptionEn" to prodWithId.descriptionEn,
-                    "descriptionTe" to prodWithId.descriptionTe,
-                    "shortDescriptionEn" to prodWithId.shortDescriptionEn,
-                    "shortDescriptionTe" to prodWithId.shortDescriptionTe,
-                    "variantsJson" to variantsJson
-                ),
+            val updateRequest = SimpleGraphQLRequest<String>(
+                updateMutation,
+                mapOf("input" to inputMap),
                 String::class.java,
                 GsonVariablesSerializer()
             )
-            Amplify.API.mutate(request,
-                { response -> 
-                    Log.i("AwsProduct", "Product synced to AWS successfully: ${response.data}")
-                    syncScope.launch { forceRefreshFromCloud() }
+            Amplify.API.mutate(updateRequest,
+                { response ->
+                    if (response.data != null) {
+                        Log.i("AwsProduct", "Product updated in AWS successfully: ${response.data}")
+                        syncScope.launch { forceRefreshFromCloud() }
+                    } else {
+                        // Fallback to CreateProduct if not found
+                        val createMutation = """
+                            mutation CreateProduct(${"$"}input: CreateProductInput!) {
+                                createProduct(input: ${"$"}input) {
+                                    id
+                                }
+                            }
+                        """.trimIndent()
+                        val createRequest = SimpleGraphQLRequest<String>(
+                            createMutation,
+                            mapOf("input" to inputMap),
+                            String::class.java,
+                            GsonVariablesSerializer()
+                        )
+                        Amplify.API.mutate(createRequest,
+                            { cRes -> 
+                                Log.i("AwsProduct", "Product created in AWS: ${cRes.data}")
+                                syncScope.launch { forceRefreshFromCloud() }
+                            },
+                            { cErr -> Log.e("AwsProduct", "AWS Product create failed", cErr) }
+                        )
+                    }
                 },
-                { error -> Log.e("AwsProduct", "AWS Product sync failed", error) }
+                { error ->
+                    val createMutation = """
+                        mutation CreateProduct(${"$"}input: CreateProductInput!) {
+                            createProduct(input: ${"$"}input) {
+                                id
+                            }
+                        }
+                    """.trimIndent()
+                    val createRequest = SimpleGraphQLRequest<String>(
+                        createMutation,
+                        mapOf("input" to inputMap),
+                        String::class.java,
+                        GsonVariablesSerializer()
+                    )
+                    Amplify.API.mutate(createRequest,
+                        { cRes -> 
+                            Log.i("AwsProduct", "Product created in AWS: ${cRes.data}")
+                            syncScope.launch { forceRefreshFromCloud() }
+                        },
+                        { cErr -> Log.e("AwsProduct", "AWS Product create failed", cErr) }
+                    )
+                }
             )
         } catch (e: Exception) {
             Log.e("AwsProduct", "AWS Product sync failed", e)
@@ -409,15 +505,15 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
 
         try {
             val mutation = """
-                mutation DeleteProduct(${"$"}id: ID!) {
-                    deleteProduct(input: {id: ${"$"}id}) {
+                mutation DeleteProduct(${"$"}input: DeleteProductInput!) {
+                    deleteProduct(input: ${"$"}input) {
                         id
                     }
                 }
             """.trimIndent()
             val request = SimpleGraphQLRequest<String>(
                 mutation,
-                mapOf("id" to productId),
+                mapOf("input" to mapOf("id" to productId)),
                 String::class.java,
                 GsonVariablesSerializer()
             )
@@ -482,18 +578,23 @@ class AwsOrderRepositoryImpl(private val context: Context) : OrderRepository {
                 listOrders(limit: 1000) {
                     items {
                         id
-                        userId
+                        customerId
                         customerName
-                        customerPhone
-                        addressHouseNo
-                        addressLandmark
-                        distanceKm
-                        subtotal
+                        deliveryAddress
                         deliveryFee
-                        totalAmount
+                        latitude
+                        longitude
                         status
+                        subtotal
+                        total
                         createdAt
-                        itemsJson
+                        items {
+                            productId
+                            productName
+                            quantity
+                            price
+                            variantSize
+                        }
                     }
                 }
             }
@@ -517,34 +618,58 @@ class AwsOrderRepositoryImpl(private val context: Context) : OrderRepository {
                                 try {
                                     val itemJson = gson.toJson(item)
                                     val raw = gson.fromJson(itemJson, Map::class.java)
-                                    val itemsJsonStr = raw["itemsJson"] as? String ?: "[]"
-                                    val itemsType = object : TypeToken<List<OrderItem>>() {}.type
-                                    val orderItems: List<OrderItem> = gson.fromJson(itemsJsonStr, itemsType) ?: emptyList()
+
+                                    val rawAddr = raw["deliveryAddress"] as? String ?: ""
+                                    val parts = rawAddr.split(" ::: ")
+                                    val houseNo = parts.getOrNull(0) ?: rawAddr
+                                    val landmark = parts.getOrNull(1) ?: ""
+                                    val phone = parts.getOrNull(2) ?: ""
+                                    val parsedDistKm = parts.getOrNull(3)?.toDoubleOrNull() ?: 0.0
+
+                                    val itemsRaw = raw["items"] as? List<*> ?: emptyList<Any>()
+                                    val orderItems = itemsRaw.mapNotNull { i ->
+                                        val iMap = i as? Map<*, *> ?: return@mapNotNull null
+                                        OrderItem(
+                                            productId = iMap["productId"] as? String ?: "",
+                                            productName = iMap["productName"] as? String ?: "",
+                                            selectedSize = iMap["variantSize"] as? String ?: "",
+                                            priceAtPurchase = (iMap["price"] as? Number)?.toDouble() ?: 0.0,
+                                            quantity = (iMap["quantity"] as? Number)?.toInt() ?: 1
+                                        )
+                                    }
+
                                     val statusStr = raw["status"] as? String ?: "PENDING"
                                     val status = try { OrderStatus.valueOf(statusStr) } catch (_: Exception) { OrderStatus.PENDING }
                                     
                                     val rawCreatedAt = raw["createdAt"]
                                     val createdAtVal = when (rawCreatedAt) {
                                         is Number -> rawCreatedAt.toLong()
-                                        is String -> rawCreatedAt.toLongOrNull() ?: System.currentTimeMillis()
+                                        is String -> {
+                                            try {
+                                                val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US)
+                                                sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+                                                sdf.parse(rawCreatedAt)?.time ?: rawCreatedAt.toLongOrNull() ?: System.currentTimeMillis()
+                                            } catch (_: Exception) {
+                                                rawCreatedAt.toLongOrNull() ?: System.currentTimeMillis()
+                                            }
+                                        }
                                         else -> System.currentTimeMillis()
                                     }
                                     
-                                    val distanceKmVal = (raw["distanceKm"] as? Number)?.toDouble() ?: (raw["distanceKm"] as? String)?.toDoubleOrNull() ?: 0.0
                                     val subtotalVal = (raw["subtotal"] as? Number)?.toDouble() ?: (raw["subtotal"] as? String)?.toDoubleOrNull() ?: 0.0
                                     val deliveryFeeVal = (raw["deliveryFee"] as? Number)?.toDouble() ?: (raw["deliveryFee"] as? String)?.toDoubleOrNull() ?: 0.0
-                                    val totalAmountVal = (raw["totalAmount"] as? Number)?.toDouble() ?: (raw["totalAmount"] as? String)?.toDoubleOrNull() ?: 0.0
+                                    val totalAmountVal = (raw["total"] as? Number)?.toDouble() ?: (raw["total"] as? String)?.toDoubleOrNull() ?: (subtotalVal + deliveryFeeVal)
                                     val latVal = (raw["latitude"] as? Number)?.toDouble() ?: (raw["latitude"] as? String)?.toDoubleOrNull() ?: 0.0
                                     val lngVal = (raw["longitude"] as? Number)?.toDouble() ?: (raw["longitude"] as? String)?.toDoubleOrNull() ?: 0.0
 
                                     Order(
                                         id = raw["id"] as? String ?: "",
-                                        userId = raw["userId"] as? String ?: "",
+                                        userId = raw["customerId"] as? String ?: "",
                                         customerName = raw["customerName"] as? String ?: "",
-                                        customerPhone = raw["customerPhone"] as? String ?: "",
-                                        addressHouseNo = raw["addressHouseNo"] as? String ?: "",
-                                        addressLandmark = raw["addressLandmark"] as? String ?: "",
-                                        distanceKm = distanceKmVal,
+                                        customerPhone = phone,
+                                        addressHouseNo = houseNo,
+                                        addressLandmark = landmark,
+                                        distanceKm = parsedDistKm,
                                         latitude = latVal,
                                         longitude = lngVal,
                                         subtotal = subtotalVal,
@@ -602,32 +727,40 @@ class AwsOrderRepositoryImpl(private val context: Context) : OrderRepository {
 
         // Asynchronously sync to AWS AppSync Order Table
         try {
-            val gson = Gson()
-            val itemsJson = gson.toJson(orderWithId.items)
+            val deliveryAddressCombined = "${orderWithId.addressHouseNo} ::: ${orderWithId.addressLandmark} ::: ${orderWithId.customerPhone} ::: ${orderWithId.distanceKm}"
+            val itemsInputList = orderWithId.items.map { item ->
+                mapOf(
+                    "productId" to item.productId,
+                    "productName" to item.productName,
+                    "quantity" to item.quantity,
+                    "price" to item.priceAtPurchase.toFloat(),
+                    "variantSize" to item.selectedSize
+                )
+            }
+            val inputMap = mapOf(
+                "id" to orderWithId.id,
+                "customerId" to orderWithId.userId,
+                "customerName" to orderWithId.customerName,
+                "deliveryAddress" to deliveryAddressCombined,
+                "deliveryFee" to orderWithId.deliveryFee.toFloat(),
+                "latitude" to orderWithId.latitude.toFloat(),
+                "longitude" to orderWithId.longitude.toFloat(),
+                "status" to orderWithId.status.name,
+                "subtotal" to orderWithId.subtotal.toFloat(),
+                "total" to orderWithId.totalAmount.toFloat(),
+                "items" to itemsInputList
+            )
+
             val mutation = """
-                mutation CreateOrder(${"$"}id: ID!, ${"$"}userId: String!, ${"$"}customerName: String!, ${"$"}customerPhone: String!, ${"$"}addressHouseNo: String!, ${"$"}addressLandmark: String!, ${"$"}distanceKm: Float!, ${"$"}subtotal: Float!, ${"$"}deliveryFee: Float!, ${"$"}totalAmount: Float!, ${"$"}status: String!, ${"$"}createdAt: String!, ${"$"}itemsJson: String!) {
-                    createOrder(input: {id: ${"$"}id, userId: ${"$"}userId, customerName: ${"$"}customerName, customerPhone: ${"$"}customerPhone, addressHouseNo: ${"$"}addressHouseNo, addressLandmark: ${"$"}addressLandmark, distanceKm: ${"$"}distanceKm, subtotal: ${"$"}subtotal, deliveryFee: ${"$"}deliveryFee, totalAmount: ${"$"}totalAmount, status: ${"$"}status, createdAt: ${"$"}createdAt, itemsJson: ${"$"}itemsJson}) {
+                mutation CreateOrder(${"$"}input: CreateOrderInput!) {
+                    createOrder(input: ${"$"}input) {
                         id
                     }
                 }
             """.trimIndent()
             val request = SimpleGraphQLRequest<String>(
                 mutation,
-                mapOf(
-                    "id" to orderWithId.id,
-                    "userId" to orderWithId.userId,
-                    "customerName" to orderWithId.customerName,
-                    "customerPhone" to orderWithId.customerPhone,
-                    "addressHouseNo" to orderWithId.addressHouseNo,
-                    "addressLandmark" to orderWithId.addressLandmark,
-                    "distanceKm" to orderWithId.distanceKm.toFloat(),
-                    "subtotal" to orderWithId.subtotal.toFloat(),
-                    "deliveryFee" to orderWithId.deliveryFee.toFloat(),
-                    "totalAmount" to orderWithId.totalAmount.toFloat(),
-                    "status" to orderWithId.status.name,
-                    "createdAt" to orderWithId.createdAt.toString(),
-                    "itemsJson" to itemsJson
-                ),
+                mapOf("input" to inputMap),
                 String::class.java,
                 GsonVariablesSerializer()
             )
@@ -646,37 +779,38 @@ class AwsOrderRepositoryImpl(private val context: Context) : OrderRepository {
     override suspend fun updateOrderStatus(orderId: String, newStatus: String) {
         val currentList = ordersState.value.toMutableList()
         val index = currentList.indexOfFirst { it.id == orderId }
+        val status = try { OrderStatus.valueOf(newStatus) } catch (_: Exception) { OrderStatus.PENDING }
         if (index != -1) {
-            val status = try { OrderStatus.valueOf(newStatus) } catch (_: Exception) { OrderStatus.PENDING }
             currentList[index] = currentList[index].copy(status = status)
             ordersState.value = currentList
             persister.saveList("aws_orders.json", currentList)
+        }
 
-            // Asynchronously sync status update to AWS AppSync Order Table
-            try {
-                val mutation = """
-                    mutation UpdateOrder(${"$"}id: ID!, ${"$"}status: String!) {
-                        updateOrder(input: {id: ${"$"}id, status: ${"$"}status}) {
-                            id
-                        }
+        // Asynchronously sync status update to AWS AppSync Order Table
+        try {
+            val mutation = """
+                mutation UpdateOrder(${"$"}input: UpdateOrderInput!) {
+                    updateOrder(input: ${"$"}input) {
+                        id
+                        status
                     }
-                """.trimIndent()
-                val request = SimpleGraphQLRequest<String>(
-                    mutation,
-                    mapOf("id" to orderId, "status" to newStatus),
-                    String::class.java,
-                    GsonVariablesSerializer()
-                )
-                Amplify.API.mutate(request,
-                    { response -> 
-                        Log.i("AwsOrder", "Order status synced to AWS successfully: ${response.data}")
-                        syncScope.launch { fetchOrdersFromCloud() }
-                    },
-                    { error -> Log.e("AwsOrder", "AWS Order status sync failed", error) }
-                )
-            } catch (e: Exception) {
-                Log.e("AwsOrder", "AWS Order status sync failed", e)
-            }
+                }
+            """.trimIndent()
+            val request = SimpleGraphQLRequest<String>(
+                mutation,
+                mapOf("input" to mapOf("id" to orderId, "status" to newStatus)),
+                String::class.java,
+                GsonVariablesSerializer()
+            )
+            Amplify.API.mutate(request,
+                { response -> 
+                    Log.i("AwsOrder", "Order status synced to AWS successfully: ${response.data}")
+                    syncScope.launch { fetchOrdersFromCloud() }
+                },
+                { error -> Log.e("AwsOrder", "AWS Order status sync failed", error) }
+            )
+        } catch (e: Exception) {
+            Log.e("AwsOrder", "AWS Order status sync failed", e)
         }
     }
 }
