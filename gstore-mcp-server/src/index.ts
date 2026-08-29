@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -531,37 +531,45 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
-// SSE Transport for Gemini Spark / Remote MCP Clients
-let transport: SSEServerTransport | null = null;
+// Multi-client SSE Session Map
+const transports: Record<string, SSEServerTransport> = {};
 
-app.get("/sse", async (req, res) => {
-  console.log("New SSE client connection established");
-  transport = new SSEServerTransport("/message", res);
+// Helper to establish SSE connection
+async function handleSseConnect(endpointPath: string, req: Request, res: Response) {
+  console.log(`Establishing SSE stream on ${endpointPath}`);
+  const transport = new SSEServerTransport(endpointPath, res);
+  const sessionId = transport.sessionId;
+  transports[sessionId] = transport;
+
+  req.on("close", () => {
+    console.log(`SSE connection closed for session: ${sessionId}`);
+    delete transports[sessionId];
+  });
+
   await server.connect(transport);
-});
+}
 
-app.post("/message", async (req, res) => {
+// Helper to handle POST messages
+async function handlePostMsg(req: Request, res: Response) {
+  const sessionId = (req.query.sessionId as string) || Object.keys(transports)[0];
+  const transport = transports[sessionId];
+
   if (!transport) {
-    res.status(400).send("No active SSE session");
+    console.warn(`No active transport found for sessionId: ${sessionId}`);
+    res.status(400).json({ error: "No active SSE transport found for session" });
     return;
   }
-  await transport.handlePostMessage(req, res);
-});
 
-// MCP endpoint alias
-app.get("/mcp", async (req, res) => {
-  console.log("MCP endpoint accessed via GET - redirecting/handling SSE");
-  transport = new SSEServerTransport("/message", res);
-  await server.connect(transport);
-});
+  // Pass req.body as 3rd arg since express.json() already parsed the stream
+  await transport.handlePostMessage(req, res, req.body);
+}
 
-app.post("/mcp", async (req, res) => {
-  if (!transport) {
-    res.status(400).send("No active SSE session for /mcp");
-    return;
-  }
-  await transport.handlePostMessage(req, res);
-});
+// Routes for SSE & MCP transports
+app.get("/sse", (req, res) => handleSseConnect("/message", req, res));
+app.post("/message", (req, res) => handlePostMsg(req, res));
+
+app.get("/mcp", (req, res) => handleSseConnect("/mcp", req, res));
+app.post("/mcp", (req, res) => handlePostMsg(req, res));
 
 // Health check endpoint
 app.get("/", (req, res) => {
@@ -574,10 +582,11 @@ app.get("/", (req, res) => {
       message: "/message",
       mcp: "/mcp",
     },
+    activeSessions: Object.keys(transports).length,
   });
 });
 
 app.listen(PORT, () => {
   console.log(`🚀 G-Store MCP Server listening on http://localhost:${PORT}`);
-  console.log(`📡 MCP SSE endpoint ready at http://localhost:${PORT}/sse and /mcp`);
+  console.log(`📡 MCP SSE endpoint ready at /sse and /mcp`);
 });
