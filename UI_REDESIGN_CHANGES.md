@@ -61,13 +61,22 @@ The customer shopping interface of G-Store has been transformed into a modern qu
 - **Sticky Slide/Tap to Pay Bottom Bar**:
   - Store open/closed validation (8 AM - 8 PM), minimum order amount alert, and one-tap checkout.
 
----
-
 ### 4. Home Products Catalog (`CustomerCatalogView`)
 - **2-Column Responsive Grid**:
   - `LazyVerticalGrid(columns = GridCells.Fixed(2))` fitting **4 to 6 products simultaneously**.
 - **Horizontal Category Carousel Chips**:
   - `All Products`, `Rice Bags`, `Cooking Oils`, `Dairy Essentials`, `Dals & Pulses`, `Spices & Masalas`.
+
+### 5. Dynamic Theme Inversion & Dark Mode Contrast
+- **Automatic Color Role Inversion**:
+  - Light mode defaults: Soft ivory/emerald background (`#F1F7F5`), pure white surface cards (`#FFFFFF`), dark slate text (`#0F172A`), and clear field borders (`#CBD5E1`).
+  - Dark mode inversion: Deep charcoal background (`#121212`), elevated dark card surfaces (`#1E1E1E`), dark input containers (`#262626`), and crisp high-contrast white text (`#F8FAFC`).
+- **Auth & Login/Registration Fixes**:
+  - Fixed field labels, phone prefix (`+91`), divider lines, and text inputs to never render white-on-white or dark-on-dark when logging out and logging in while in Dark Mode.
+- **Address & Timeline Card Contrast**:
+  - Fixed Address Selection card to use dark amber `#2E2415` for selected state and `#262626` for unselected state in dark mode.
+  - Fixed `OrderTrackingTimeline` node backgrounds and status text to remain fully legible across both themes.
+
 - **Floating Quick-Cart Bottom Bar (`FloatingQuickCartBar`)**:
   - Automatically pops up whenever `cartItems.isNotEmpty()` with `X ITEMS • ₹TOTAL` and `View Cart ➔`.
 
