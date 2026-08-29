@@ -18,13 +18,10 @@ app.use(
   cors({
     origin: "*",
     methods: ["GET", "POST", "OPTIONS", "HEAD"],
-    allowedHeaders: ["Content-Type", "Authorization", "x-session-id", "mcp-session-id", "Accept"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-session-id", "mcp-session-id", "Accept", "Last-Event-ID"],
     exposedHeaders: ["x-session-id", "mcp-session-id"],
   })
 );
-
-// NOTE: Do NOT use express.json() here. StreamableHTTPServerTransport needs
-// to consume the raw unparsed IncomingMessage stream directly via @hono/node-server.
 
 const PORT = process.env.PORT || 3000;
 
@@ -542,9 +539,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
-// Modern Streamable HTTP Transport for MCP
+// Modern Streamable HTTP Transport for MCP with JSON response enabled
 const transport = new StreamableHTTPServerTransport({
   sessionIdGenerator: undefined, // Stateless mode for maximum client compatibility
+  enableJsonResponse: true, // Enable JSON responses for Gemini & standard REST/JSON clients
 });
 
 // Connect transport to MCP Server
