@@ -232,6 +232,8 @@ fun CustomerScreen() {
             }
         }
     ) { paddingValues ->
+        var selectedProductForDetail by remember { mutableStateOf<Product?>(null) }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -245,15 +247,26 @@ fun CustomerScreen() {
                 "HOME" -> CustomerCatalogView(
                     onLogoutClick = { showLogoutConfirm = true },
                     onCartClick = { selectedTab = "CART" },
-                    onLocationClick = { showAddressModal = true }
+                    onLocationClick = { showAddressModal = true },
+                    onProductClick = { selectedProductForDetail = it }
                 )
-                "CART" -> CustomerCartView(onOpenAddressManager = { showAddressModal = true })
+                "CART" -> CustomerCartView(
+                    onOpenAddressManager = { showAddressModal = true },
+                    onProductClick = { selectedProductForDetail = it }
+                )
                 "TRACKING" -> CustomerOrdersView()
                 "ACCOUNT" -> CustomerAccountView(onLogoutClick = { showLogoutConfirm = true })
             }
 
             if (showAddressModal) {
                 AddressSelectionDialog(onDismiss = { showAddressModal = false })
+            }
+
+            if (selectedProductForDetail != null) {
+                ProductDetailBottomSheet(
+                    product = selectedProductForDetail!!,
+                    onDismiss = { selectedProductForDetail = null }
+                )
             }
         }
     }
@@ -264,7 +277,8 @@ fun CustomerScreen() {
 fun CustomerCatalogView(
     onLogoutClick: () -> Unit,
     onCartClick: () -> Unit,
-    onLocationClick: () -> Unit
+    onLocationClick: () -> Unit,
+    onProductClick: (Product) -> Unit
 ) {
     // Refresh product list from cloud whenever catalog opens, ensuring new admin products are shown
     LaunchedEffect(Unit) {
@@ -633,7 +647,7 @@ fun CustomerCatalogView(
                         }
                     } else {
                         items(filteredProducts) { product ->
-                            CustomerProductCard(product, selectedSort)
+                            CustomerProductCard(product, selectedSort, onProductClick)
                         }
                     }
                 }
@@ -915,7 +929,11 @@ fun SectionHeader(title: String) {
 }
 
 @Composable
-fun CustomerProductCard(product: Product, selectedSort: String = "Default") {
+fun CustomerProductCard(
+    product: Product,
+    selectedSort: String = "Default",
+    onProductClick: (Product) -> Unit = {}
+) {
     val sortedVariants = remember(product.variants, selectedSort) {
         if (selectedSort == "Price: Low to High") {
             product.variants.sortedBy { it.currentPrice }
@@ -941,7 +959,8 @@ fun CustomerProductCard(product: Product, selectedSort: String = "Default") {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(2.dp, RoundedCornerShape(16.dp), ambientColor = Color.Black.copy(alpha = 0.04f)),
+            .shadow(2.dp, RoundedCornerShape(16.dp), ambientColor = Color.Black.copy(alpha = 0.04f))
+            .clickable { onProductClick(product) },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, Color(0xFFF1F3F4))
@@ -1000,26 +1019,6 @@ fun CustomerProductCard(product: Product, selectedSort: String = "Default") {
                     }
                 }
 
-                // Brand Tag (bottom-left)
-                if (product.brand.isNotBlank()) {
-                    Surface(
-                        color = Color.White.copy(alpha = 0.9f),
-                        shape = RoundedCornerShape(4.dp),
-                        border = BorderStroke(0.5.dp, Color(0xFFE5E7EB)),
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(4.dp)
-                    ) {
-                        Text(
-                            product.brand.uppercase(),
-                            fontSize = 8.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = RoyalEmerald,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                        )
-                    }
-                }
-
                 // Out of stock overlay
                 if (isOutOfStock) {
                     Box(
@@ -1044,7 +1043,7 @@ fun CustomerProductCard(product: Product, selectedSort: String = "Default") {
                 }
             }
 
-            // 2. Body Details
+            // 2. Body Details: Title & Size ONLY (Clean & Uncluttered)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1064,7 +1063,7 @@ fun CustomerProductCard(product: Product, selectedSort: String = "Default") {
 
                 Spacer(Modifier.height(4.dp))
 
-                // Variant / Size chip
+                // Variant / Size chip (Tap to pick size directly or see count)
                 if (sortedVariants.size > 1) {
                     Surface(
                         onClick = { showVariantSheet = true },
@@ -1277,6 +1276,316 @@ fun CustomerProductCard(product: Product, selectedSort: String = "Default") {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProductDetailBottomSheet(
+    product: Product,
+    onDismiss: () -> Unit
+) {
+    var selectedVariantIndex by remember { mutableStateOf(0) }
+    val variants = product.variants
+    val dummyVariant = com.example.domain.model.ProductVariant(
+        id = "none", weight = "—", unit = "", currentPrice = 0.0, mrp = 0.0, stockQuantity = 0, sku = ""
+    )
+    val hasVariants = variants.isNotEmpty()
+    val currentVariant = variants.getOrNull(selectedVariantIndex) ?: variants.firstOrNull() ?: dummyVariant
+
+    val cartKey = "${product.id}#${currentVariant.id}"
+    val currentInCart = AppState.cartItems[cartKey] ?: 0
+    val isOutOfStock = !hasVariants || currentVariant.stockQuantity <= 0
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            // 1. Large Image Hero (200dp with Fit scaling)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xFFF8FAF9)),
+                contentAlignment = Alignment.Center
+            ) {
+                val imageUrl = product.imageUrls.getOrNull(product.thumbnailIndex)?.trim() ?: ""
+                if (imageUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = product.nameEn,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                } else {
+                    Icon(
+                        Icons.Default.ShoppingCart,
+                        contentDescription = null,
+                        tint = RoyalEmerald.copy(alpha = 0.3f),
+                        modifier = Modifier.size(64.dp)
+                    )
+                }
+
+                // Discount Pill
+                if (hasVariants && currentVariant.mrp > currentVariant.currentPrice) {
+                    val discount = ((currentVariant.mrp - currentVariant.currentPrice) / currentVariant.mrp * 100).toInt()
+                    if (discount > 0) {
+                        Surface(
+                            color = Color(0xFFEA580C),
+                            shape = RoundedCornerShape(topStart = 20.dp, bottomEnd = 10.dp),
+                            modifier = Modifier.align(Alignment.TopStart)
+                        ) {
+                            Text(
+                                "$discount% OFF",
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // 2. Product Name & Telugu Name
+            Text(
+                text = product.nameEn,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            if (product.nameTe.isNotBlank()) {
+                Text(
+                    text = product.nameTe,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = RoyalEmerald,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+
+            if (product.brand.isNotBlank()) {
+                Spacer(Modifier.height(6.dp))
+                Surface(
+                    color = Color(0xFFECFDF5),
+                    shape = RoundedCornerShape(6.dp),
+                    border = BorderStroke(0.5.dp, RoyalEmerald.copy(alpha = 0.3f))
+                ) {
+                    Text(
+                        text = "Brand: ${product.brand}",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = RoyalEmerald,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = Color(0xFFF1F3F4))
+            Spacer(Modifier.height(14.dp))
+
+            // 3. Size / Variant Selector
+            if (variants.size > 1) {
+                Text(
+                    text = "Select Pack Size",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    variants.forEachIndexed { idx, v ->
+                        val isSelected = selectedVariantIndex == idx
+                        Surface(
+                            onClick = { selectedVariantIndex = idx },
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) Color(0xFFECFDF5) else MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.5.dp, if (isSelected) RoyalEmerald else Color(0xFFE5E7EB)),
+                            shadowElevation = if (isSelected) 2.dp else 0.dp
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    "${v.weight}${v.unit}",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = if (isSelected) RoyalEmerald else MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    "₹${v.currentPrice.toInt()}",
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                if (v.mrp > v.currentPrice) {
+                                    Text(
+                                        "₹${v.mrp.toInt()}",
+                                        fontSize = 10.sp,
+                                        color = Color.Gray,
+                                        textDecoration = TextDecoration.LineThrough
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider(color = Color(0xFFF1F3F4))
+                Spacer(Modifier.height(14.dp))
+            }
+
+            // 4. Product Details / Description
+            if (product.descriptionEn.isNotBlank() || product.descriptionTe.isNotBlank()) {
+                Text(
+                    text = "Product Details",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(6.dp))
+                if (product.descriptionEn.isNotBlank()) {
+                    Text(
+                        text = product.descriptionEn,
+                        fontSize = 13.sp,
+                        color = Color.Gray,
+                        lineHeight = 18.sp
+                    )
+                }
+                if (product.descriptionTe.isNotBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = product.descriptionTe,
+                        fontSize = 13.sp,
+                        color = Color.Gray,
+                        lineHeight = 18.sp
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
+            }
+
+            // 5. Price & Sticky Add to Cart Action Row
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Color(0xFFF9FAFB),
+                border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            "₹${currentVariant.currentPrice.toInt()}",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = RoyalEmerald
+                        )
+                        if (hasVariants && currentVariant.mrp > currentVariant.currentPrice) {
+                            Text(
+                                "MRP ₹${currentVariant.mrp.toInt()}",
+                                fontSize = 11.sp,
+                                color = Color.Gray,
+                                textDecoration = TextDecoration.LineThrough
+                            )
+                        }
+                    }
+
+                    if (isOutOfStock) {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xFFE5E7EB)
+                        ) {
+                            Text(
+                                "OUT OF STOCK",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Gray,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                            )
+                        }
+                    } else if (currentInCart > 0) {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = RoyalEmerald,
+                            shadowElevation = 2.dp
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clickable { AppState.updateCartQty(product.id, currentVariant.id, currentInCart - 1) },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Remove, "Minus", tint = Color.White, modifier = Modifier.size(16.dp))
+                                }
+                                Text(
+                                    text = "$currentInCart in Cart",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 8.dp)
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clickable(enabled = currentInCart < currentVariant.stockQuantity) {
+                                            AppState.updateCartQty(product.id, currentVariant.id, currentInCart + 1)
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Add, "Plus", tint = if (currentInCart < currentVariant.stockQuantity) Color.White else Color.White.copy(alpha = 0.4f), modifier = Modifier.size(16.dp))
+                                }
+                            }
+                        }
+                    } else {
+                        Button(
+                            onClick = { AppState.addToCart(product.id, currentVariant.id) },
+                            colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 10.dp)
+                        ) {
+                            Icon(Icons.Default.ShoppingCart, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                "ADD TO CART",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun FloatingQuickCartBar(
     itemCount: Int,
@@ -1395,7 +1704,10 @@ fun QtyController(qty: Int, onMinus: () -> Unit, onPlus: () -> Unit, maxStock: I
 }
 
 @Composable
-fun CustomerCartView(onOpenAddressManager: () -> Unit) {
+fun CustomerCartView(
+    onOpenAddressManager: () -> Unit,
+    onProductClick: (Product) -> Unit = {}
+) {
     val selectedAddress = AppState.addressesList.find { it.isSelected }
     var selectedGiftId by remember { mutableStateOf<String?>(null) }
 
@@ -1473,7 +1785,12 @@ fun CustomerCartView(onOpenAddressManager: () -> Unit) {
                         val variant = prod?.variants?.find { it.id == variantId }
 
                         if (prod != null && variant != null) {
-                            CartItemRow(prod, variant, qty)
+                            CartItemRow(
+                                product = prod,
+                                variant = variant,
+                                quantity = qty,
+                                onProductClick = onProductClick
+                            )
                         }
                     }
                 }
@@ -1551,7 +1868,12 @@ fun AddressCard(address: Address?, onEdit: () -> Unit) {
 }
 
 @Composable
-fun CartItemRow(product: Product, variant: ProductVariant, quantity: Int) {
+fun CartItemRow(
+    product: Product,
+    variant: ProductVariant,
+    quantity: Int,
+    onProductClick: (Product) -> Unit = {}
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -1564,12 +1886,13 @@ fun CartItemRow(product: Product, variant: ProductVariant, quantity: Int) {
                 .padding(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Product image
+            // Product image (clickable to open detail view)
             Box(
                 modifier = Modifier
                     .size(64.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFF8FAF9)),
+                    .background(Color(0xFFF8FAF9))
+                    .clickable { onProductClick(product) },
                 contentAlignment = Alignment.Center
             ) {
                 val imageUrl = product.imageUrls.getOrNull(product.thumbnailIndex) ?: ""
@@ -1587,7 +1910,11 @@ fun CartItemRow(product: Product, variant: ProductVariant, quantity: Int) {
 
             Spacer(Modifier.width(12.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onProductClick(product) }
+            ) {
                 Text(
                     product.nameEn,
                     style = MaterialTheme.typography.bodyMedium,

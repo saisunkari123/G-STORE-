@@ -1,7 +1,7 @@
 # G-Store Quick-Commerce UI Redesign Documentation
 
 ## Overview
-The customer shopping interface of G-Store has been completely redesigned into a modern quick-commerce UI (inspired by **Blinkit, Swiggy Instamart, Zepto, and Flipkart Quick**).
+The customer shopping interface of G-Store has been transformed into a modern quick-commerce UI inspired by **Blinkit, Swiggy Instamart, Zepto, and Flipkart Quick**.
 
 ---
 
@@ -15,47 +15,43 @@ The customer shopping interface of G-Store has been completely redesigned into a
   - Customer Home & Catalog View
   - Product Cards
   - Customer Cart View
+  - Product Details Bottom Sheet View
   - Order Placed Success Confirmation
 
 ---
 
 ## 🎨 UI Redesign Details
 
-### 1. Home Products Catalog (`CustomerCatalogView`)
-- **2-Column Responsive Grid**:
-  - Replaced the vertical `LazyColumn` with `LazyVerticalGrid(columns = GridCells.Fixed(2), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp))`.
-  - Displays **4 to 6 products simultaneously** in the user's viewport without excessive vertical scrolling.
-- **Horizontal Category Carousel Chips**:
-  - Added an interactive sticky carousel at the top (`All Products`, `Rice Bags`, `Cooking Oils`, `Dairy Essentials`, `Dals & Pulses`, `Spices & Masalas`).
-  - Active category highlights in emerald pill (`RoyalEmerald`); one-tap filtering.
-- **Sleek Filter & Sort Controls**:
-  - Compact side-by-side outlined buttons for Categories and Price/Date sorting.
-- **Floating Quick-Cart Bottom Bar (`FloatingQuickCartBar`)**:
-  - Automatically pops up whenever `cartItems.isNotEmpty()`.
-  - Shows real-time item count, subtotal (`X ITEMS • ₹TOTAL`), and one-tap "View Cart ➔" shortcut.
+### 1. Clutter-Free Grid Cards (`CustomerProductCard`)
+- **Clean 2-Element Text Layout**:
+  - Only displays **Product Name** (2 lines max) and **Pack Size / Weight** (e.g. `500 ml` or `26 kg`).
+  - **Removed Text Clutter**: Removed multi-line descriptions and watermark brand badges from the small card to keep the grid clean, modern, and easily scannable.
+- **Fixed Uniform Image Canvas (115dp)**:
+  - Every card features a fixed 115dp image container with `ContentScale.Fit` and 6dp padding inside `#F8FAF9`.
+  - Ensures milk packets, rice bags, and bottles sit in a consistent, uniform canvas with **zero image distortion or uneven card heights**.
+- **Interactive Multi-Size Pill**:
+  - If a product has multiple sizes, a clean `X Sizes ▾` chip allows switching variants directly or viewing pack options.
+- **Instant `+ ADD` $\rightarrow$ `- 1 +` Stepper**:
+  - Crisp emerald border that transforms dynamically into an emerald stepper pill when added.
 
 ---
 
-### 2. Quick-Commerce Product Card (`CustomerProductCard`)
-- **Compact Card Dimensions**:
-  - Reduced height from 450dp+ down to **~220dp-240dp**.
-- **115dp Product Image Container**:
-  - Rounded top corners with subtle off-white background (`#F8FAF9`).
-  - `AsyncImage` with `ContentScale.Fit` to ensure bags and bottles are completely visible without edge clipping.
-- **Badges & Tags**:
-  - Top-left discount badge (e.g. `15% OFF` with high-contrast orange background).
-  - Bottom-left brand pill (e.g. `AMUL`, `HERITAGE`, `MILL-DIRECT`).
-  - Out of Stock overlay if product inventory is depleted.
-- **Typography & Details**:
-  - Title: 2 lines max with 12.5sp bold font and ellipsis.
-  - Variant Selector Chip: For products with multiple sizes (e.g. `500 ml ▾`), a clean pill opens an instant bottom sheet modal to switch size variants.
-- **Price & Stepper Controls**:
-  - Bold emerald selling price (`₹34`) + strikethrough MRP (`₹38`).
-  - **Instant `+ ADD` Button**: Crisp emerald border that morphs into a **`- 1 +` pill stepper** the moment an item is added to the cart directly from the home feed.
+### 2. Rich Product Details Bottom Sheet (`ProductDetailBottomSheet`)
+- **Full View on Tap**:
+  - Tapping any product image or title on the **Home Grid** or in the **Cart** opens a full quick-commerce bottom sheet.
+- **Rich Information Displayed**:
+  - Large 200dp high-res image hero with `ContentScale.Fit` and discount badge.
+  - English and Telugu Product Names (e.g. *లలిత హెచ్.ఎమ్.టి రైస్*).
+  - Brand Tag (e.g. `Brand: AMUL`, `Brand: HERITAGE`).
+  - Horizontal pack size selector cards showing weight, selling price, MRP, and savings.
+  - "About Product" section with full English & Telugu descriptions.
+  - Sticky bottom action bar with live price, strikethrough MRP, and a large **"ADD TO CART"** button / **`- qty +` stepper**.
 
 ---
 
 ### 3. Customer Cart Screen (`CustomerCartView` & `CartItemRow`)
+- **Clickable Cart Thumbnails**:
+  - Tapping the 64dp product thumbnail or name in the cart immediately opens the `ProductDetailBottomSheet`.
 - **Compact Cart Item Cards**:
   - 64dp thumbnail, bold title, size tag, bold emerald price, and compact `- 1 +` stepper pill.
 - **Address Selection Card**:
@@ -67,10 +63,13 @@ The customer shopping interface of G-Store has been completely redesigned into a
 
 ---
 
-### 4. Order Confirmation Screen (`OrderSuccessView`)
-- Animated confetti celebration with bouncing success checkmark.
-- Clear Order ID, timestamp, and delivery address summary.
-- "Track Order Status" and "Continue Shopping" navigation.
+### 4. Home Products Catalog (`CustomerCatalogView`)
+- **2-Column Responsive Grid**:
+  - `LazyVerticalGrid(columns = GridCells.Fixed(2))` fitting **4 to 6 products simultaneously**.
+- **Horizontal Category Carousel Chips**:
+  - `All Products`, `Rice Bags`, `Cooking Oils`, `Dairy Essentials`, `Dals & Pulses`, `Spices & Masalas`.
+- **Floating Quick-Cart Bottom Bar (`FloatingQuickCartBar`)**:
+  - Automatically pops up whenever `cartItems.isNotEmpty()` with `X ITEMS • ₹TOTAL` and `View Cart ➔`.
 
 ---
 
