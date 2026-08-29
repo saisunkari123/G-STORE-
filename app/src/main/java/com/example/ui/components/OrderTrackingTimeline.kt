@@ -24,11 +24,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.RoyalEmerald
 
+import com.example.ui.state.AppState
+
 @Composable
 fun OrderTrackingTimeline(
     orderStatus: String,
     modifier: Modifier = Modifier
 ) {
+    val isDark = AppState.isDarkMode
     val stages = listOf(
         Triple("Ordered", "PENDING", Icons.Default.ShoppingBag),
         Triple("Confirmed", "CONFIRMED", Icons.Default.ThumbUp),
@@ -49,24 +52,29 @@ fun OrderTrackingTimeline(
         Box(
             modifier = modifier
                 .fillMaxWidth()
-                .background(Color(0xFFFEE2E2), shape = RoundedCornerShape(12.dp))
+                .background(if (isDark) Color(0xFF3F1D1D) else Color(0xFFFEE2E2), shape = RoundedCornerShape(12.dp))
                 .padding(12.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "❌ Order Cancelled",
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFFDC2626),
+                color = if (isDark) Color(0xFFFCA5A5) else Color(0xFFDC2626),
                 fontSize = 14.sp
             )
         }
         return
     }
 
+    val containerBg = if (isDark) Color(0xFF1E1E1E) else Color(0xFFF8FAFC)
+    val inactiveBg = if (isDark) Color(0xFF333333) else Color(0xFFE2E8F0)
+    val completedTextColor = if (isDark) Color(0xFFF1F5F9) else Color(0xFF1E293B)
+    val inactiveTextColor = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Color(0xFFF8FAFC), shape = RoundedCornerShape(16.dp))
+            .background(containerBg, shape = RoundedCornerShape(16.dp))
             .padding(16.dp)
     ) {
         Text(
@@ -84,13 +92,10 @@ fun OrderTrackingTimeline(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            stages.forEachIndexed { index, (label, statusKey, icon) ->
+            stages.forEachIndexed { index, (label, _, icon) ->
                 val isCompleted = index <= currentStepIndex
                 val isCurrent = index == currentStepIndex
-
                 val activeColor = RoyalEmerald
-                val inactiveColor = Color.LightGray.copy(alpha = 0.6f)
-                val nodeColor = if (isCompleted) activeColor else inactiveColor
 
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -100,13 +105,13 @@ fun OrderTrackingTimeline(
                         modifier = Modifier
                             .size(32.dp)
                             .clip(CircleShape)
-                            .background(if (isCurrent) activeColor else if (isCompleted) activeColor.copy(alpha = 0.15f) else Color(0xFFE2E8F0)),
+                            .background(if (isCurrent) activeColor else if (isCompleted) activeColor.copy(alpha = 0.15f) else inactiveBg),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = icon,
                             contentDescription = label,
-                            tint = if (isCurrent) Color.White else if (isCompleted) activeColor else Color.Gray,
+                            tint = if (isCurrent) Color.White else if (isCompleted) activeColor else inactiveTextColor,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -117,7 +122,7 @@ fun OrderTrackingTimeline(
                         text = label,
                         fontSize = 10.sp,
                         fontWeight = if (isCurrent) FontWeight.ExtraBold else FontWeight.Medium,
-                        color = if (isCompleted) Color.DarkGray else Color.Gray,
+                        color = if (isCompleted) completedTextColor else inactiveTextColor,
                         textAlign = TextAlign.Center,
                         maxLines = 1
                     )
@@ -129,7 +134,7 @@ fun OrderTrackingTimeline(
                         modifier = Modifier
                             .height(3.dp)
                             .weight(0.6f)
-                            .background(if (lineActive) activeColor else Color(0xFFE2E8F0), shape = CircleShape)
+                            .background(if (lineActive) activeColor else inactiveBg, shape = CircleShape)
                     )
                 }
             }

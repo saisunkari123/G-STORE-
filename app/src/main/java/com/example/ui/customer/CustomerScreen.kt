@@ -2274,9 +2274,15 @@ fun AddressSelectionDialog(onDismiss: () -> Unit) {
                         var isEditing by remember { mutableStateOf(false) }
                         var editFlat by remember { mutableStateOf(addr.houseNo) }
                         var editLandmark by remember { mutableStateOf(addr.landmark) }
+                        val isDark = AppState.isDarkMode
+                        val addressContainerBg = if (isDark) {
+                            if (addr.isSelected) Color(0xFF2E2415) else Color(0xFF262626)
+                        } else {
+                            if (addr.isSelected) SoftOrange else Color(0xFFF1F5F9)
+                        }
 
                         Card(
-                            colors = CardDefaults.cardColors(containerColor = if (addr.isSelected) SoftOrange else LightGrey),
+                            colors = CardDefaults.cardColors(containerColor = addressContainerBg),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {

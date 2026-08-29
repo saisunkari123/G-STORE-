@@ -38,11 +38,19 @@ import androidx.compose.ui.unit.sp
 import com.example.ui.state.AppState
 import com.example.ui.theme.RoyalEmerald
 
-val SurfaceEmerald = Color(0xFFF1F7F5) // Soft emerald tint for background
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen() {
+    // Dynamic Theme-Aware Colors
+    val isDark = AppState.isDarkMode
+    val pageBackground = if (isDark) Color(0xFF121212) else Color(0xFFF1F7F5)
+    val cardBackground = if (isDark) Color(0xFF1E1E1E) else Color.White
+    val labelColor = if (isDark) Color(0xFFE2E8F0) else Color(0xFF334155)
+    val subtextColor = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val inputTextColor = if (isDark) Color.White else Color(0xFF0F172A)
+    val inputContainerColor = if (isDark) Color(0xFF262626) else Color.White
+    val dividerColor = if (isDark) Color(0xFF404040) else Color(0xFFE2E8F0)
+
     // Form Inputs
     var nameInput by remember { mutableStateOf("") }
     var phoneInput by remember { mutableStateOf("") }
@@ -72,23 +80,25 @@ fun LoginScreen() {
 
     // Reusable colors for text fields
     val fieldColors = OutlinedTextFieldDefaults.colors(
-        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+        focusedTextColor = inputTextColor,
+        unfocusedTextColor = inputTextColor,
         cursorColor = primaryGreen,
         focusedBorderColor = primaryGreen,
-        unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f),
+        unfocusedBorderColor = if (isDark) Color(0xFF404040) else Color(0xFFCBD5E1),
         focusedLabelColor = primaryGreen,
-        unfocusedLabelColor = Color.Gray,
+        unfocusedLabelColor = subtextColor,
         focusedLeadingIconColor = primaryGreen,
-        unfocusedLeadingIconColor = Color.Gray,
-        focusedPlaceholderColor = Color.Gray,
-        unfocusedPlaceholderColor = Color.Gray
+        unfocusedLeadingIconColor = if (isDark) Color(0xFF94A3B8) else Color.Gray,
+        focusedPlaceholderColor = subtextColor,
+        unfocusedPlaceholderColor = subtextColor,
+        focusedContainerColor = inputContainerColor,
+        unfocusedContainerColor = inputContainerColor
     )
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(SurfaceEmerald)
+            .background(pageBackground)
     ) {
         Column(
             modifier = Modifier
@@ -143,7 +153,7 @@ fun LoginScreen() {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(32.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = cardBackground),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(
@@ -169,14 +179,14 @@ fun LoginScreen() {
                                 text = "Full Name",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color.DarkGray
+                                color = labelColor
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             OutlinedTextField(
                                 value = nameInput,
                                 onValueChange = { nameInput = it },
                                 modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text("Enter your name", color = Color.Gray) },
+                                placeholder = { Text("Enter your name", color = subtextColor) },
                                 leadingIcon = {
                                     Icon(Icons.Outlined.Person, contentDescription = null, tint = primaryGreen)
                                 },
@@ -191,14 +201,14 @@ fun LoginScreen() {
                                 text = "Phone Number",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color.DarkGray
+                                color = labelColor
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             OutlinedTextField(
                                 value = phoneInput,
                                 onValueChange = { if (it.length <= 10) phoneInput = it },
                                 modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text("10 digit number", color = Color.Gray) },
+                                placeholder = { Text("10 digit number", color = subtextColor) },
                                 leadingIcon = {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -206,9 +216,9 @@ fun LoginScreen() {
                                     ) {
                                         Icon(Icons.Default.Phone, contentDescription = null, tint = primaryGreen)
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("+91", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                        Text("+91", fontWeight = FontWeight.Bold, color = inputTextColor)
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Box(modifier = Modifier.width(1.dp).height(24.dp).background(Color.LightGray))
+                                        Box(modifier = Modifier.width(1.dp).height(24.dp).background(dividerColor))
                                     }
                                 },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -223,14 +233,14 @@ fun LoginScreen() {
                                 text = "Email Address",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color.DarkGray
+                                color = labelColor
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             OutlinedTextField(
                                 value = emailInput,
                                 onValueChange = { emailInput = it },
                                 modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text("email@example.com", color = Color.Gray) },
+                                placeholder = { Text("email@example.com", color = subtextColor) },
                                 leadingIcon = {
                                     Icon(Icons.Outlined.Email, contentDescription = null, tint = primaryGreen)
                                 },
@@ -246,14 +256,14 @@ fun LoginScreen() {
                                 text = "Password",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color.DarkGray
+                                color = labelColor
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             OutlinedTextField(
                                 value = passwordInput,
                                 onValueChange = { passwordInput = it },
                                 modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text("••••••••", color = Color.Gray) },
+                                placeholder = { Text("••••••••", color = subtextColor) },
                                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                                 leadingIcon = {
                                     Icon(Icons.Outlined.Lock, contentDescription = null, tint = primaryGreen)
@@ -278,7 +288,7 @@ fun LoginScreen() {
                             Text(
                                 text = "At least 8 characters with letters, numbers, and symbols",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray,
+                                color = subtextColor,
                                 lineHeight = 16.sp
                             )
 
@@ -321,7 +331,8 @@ fun LoginScreen() {
                                         AppState.authError = null
                                     },
                                 textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = subtextColor
                             )
                         } else {
                             // --- LOGIN FORM ---
@@ -329,14 +340,14 @@ fun LoginScreen() {
                                 text = "Phone Number",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color.DarkGray
+                                color = labelColor
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             OutlinedTextField(
                                 value = loginPhoneInput,
                                 onValueChange = { if (it.length <= 10) loginPhoneInput = it },
                                 modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text("10 digit number", color = Color.Gray) },
+                                placeholder = { Text("10 digit number", color = subtextColor) },
                                 leadingIcon = {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -344,9 +355,9 @@ fun LoginScreen() {
                                     ) {
                                         Icon(Icons.Default.Phone, contentDescription = null, tint = primaryGreen)
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("+91", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                        Text("+91", fontWeight = FontWeight.Bold, color = inputTextColor)
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Box(modifier = Modifier.width(1.dp).height(24.dp).background(Color.LightGray))
+                                        Box(modifier = Modifier.width(1.dp).height(24.dp).background(dividerColor))
                                     }
                                 },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -359,14 +370,14 @@ fun LoginScreen() {
                                 text = "Password",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color.DarkGray
+                                color = labelColor
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             OutlinedTextField(
                                 value = passwordInput,
                                 onValueChange = { passwordInput = it },
                                 modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text("••••••••", color = Color.Gray) },
+                                placeholder = { Text("••••••••", color = subtextColor) },
                                 leadingIcon = { Icon(Icons.Default.Lock, null, tint = primaryGreen) },
                                 trailingIcon = {
                                     IconButton(onClick = { loginPasswordVisible = !loginPasswordVisible }) {
@@ -433,7 +444,8 @@ fun LoginScreen() {
                                         AppState.authError = null
                                     },
                                 textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = subtextColor
                             )
                         }
                     } else { // Admin Flow
@@ -441,14 +453,14 @@ fun LoginScreen() {
                             text = "Admin Email",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.DarkGray
+                            color = labelColor
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
                             value = adminEmailInput,
                             onValueChange = { adminEmailInput = it },
                             modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text("Enter admin email") },
+                            placeholder = { Text("Enter admin email", color = subtextColor) },
                             leadingIcon = { Icon(Icons.Default.Email, null, tint = primaryGreen) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                             shape = RoundedCornerShape(12.dp),
@@ -460,14 +472,14 @@ fun LoginScreen() {
                             text = "Admin Password",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.DarkGray
+                            color = labelColor
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
                             value = adminPasswordInput,
                             onValueChange = { adminPasswordInput = it },
                             modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text("••••••••", color = Color.Gray) },
+                            placeholder = { Text("••••••••", color = subtextColor) },
                             leadingIcon = { Icon(Icons.Default.Lock, null, tint = primaryGreen) },
                             trailingIcon = {
                                 IconButton(onClick = { adminPasswordVisible = !adminPasswordVisible }) {
@@ -508,11 +520,12 @@ fun LoginScreen() {
         if (showForgotPasswordDialog) {
             AlertDialog(
                 onDismissRequest = { showForgotPasswordDialog = false },
+                containerColor = cardBackground,
                 title = {
                     Text(
                         text = if (forgotStep == 1) "Forgot Password" else "Reset Password",
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = inputTextColor
                     )
                 },
                 text = {
@@ -532,13 +545,13 @@ fun LoginScreen() {
                             Text(
                                 text = "Enter your registered phone number. We will send a password reset verification code to your registered email address.",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color.Gray
+                                color = subtextColor
                             )
                             OutlinedTextField(
                                 value = forgotPhoneInput,
                                 onValueChange = { if (it.length <= 10) forgotPhoneInput = it },
                                 modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text("10 digit number", color = Color.Gray) },
+                                placeholder = { Text("10 digit number", color = subtextColor) },
                                 leadingIcon = {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -546,9 +559,9 @@ fun LoginScreen() {
                                     ) {
                                         Icon(Icons.Default.Phone, contentDescription = null, tint = primaryGreen)
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("+91", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                        Text("+91", fontWeight = FontWeight.Bold, color = inputTextColor)
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Box(modifier = Modifier.width(1.dp).height(24.dp).background(Color.LightGray))
+                                        Box(modifier = Modifier.width(1.dp).height(24.dp).background(dividerColor))
                                     }
                                 },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -560,13 +573,13 @@ fun LoginScreen() {
                             Text(
                                 text = "A verification code has been sent to your registered email. Enter the code and your new password below.",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color.Gray
+                                color = subtextColor
                             )
                             OutlinedTextField(
                                 value = forgotCodeInput,
                                 onValueChange = { forgotCodeInput = it },
                                 modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text("Enter verification code") },
+                                placeholder = { Text("Enter verification code", color = subtextColor) },
                                 leadingIcon = { Icon(Icons.Default.Lock, null, tint = primaryGreen) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 singleLine = true,
@@ -577,7 +590,7 @@ fun LoginScreen() {
                                 value = forgotNewPasswordInput,
                                 onValueChange = { forgotNewPasswordInput = it },
                                 modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text("New Password") },
+                                placeholder = { Text("New Password", color = subtextColor) },
                                 leadingIcon = { Icon(Icons.Default.Lock, null, tint = primaryGreen) },
                                 trailingIcon = {
                                     IconButton(onClick = { forgotPasswordVisible = !forgotPasswordVisible }) {
@@ -591,7 +604,6 @@ fun LoginScreen() {
                                 visualTransformation = if (forgotPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                                 singleLine = true,
-
                                 shape = RoundedCornerShape(12.dp),
                                 colors = fieldColors
                             )
@@ -626,7 +638,7 @@ fun LoginScreen() {
                 },
                 dismissButton = {
                     TextButton(onClick = { showForgotPasswordDialog = false }) {
-                        Text("Cancel", color = Color.Gray)
+                        Text("Cancel", color = subtextColor)
                     }
                 },
                 shape = RoundedCornerShape(24.dp)
