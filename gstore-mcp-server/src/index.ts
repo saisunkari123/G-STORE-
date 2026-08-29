@@ -23,6 +23,15 @@ app.use(
   })
 );
 
+// Normalize Accept header to ensure compatibility with all MCP clients (including Gemini Spark)
+app.use((req, res, next) => {
+  const current = req.headers.accept || "";
+  if (!current.includes("text/event-stream") || !current.includes("application/json")) {
+    req.headers.accept = `${current ? current + ", " : ""}application/json, text/event-stream, */*`;
+  }
+  next();
+});
+
 const PORT = process.env.PORT || 3000;
 
 // Create MCP Server Instance
