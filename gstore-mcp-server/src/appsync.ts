@@ -3,8 +3,16 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const APPSYNC_ENDPOINT = process.env.APPSYNC_ENDPOINT || "";
-const APPSYNC_API_KEY = process.env.APPSYNC_API_KEY || "";
+const APPSYNC_ENDPOINT =
+  process.env.APPSYNC_ENDPOINT ||
+  "https://gosrh7asubcb3i2qznf6niewd4.appsync-api.us-east-1.amazonaws.com/graphql";
+
+// Active AWS AppSync API Key
+const ACTIVE_API_KEY = "da2-nk6kuao7yrcplhiytlhykr62qq";
+
+const envKey = process.env.APPSYNC_API_KEY;
+const APPSYNC_API_KEY =
+  !envKey || envKey.startsWith("da2-ko7") ? ACTIVE_API_KEY : envKey;
 
 export interface GraphQLResponse<T = any> {
   data?: T;
