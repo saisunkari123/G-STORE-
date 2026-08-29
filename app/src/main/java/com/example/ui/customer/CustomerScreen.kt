@@ -1019,6 +1019,7 @@ fun CustomerProductCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(115.dp)
+                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                     .background(if (AppState.isDarkMode) Color(0xFF262626) else Color(0xFFF8FAF9))
             ) {
                 val imageUrl = product.imageUrls.getOrNull(product.thumbnailIndex)?.trim() ?: ""
@@ -1026,10 +1027,8 @@ fun CustomerProductCard(
                     AsyncImage(
                         model = imageUrl,
                         contentDescription = product.nameEn,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(6.dp),
-                        contentScale = ContentScale.Fit
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
                     )
                 } else {
                     Box(
@@ -1973,8 +1972,8 @@ fun CartItemRow(
                     AsyncImage(
                         model = imageUrl,
                         contentDescription = product.nameEn,
-                        modifier = Modifier.size(54.dp),
-                        contentScale = ContentScale.Fit
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
                     )
                 } else {
                     Icon(Icons.Default.ShoppingCart, null, tint = RoyalEmerald.copy(alpha = 0.4f), modifier = Modifier.size(24.dp))

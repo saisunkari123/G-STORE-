@@ -30,7 +30,7 @@ const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || "8SR-robZhuJf
 function formatCloudinaryUrl(url: string): string {
   if (url && url.includes("res.cloudinary.com") && url.includes("/upload/")) {
     if (!url.includes("/upload/c_") && !url.includes("/upload/w_")) {
-      return url.replace("/upload/", "/upload/c_pad,w_600,h_600,b_white,f_auto,q_auto/");
+      return url.replace("/upload/", "/upload/c_fill,g_auto,w_800,h_800,f_auto,q_auto/");
     }
   }
   return url;
@@ -1063,12 +1063,12 @@ async function executeToolCall(name: string, args: any) {
         // Case 1: Reference photo taken on phone or image URL provided
         finalCloudinaryUrl = await uploadToCloudinary(referenceImage);
       } else {
-        // Case 2: AI-generated commercial studio packaging photo
-        const promptDetails = customPrompt || `${productName}, retail grocery package, vibrant packaging labels, 4k sharp details`;
-        const fullPrompt = `Commercial studio product packaging photo of ${promptDetails}, ${category}, centered on pure clean white background, soft studio lighting, sharp focus, 8k ecommerce product photography`;
+        // Case 2: AI-generated commercial studio packaging photo filling full card frame
+        const promptDetails = customPrompt || `${productName}, authentic Indian grocery retail package, vibrant high-contrast packaging`;
+        const fullPrompt = `Close-up commercial retail packaging photography of ${promptDetails}, ${category}, product packaging filling the full frame edge-to-edge, ultra-high resolution 8k details, vibrant crisp branding, studio lighting, clean background, modern quick-commerce product image`;
         
         const seed = Math.floor(Math.random() * 100000);
-        const aiImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=600&height=600&nologo=true&enhance=true&seed=${seed}`;
+        const aiImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=800&height=800&nologo=true&enhance=true&seed=${seed}`;
         
         finalCloudinaryUrl = await uploadToCloudinary(aiImageUrl);
       }
