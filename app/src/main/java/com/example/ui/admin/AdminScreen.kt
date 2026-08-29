@@ -9,6 +9,9 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -50,32 +53,11 @@ fun AdminScreen() {
     var showProductEditor by remember { mutableStateOf<Product?>(null) }
     var isAddingProduct by remember { mutableStateOf(false) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
-    var isSeeding by remember { mutableStateOf(false) }
     var showManageCategoriesDialog by remember { mutableStateOf(false) }
     var showManageGiftsDialog by remember { mutableStateOf(false) }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-
-    if (isSeeding) {
-        androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.padding(24.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    CircularProgressIndicator(color = RoyalEmerald)
-                    Text("Seeding 15 premium test products...", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                    Text("Please wait, syncing with AWS cloud...", fontSize = 12.sp, color = Color.Gray)
-                }
-            }
-        }
-    }
 
     if (showLogoutConfirm) {
         @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
@@ -124,13 +106,6 @@ fun AdminScreen() {
                         scope.launch { drawerState.close() }
                         showLogoutConfirm = true
                     },
-                    onSeedClicked = {
-                        scope.launch { drawerState.close() }
-                        isSeeding = true
-                        AppState.seedTestData {
-                            isSeeding = false
-                        }
-                    },
                     onManageCategoriesClicked = {
                         scope.launch { drawerState.close() }
                         showManageCategoriesDialog = true
@@ -148,29 +123,59 @@ fun AdminScreen() {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color.White)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .statusBarsPadding()
                 ) {
-                    // Header with Menu Icon Toggle
+                    // Header with Menu Icon on LEFT and Centered G-STORE Admin in ONE LINE
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
-                            Text("G-STORE Control", fontWeight = FontWeight.Black, fontSize = 24.sp, color = MaterialTheme.colorScheme.onSurface)
-                            Text("Admin Center", fontSize = 12.sp, color = Color.Gray)
-                        }
+                        // 3 lines Menu Icon on the LEFT
                         IconButton(
                             onClick = { scope.launch { drawerState.open() } },
-                            modifier = Modifier.background(RoyalEmerald.copy(alpha = 0.1f), CircleShape)
+                            modifier = Modifier
+                                .size(38.dp)
+                                .background(RoyalEmerald.copy(alpha = 0.12f), CircleShape)
                         ) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = RoyalEmerald)
+                            Icon(
+                                Icons.Default.Menu,
+                                contentDescription = "Menu",
+                                tint = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        // Centered Title in ONE single clean line
+                        Text(
+                            text = "G-STORE Admin",
+                            fontWeight = FontWeight.Black,
+                            fontSize = 18.sp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        // Theme Toggle Icon on the RIGHT for easy contrast testing
+                        IconButton(
+                            onClick = { AppState.isDarkMode = !AppState.isDarkMode },
+                            modifier = Modifier
+                                .size(38.dp)
+                                .background(
+                                    if (AppState.isDarkMode) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
+                                    CircleShape
+                                )
+                        ) {
+                            Icon(
+                                if (AppState.isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
+                                contentDescription = "Toggle Theme",
+                                tint = if (AppState.isDarkMode) Color(0xFFFBBF24) else Color(0xFF4B5563),
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(4.dp))
 
                     TabRow(
                         selectedTabIndex = if (adminTab == "ORDERS") 0 else 1,
@@ -179,19 +184,31 @@ fun AdminScreen() {
                         indicator = { tabPositions ->
                             TabRowDefaults.SecondaryIndicator(
                                 Modifier.tabIndicatorOffset(tabPositions[if (adminTab == "ORDERS") 0 else 1]),
-                                color = RoyalEmerald
+                                color = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald
                             )
                         }
                     ) {
                         Tab(
                             selected = adminTab == "ORDERS",
                             onClick = { adminTab = "ORDERS" },
-                            text = { Text("Live Orders", fontWeight = FontWeight.Bold) }
+                            text = { 
+                                Text(
+                                    "Live Orders", 
+                                    fontWeight = FontWeight.Bold, 
+                                    color = if (adminTab == "ORDERS") (if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                ) 
+                            }
                         )
                         Tab(
                             selected = adminTab == "INVENTORY",
                             onClick = { adminTab = "INVENTORY" },
-                            text = { Text("Inventory", fontWeight = FontWeight.Bold) }
+                            text = { 
+                                Text(
+                                    "Inventory", 
+                                    fontWeight = FontWeight.Bold, 
+                                    color = if (adminTab == "INVENTORY") (if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                ) 
+                            }
                         )
                     }
                 }
@@ -332,7 +349,7 @@ fun AdminScreen() {
 }
 
 @Composable
-fun AdminSidePanelContent(onLogoutClicked: () -> Unit, onSeedClicked: () -> Unit, onManageCategoriesClicked: () -> Unit, onManageGiftsClicked: () -> Unit) {
+fun AdminSidePanelContent(onLogoutClicked: () -> Unit, onManageCategoriesClicked: () -> Unit, onManageGiftsClicked: () -> Unit) {
     val totalSales = AppState.ordersList.filter { it.status == OrderStatus.DELIVERED }.sumOf { it.totalAmount }
     val pendingCount = AppState.ordersList.filter { it.status == OrderStatus.PENDING }.size
     val totalOrdersCount = AppState.ordersList.size
@@ -641,19 +658,6 @@ fun AdminSidePanelContent(onLogoutClicked: () -> Unit, onSeedClicked: () -> Unit
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = onSeedClicked,
-            colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald),
-            shape = RoundedCornerShape(10.dp),
-            modifier = Modifier.fillMaxWidth().height(44.dp)
-        ) {
-            Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Seed Test Products", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Button(
             onClick = onManageCategoriesClicked,
             colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald),
             shape = RoundedCornerShape(10.dp),
@@ -842,11 +846,24 @@ fun AdminOrdersView() {
     var searchQuery by remember { mutableStateOf("") }
     var selectedStatusFilter by remember { mutableStateOf<OrderStatus?>(null) }
     var selectedOrderForMap by remember { mutableStateOf<Order?>(null) }
+    var selectedOrderForDetail by remember { mutableStateOf<Order?>(null) }
     var isRefreshing by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
     if (selectedOrderForMap != null) {
         AdminOrderMapModal(order = selectedOrderForMap!!, onDismiss = { selectedOrderForMap = null })
+    }
+
+    if (selectedOrderForDetail != null) {
+        AdminOrderDetailModal(
+            order = selectedOrderForDetail!!,
+            onDismiss = { selectedOrderForDetail = null },
+            onViewMap = {
+                val ord = selectedOrderForDetail
+                selectedOrderForDetail = null
+                selectedOrderForMap = ord
+            }
+        )
     }
 
     val filteredOrders = AppState.ordersList.filter { order ->
@@ -873,43 +890,42 @@ fun AdminOrdersView() {
         },
         modifier = Modifier.fillMaxSize()
     ) {
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Search by ID, name, or phone...", color = Color.Gray) },
-                leadingIcon = { Icon(Icons.Default.Search, null, tint = RoyalEmerald) },
-                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Search by ID, name, or phone...", color = Color.Gray, fontSize = 13.sp) },
+                leadingIcon = { Icon(Icons.Default.Search, null, tint = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald) },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
-                textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface),
+                textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = MaterialTheme.colorScheme.onSurface,
                     unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    focusedBorderColor = RoyalEmerald,
-                    unfocusedBorderColor = Color.LightGray
+                    focusedBorderColor = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald,
+                    unfocusedBorderColor = if (AppState.isDarkMode) Color(0xFF3A3A3A) else Color.LightGray
                 )
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            Text("Filter by Status", style = MaterialTheme.typography.bodySmall, color = Color.Gray, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(4.dp))
+            // Status filter chips
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 val isAllSelected = selectedStatusFilter == null
                 AssistChip(
                     onClick = { selectedStatusFilter = null },
-                    label = { Text("All (${AppState.ordersList.size})") },
+                    label = { Text("All (${AppState.ordersList.size})", fontSize = 11.sp) },
                     colors = AssistChipDefaults.assistChipColors(
-                        containerColor = if (isAllSelected) RoyalEmerald.copy(alpha = 0.15f) else Color.Transparent,
-                        labelColor = if (isAllSelected) RoyalEmerald else Color.Gray
+                        containerColor = if (isAllSelected) (if (AppState.isDarkMode) Color(0xFF34D399).copy(alpha = 0.2f) else RoyalEmerald.copy(alpha = 0.15f)) else Color.Transparent,
+                        labelColor = if (isAllSelected) (if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald) else Color.Gray
                     ),
-                    border = BorderStroke(1.dp, if (isAllSelected) RoyalEmerald else Color.LightGray.copy(alpha = 0.5f))
+                    border = BorderStroke(1.dp, if (isAllSelected) (if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald) else Color.LightGray.copy(alpha = 0.4f))
                 )
 
                 OrderStatus.values().forEach { status ->
@@ -917,26 +933,26 @@ fun AdminOrdersView() {
                     val isSelected = selectedStatusFilter == status
                     val label = when(status) {
                         OrderStatus.PENDING -> "Pending"
-                        OrderStatus.OUT_FOR_DELIVERY -> "Out for Delivery"
+                        OrderStatus.OUT_FOR_DELIVERY -> "Dispatched"
                         OrderStatus.DELIVERED -> "Delivered"
                         OrderStatus.CANCELLED -> "Cancelled"
                         OrderStatus.RETURN_REQUESTED -> "Return Req."
-                        OrderStatus.RETURN_ACCEPTED -> "Ret. Accepted"
+                        OrderStatus.RETURN_ACCEPTED -> "Ret. Acc."
                         OrderStatus.RETURNED -> "Returned"
                     }
                     AssistChip(
                         onClick = { selectedStatusFilter = status },
-                        label = { Text("$label ($count)") },
+                        label = { Text("$label ($count)", fontSize = 11.sp) },
                         colors = AssistChipDefaults.assistChipColors(
-                            containerColor = if (isSelected) RoyalEmerald.copy(alpha = 0.15f) else Color.Transparent,
-                            labelColor = if (isSelected) RoyalEmerald else Color.Gray
+                            containerColor = if (isSelected) (if (AppState.isDarkMode) Color(0xFF34D399).copy(alpha = 0.2f) else RoyalEmerald.copy(alpha = 0.15f)) else Color.Transparent,
+                            labelColor = if (isSelected) (if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald) else Color.Gray
                         ),
-                        border = BorderStroke(1.dp, if (isSelected) RoyalEmerald else Color.LightGray.copy(alpha = 0.5f))
+                        border = BorderStroke(1.dp, if (isSelected) (if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald) else Color.LightGray.copy(alpha = 0.4f))
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             if (filteredOrders.isEmpty()) {
                 Column(
@@ -946,16 +962,23 @@ fun AdminOrdersView() {
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(64.dp), tint = RoyalEmerald.copy(alpha = 0.3f))
-                    Text("No matching orders found", color = Color.Gray)
+                    Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(56.dp), tint = RoyalEmerald.copy(alpha = 0.3f))
+                    Text("No matching orders found", color = Color.Gray, fontSize = 14.sp)
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                // 2-Column Grid Layout for compact 2-order visibility
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f)
                 ) {
                     items(filteredOrders, key = { it.id }) { order ->
-                        OrderCard(order, onViewMap = { selectedOrderForMap = it })
+                        AdminOrderGridCard(
+                            order = order,
+                            onClick = { selectedOrderForDetail = order },
+                            onViewMap = { selectedOrderForMap = it }
+                        )
                     }
                 }
             }
@@ -964,8 +987,221 @@ fun AdminOrdersView() {
 }
 
 @Composable
-fun OrderCard(order: com.example.domain.model.Order, onViewMap: (Order) -> Unit) {
+fun AdminOrderGridCard(
+    order: com.example.domain.model.Order,
+    onClick: () -> Unit,
+    onViewMap: (Order) -> Unit
+) {
     val context = LocalContext.current
+    var isUpdatingStatus by remember { mutableStateOf(false) }
+
+    val friendlyStatus = when(order.status) {
+        OrderStatus.PENDING -> "Pending"
+        OrderStatus.OUT_FOR_DELIVERY -> "Dispatched"
+        OrderStatus.DELIVERED -> "Delivered"
+        OrderStatus.CANCELLED -> "Cancelled"
+        OrderStatus.RETURN_REQUESTED -> "Return Req."
+        OrderStatus.RETURN_ACCEPTED -> "Ret. Acc."
+        OrderStatus.RETURNED -> "Returned"
+    }
+
+    val isDark = AppState.isDarkMode
+    val sdf = remember { java.text.SimpleDateFormat("dd MMM, hh:mm a", java.util.Locale.ENGLISH) }
+
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, if (isDark) Color(0xFF333333) else Color(0xFFE5E7EB))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            // Header: #ID + Status Badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "#${order.id.takeLast(6).uppercase()}",
+                    fontWeight = FontWeight.Black,
+                    color = DeepGold,
+                    fontSize = 13.sp
+                )
+                Surface(
+                    color = when(order.status) {
+                        OrderStatus.PENDING -> if (isDark) DeepGold.copy(alpha = 0.25f) else Color(0xFFFFF4E5)
+                        OrderStatus.OUT_FOR_DELIVERY -> (if (isDark) Color(0xFF34D399) else RoyalEmerald).copy(alpha = 0.2f)
+                        OrderStatus.CANCELLED -> Color.Red.copy(alpha = 0.15f)
+                        OrderStatus.RETURN_REQUESTED -> DeepGold.copy(alpha = 0.2f)
+                        OrderStatus.RETURN_ACCEPTED -> DeepGold.copy(alpha = 0.3f)
+                        else -> (if (isDark) Color(0xFF34D399) else RoyalEmerald).copy(alpha = 0.15f)
+                    },
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text(
+                        text = friendlyStatus,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        color = when(order.status) {
+                            OrderStatus.PENDING -> DeepGold
+                            OrderStatus.CANCELLED -> Color.Red
+                            OrderStatus.RETURN_REQUESTED -> DeepGold
+                            OrderStatus.RETURN_ACCEPTED -> DeepGold
+                            else -> if (isDark) Color(0xFF34D399) else RoyalEmerald
+                        }
+                    )
+                }
+            }
+
+            // Time
+            Text(
+                text = sdf.format(java.util.Date(order.createdAt)),
+                fontSize = 10.sp,
+                color = Color.Gray
+            )
+
+            // Customer Name & Phone Call icon
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = order.customerName.ifBlank { "Customer" },
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.5.sp,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
+                if (order.customerPhone.isNotBlank()) {
+                    IconButton(
+                        onClick = {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
+                                data = android.net.Uri.parse("tel:${order.customerPhone}")
+                            }
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Call,
+                            contentDescription = "Call",
+                            tint = if (isDark) Color(0xFF34D399) else RoyalEmerald,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+            }
+
+            // Items Count Snippet
+            val itemsCount = order.items.sumOf { it.quantity }
+            Text(
+                text = "$itemsCount item(s) • ${order.items.firstOrNull()?.productName ?: "Items"}",
+                fontSize = 10.5.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+
+            // Bill Amount (High Contrast in both Dark and Light mode)
+            Surface(
+                color = if (isDark) Color(0xFF242424) else Color(0xFFF8FAFC),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(0.5.dp, if (isDark) Color(0xFF3A3A3A) else Color(0xFFE2E8F0)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Bill", fontSize = 10.sp, color = Color.Gray)
+                    Text(
+                        "₹${order.totalAmount.toInt()}",
+                        fontWeight = FontWeight.Black,
+                        fontSize = 13.5.sp,
+                        color = if (isDark) Color(0xFF34D399) else RoyalEmerald
+                    )
+                }
+            }
+
+            // Action Button
+            if (order.status == OrderStatus.PENDING) {
+                Button(
+                    onClick = {
+                        isUpdatingStatus = true
+                        AppState.updateOrderStatus(order.id, OrderStatus.OUT_FOR_DELIVERY) {
+                            isUpdatingStatus = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald),
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.fillMaxWidth().height(30.dp),
+                    contentPadding = PaddingValues(0.dp),
+                    enabled = !isUpdatingStatus
+                ) {
+                    if (isUpdatingStatus) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp)
+                    } else {
+                        Text("Dispatch", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            } else if (order.status == OrderStatus.OUT_FOR_DELIVERY) {
+                Button(
+                    onClick = {
+                        isUpdatingStatus = true
+                        AppState.updateOrderStatus(order.id, OrderStatus.DELIVERED) {
+                            isUpdatingStatus = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DeepGold),
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.fillMaxWidth().height(30.dp),
+                    contentPadding = PaddingValues(0.dp),
+                    enabled = !isUpdatingStatus
+                ) {
+                    if (isUpdatingStatus) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp)
+                    } else {
+                        Text("Mark Delivered", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            } else {
+                OutlinedButton(
+                    onClick = onClick,
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.fillMaxWidth().height(28.dp),
+                    contentPadding = PaddingValues(0.dp),
+                    border = BorderStroke(0.5.dp, if (isDark) Color(0xFF4B5563) else Color(0xFFD1D5DB))
+                ) {
+                    Text("View Details", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium)
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AdminOrderDetailModal(
+    order: com.example.domain.model.Order,
+    onDismiss: () -> Unit,
+    onViewMap: (Order) -> Unit
+) {
+    val context = LocalContext.current
+    var isUpdatingStatus by remember { mutableStateOf(false) }
+    val isDark = AppState.isDarkMode
 
     val friendlyStatus = when(order.status) {
         OrderStatus.PENDING -> "Pending"
@@ -977,200 +1213,200 @@ fun OrderCard(order: com.example.domain.model.Order, onViewMap: (Order) -> Unit)
         OrderStatus.RETURNED -> "Returned"
     }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color(0xFFEEEEEE))
+    val displayAddress = remember(order.addressHouseNo, order.addressLandmark, order.latitude, order.longitude) {
+        buildString {
+            val house = order.addressHouseNo.trim()
+            val landmark = order.addressLandmark.trim()
+            val hasValidHouse = house.isNotBlank() && !house.contains("Fetching location", ignoreCase = true)
+            val hasValidLandmark = landmark.isNotBlank() && !landmark.contains("Fetching location", ignoreCase = true)
+            if (hasValidHouse) append(house)
+            if (hasValidLandmark) {
+                if (isNotEmpty()) append("\n")
+                append(landmark)
+            }
+            if (isEmpty()) {
+                if (order.latitude != 0.0 && order.longitude != 0.0) {
+                    append(String.format(java.util.Locale.US, "Location: %.4f, %.4f", order.latitude, order.longitude))
+                } else {
+                    append("Customer Location")
+                }
+            }
+        }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 10.dp)
+                .padding(bottom = 32.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Order #${order.id}", fontWeight = FontWeight.Black, color = DeepGold, fontSize = 16.sp, maxLines = 1)
-                    val sdf = java.text.SimpleDateFormat("dd MMM, hh:mm a", java.util.Locale.ENGLISH)
+                Column {
+                    Text("Order #${order.id}", fontWeight = FontWeight.Black, color = DeepGold, fontSize = 17.sp)
+                    val sdf = java.text.SimpleDateFormat("dd MMM yyyy, hh:mm a", java.util.Locale.ENGLISH)
                     Text(sdf.format(java.util.Date(order.createdAt)), fontSize = 11.sp, color = Color.Gray)
                 }
-                Spacer(modifier = Modifier.width(8.dp))
                 Surface(
                     color = when(order.status) {
-                        OrderStatus.PENDING -> Color(0xFFFFF4E5)
-                        OrderStatus.OUT_FOR_DELIVERY -> RoyalEmerald.copy(alpha = 0.15f)
-                        OrderStatus.CANCELLED -> Color.Red.copy(alpha = 0.1f)
-                        OrderStatus.RETURN_REQUESTED -> DeepGold.copy(alpha = 0.15f)
-                        OrderStatus.RETURN_ACCEPTED -> DeepGold.copy(alpha = 0.25f)
-                        OrderStatus.RETURNED -> RoyalEmerald.copy(alpha = 0.1f)
-                        else -> RoyalEmerald.copy(alpha = 0.1f)
+                        OrderStatus.PENDING -> if (isDark) DeepGold.copy(alpha = 0.25f) else Color(0xFFFFF4E5)
+                        OrderStatus.OUT_FOR_DELIVERY -> (if (isDark) Color(0xFF34D399) else RoyalEmerald).copy(alpha = 0.2f)
+                        OrderStatus.CANCELLED -> Color.Red.copy(alpha = 0.15f)
+                        else -> (if (isDark) Color(0xFF34D399) else RoyalEmerald).copy(alpha = 0.15f)
                     },
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
                         text = friendlyStatus,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        maxLines = 1,
                         color = when(order.status) {
                             OrderStatus.PENDING -> DeepGold
                             OrderStatus.CANCELLED -> Color.Red
-                            OrderStatus.RETURN_REQUESTED -> DeepGold
-                            OrderStatus.RETURN_ACCEPTED -> DeepGold
-                            else -> RoyalEmerald
+                            else -> if (isDark) Color(0xFF34D399) else RoyalEmerald
                         }
                     )
                 }
             }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Customer Details Section
+
+            HorizontalDivider(color = if (isDark) Color(0xFF333333) else Color(0xFFEEEEEE))
+
+            // Customer Details
             Text("CUSTOMER DETAILS", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.Gray, letterSpacing = 1.sp)
-            Spacer(modifier = Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(16.dp), tint = RoyalEmerald)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(order.customerName, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
+                Text(order.customerName.ifBlank { "Customer" }, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
             }
-            
+
             Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(16.dp), tint = RoyalEmerald)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(order.customerPhone, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
+                    Text(order.customerPhone.ifBlank { "No phone" }, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
                 }
-                
-                TextButton(
-                    onClick = {
-                        val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
-                            data = android.net.Uri.parse("tel:${order.customerPhone}")
-                        }
-                        context.startActivity(intent)
-                    },
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                    modifier = Modifier.height(32.dp)
-                ) {
-                    Icon(Icons.Default.Call, null, modifier = Modifier.size(14.dp), tint = RoyalEmerald)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Call", fontSize = 12.sp, color = RoyalEmerald, fontWeight = FontWeight.Bold)
+                if (order.customerPhone.isNotBlank()) {
+                    Button(
+                        onClick = {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
+                                data = android.net.Uri.parse("tel:${order.customerPhone}")
+                            }
+                            context.startActivity(intent)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.height(32.dp)
+                    ) {
+                        Icon(Icons.Default.Call, null, modifier = Modifier.size(14.dp), tint = Color.White)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Call", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 
             Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.Top, modifier = Modifier.weight(1f)) {
                     Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp), tint = RoyalEmerald)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "${order.addressHouseNo}\n${order.addressLandmark}",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                        lineHeight = 18.sp
-                    )
+                    Text(text = displayAddress, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f), lineHeight = 17.sp)
                 }
-                TextButton(
-                    onClick = { onViewMap(order) },
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                    modifier = Modifier.height(32.dp)
+                OutlinedButton(
+                    onClick = { onDismiss(); onViewMap(order) },
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.height(32.dp),
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF34D399) else RoyalEmerald)
                 ) {
-                    Icon(Icons.Default.LocationOn, null, modifier = Modifier.size(14.dp), tint = RoyalEmerald)
+                    Icon(Icons.Default.LocationOn, null, modifier = Modifier.size(14.dp), tint = if (isDark) Color(0xFF34D399) else RoyalEmerald)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("View Map", fontSize = 12.sp, color = RoyalEmerald, fontWeight = FontWeight.Bold)
+                    Text("Map", fontSize = 12.sp, color = if (isDark) Color(0xFF34D399) else RoyalEmerald, fontWeight = FontWeight.Bold)
                 }
             }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), thickness = 0.5.dp, color = Color.LightGray)
-            
-            // Order Items Section
-            Text("ITEMS ORDERED", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.Gray, letterSpacing = 1.sp)
-            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider(color = if (isDark) Color(0xFF333333) else Color(0xFFEEEEEE))
+
+            // Items Breakdown
+            Text("ORDER ITEMS (${order.items.size})", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.Gray, letterSpacing = 1.sp)
             order.items.forEach { item ->
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(item.productName, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
-                        Text("Size: ${item.selectedSize}", fontSize = 12.sp, color = RoyalEmerald, fontWeight = FontWeight.Bold)
+                        Text(item.productName, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, color = MaterialTheme.colorScheme.onSurface)
+                        Text("Size: ${item.selectedSize}", fontSize = 11.5.sp, color = if (isDark) Color(0xFF34D399) else RoyalEmerald, fontWeight = FontWeight.Bold)
                     }
-                    Text("Qty: ${item.quantity}", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
-                    Text("₹${(item.priceAtPurchase * item.quantity).toInt()}", fontWeight = FontWeight.Black, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.width(60.dp), textAlign = androidx.compose.ui.text.style.TextAlign.End)
+                    Text("Qty: ${item.quantity}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(horizontal = 8.dp))
+                    Text("₹${(item.priceAtPurchase * item.quantity).toInt()}", fontWeight = FontWeight.Black, fontSize = 13.5.sp, color = MaterialTheme.colorScheme.onSurface)
                 }
             }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFFF8F9FA), RoundedCornerShape(12.dp))
-                    .padding(12.dp)
+
+            // Total Bill Container (High Contrast)
+            Surface(
+                color = if (isDark) Color(0xFF242424) else Color(0xFFF8FAFC),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, if (isDark) Color(0xFF3A3A3A) else Color(0xFFE2E8F0)),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Column {
-                    Text("Bill Amount", fontSize = 11.sp, color = Color.Gray)
-                    Text("₹${order.totalAmount.toInt()}", fontWeight = FontWeight.Black, fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurface)
-                }
-                if (order.status == OrderStatus.PENDING) {
-                    Button(
-                        onClick = { AppState.updateOrderStatus(order.id, OrderStatus.OUT_FOR_DELIVERY) },
-                        colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald),
-                        shape = RoundedCornerShape(8.dp),
-                        enabled = !AppState.isNetworkLoading
-                    ) {
-                        if (AppState.isNetworkLoading) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                        } else {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("Total Bill Amount", fontSize = 11.sp, color = Color.Gray)
+                        Text("₹${order.totalAmount.toInt()}", fontWeight = FontWeight.Black, fontSize = 22.sp, color = if (isDark) Color(0xFF34D399) else RoyalEmerald)
+                    }
+                    if (order.status == OrderStatus.PENDING) {
+                        Button(
+                            onClick = { 
+                                isUpdatingStatus = true
+                                AppState.updateOrderStatus(order.id, OrderStatus.OUT_FOR_DELIVERY) {
+                                    isUpdatingStatus = false
+                                    onDismiss()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald),
+                            shape = RoundedCornerShape(8.dp),
+                            enabled = !isUpdatingStatus
+                        ) {
                             Text("Dispatch Order", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
                         }
-                    }
-                } else if (order.status == OrderStatus.RETURN_REQUESTED) {
-                    Button(
-                        onClick = { AppState.updateOrderStatus(order.id, OrderStatus.RETURN_ACCEPTED) },
-                        colors = ButtonDefaults.buttonColors(containerColor = DeepGold),
-                        shape = RoundedCornerShape(8.dp),
-                        enabled = !AppState.isNetworkLoading
-                    ) {
-                        if (AppState.isNetworkLoading) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                        } else {
-                            Text("Accept Return", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                } else if (order.status == OrderStatus.RETURN_ACCEPTED) {
-                    Button(
-                        onClick = { AppState.updateOrderStatus(order.id, OrderStatus.RETURNED) },
-                        colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald),
-                        shape = RoundedCornerShape(8.dp),
-                        enabled = !AppState.isNetworkLoading
-                    ) {
-                        if (AppState.isNetworkLoading) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                        } else {
-                            Text("Return Successfully", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                } else if (order.status != OrderStatus.DELIVERED && order.status != OrderStatus.CANCELLED && order.status != OrderStatus.RETURNED) {
-                    Button(
-                        onClick = { AppState.updateOrderStatus(order.id, OrderStatus.DELIVERED) },
-                        colors = ButtonDefaults.buttonColors(containerColor = DeepGold),
-                        shape = RoundedCornerShape(8.dp),
-                        enabled = !AppState.isNetworkLoading
-                    ) {
-                        if (AppState.isNetworkLoading) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                        } else {
+                    } else if (order.status == OrderStatus.OUT_FOR_DELIVERY) {
+                        Button(
+                            onClick = { 
+                                isUpdatingStatus = true
+                                AppState.updateOrderStatus(order.id, OrderStatus.DELIVERED) {
+                                    isUpdatingStatus = false
+                                    onDismiss()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = DeepGold),
+                            shape = RoundedCornerShape(8.dp),
+                            enabled = !isUpdatingStatus
+                        ) {
                             Text("Mark Delivered", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
                         }
                     }
