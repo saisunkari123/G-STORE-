@@ -494,7 +494,7 @@ fun CustomerCatalogView(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Search premium grains...", color = Color.Gray, fontSize = 13.sp) },
+                        placeholder = { Text("Search for quality products...", color = Color.Gray, fontSize = 13.sp) },
                         leadingIcon = { Icon(Icons.Default.Search, null, tint = RoyalEmerald, modifier = Modifier.size(18.dp)) },
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true,
