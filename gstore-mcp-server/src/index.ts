@@ -410,6 +410,142 @@ const toolsList = [
     },
   },
   {
+    name: "get_sales_report",
+    description:
+      "Generate a detailed sales and revenue report for a specified date range (e.g. today, yesterday, last 7 days, or between two dates). Computes total revenue, completed/pending/cancelled orders, average order value, and top selling products during that period.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        startDate: {
+          type: "string",
+          description: "Start date (YYYY-MM-DD or ISO timestamp, e.g. '2026-08-01'). Defaults to 7 days ago if omitted.",
+        },
+        endDate: {
+          type: "string",
+          description: "End date (YYYY-MM-DD or ISO timestamp, e.g. '2026-08-29'). Defaults to current time if omitted.",
+        },
+        category: {
+          type: "string",
+          description: "Optional product category filter (e.g. 'Rice Bags', 'Cooking Oils', 'Dairy Essentials')",
+        },
+      },
+    },
+  },
+  {
+    name: "export_orders_csv",
+    description:
+      "Export customer orders within a date range to a CSV string suitable for spreadsheets, accounting, or tax tallying.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        startDate: {
+          type: "string",
+          description: "Optional start date filter (YYYY-MM-DD)",
+        },
+        endDate: {
+          type: "string",
+          description: "Optional end date filter (YYYY-MM-DD)",
+        },
+        status: {
+          type: "string",
+          description: "Optional status filter (e.g. 'DELIVERED', 'PENDING', 'ALL')",
+        },
+      },
+    },
+  },
+  {
+    name: "set_store_availability",
+    description:
+      "Pause or resume incoming customer orders by marking the store as Open or Closed with an optional public reason (e.g. heavy rain, power outage, festival holiday, inventory counting).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        isOpen: {
+          type: "boolean",
+          description: "Set true to accept orders, false to pause incoming orders",
+        },
+        closingReason: {
+          type: "string",
+          description: "Optional explanation shown to customers (e.g., 'Heavy rain in Rajam — delivery paused until 4 PM')",
+        },
+      },
+      required: ["isOpen"],
+    },
+  },
+  {
+    name: "create_order",
+    description:
+      "Create and record a counter, phone, or WhatsApp customer order directly into G-Store's AWS backend. Calculates totals and automatically deducts stock.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        customerName: {
+          type: "string",
+          description: "Customer full name (e.g. 'Ramesh', 'Sita Devi')",
+        },
+        customerPhone: {
+          type: "string",
+          description: "Customer 10-digit mobile number (e.g. '9876543210')",
+        },
+        deliveryAddress: {
+          type: "string",
+          description: "Delivery address or landmark in Rajam (e.g. 'D.No 4-12, Near SBI Bank, Rajam')",
+        },
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              productIdOrName: {
+                type: "string",
+                description: "Product ID (e.g. 'p_rice_sona') or product name keywords (e.g. 'Lalitha Rice', 'Heritage Milk')",
+              },
+              variantSize: {
+                type: "string",
+                description: "Optional pack size (e.g. '26kg', '10kg', '500ml'). Defaults to first variant if omitted.",
+              },
+              quantity: {
+                type: "number",
+                description: "Number of units/bags ordered",
+              },
+              price: {
+                type: "number",
+                description: "Optional custom unit price in ₹ (defaults to current catalog price)",
+              },
+            },
+            required: ["productIdOrName", "quantity"],
+          },
+          description: "List of items ordered",
+        },
+        status: {
+          type: "string",
+          enum: ["PENDING", "PREPARING", "OUT_FOR_DELIVERY", "DELIVERED"],
+          description: "Initial order status (default is PENDING)",
+        },
+        deliveryFee: {
+          type: "number",
+          description: "Delivery charge in ₹ (default 0 for free delivery)",
+        },
+      },
+      required: ["customerName", "customerPhone", "deliveryAddress", "items"],
+    },
+  },
+  {
+    name: "generate_order_invoice",
+    description:
+      "Generate a clean, formatted receipt and packing slip for an order (formatted for printing or copying directly to WhatsApp for the customer or delivery agent).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        orderId: {
+          type: "string",
+          description: "The order ID to generate invoice for (e.g. 'G-1786896453001-823')",
+        },
+      },
+      required: ["orderId"],
+    },
+  },
+  {
     name: "get_store_metrics",
     description:
       "Get summary store analytics: total orders, total revenue, pending orders, and recent order activity.",
@@ -421,7 +557,7 @@ const toolsList = [
   {
     name: "get_store_settings",
     description:
-      "Get the active store settings such as delivery radius (in km) and minimum order value (in ₹).",
+      "Get the active store settings such as delivery radius (in km), minimum order value (in ₹), and store open/closed status.",
     inputSchema: {
       type: "object",
       properties: {},
@@ -430,7 +566,7 @@ const toolsList = [
   {
     name: "update_store_settings",
     description:
-      "Update store operational settings such as delivery radius (km) or minimum order amount (₹).",
+      "Update store operational settings such as delivery radius (km), minimum order amount (₹), or store open/closed status.",
     inputSchema: {
       type: "object",
       properties: {
@@ -441,6 +577,14 @@ const toolsList = [
         deliveryRadiusKm: {
           type: "number",
           description: "New delivery radius in kilometers",
+        },
+        isStoreOpen: {
+          type: "boolean",
+          description: "Set store open/closed status",
+        },
+        closingReason: {
+          type: "string",
+          description: "Reason if store is closed",
         },
       },
     },
@@ -1427,6 +1571,529 @@ async function executeToolCall(name: string, args: any) {
       };
     }
 
+    case "get_sales_report": {
+      const query = `
+        query ListOrders {
+          listOrders(limit: 1000) {
+            items {
+              id
+              customerId
+              customerName
+              deliveryAddress
+              deliveryFee
+              subtotal
+              total
+              status
+              createdAt
+              items {
+                productId
+                productName
+                quantity
+                variantSize
+                price
+              }
+            }
+          }
+        }
+      `;
+      const data = await executeGraphQL(query);
+      const allOrders: any[] = data?.listOrders?.items || [];
+
+      // Determine date window
+      const now = new Date();
+      const defaultStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const start = args?.startDate ? new Date(args.startDate) : defaultStart;
+      const end = args?.endDate ? new Date(args.endDate + "T23:59:59.999Z") : now;
+
+      const filteredOrders = allOrders.filter((o) => {
+        if (!o.createdAt) return true;
+        const orderDate = new Date(o.createdAt);
+        return orderDate >= start && orderDate <= end;
+      });
+
+      let totalGrossRevenue = 0;
+      let completedOrdersCount = 0;
+      let pendingOrdersCount = 0;
+      let cancelledOrdersCount = 0;
+      const itemSalesMap: Record<string, { name: string; quantity: number; revenue: number }> = {};
+      const dailyMap: Record<string, { orders: number; revenue: number }> = {};
+
+      for (const o of filteredOrders) {
+        const status = (o.status || "PENDING").toUpperCase();
+        if (status === "CANCELLED") {
+          cancelledOrdersCount++;
+          continue;
+        }
+
+        if (status === "DELIVERED") {
+          completedOrdersCount++;
+        } else {
+          pendingOrdersCount++;
+        }
+
+        const total = Number(o.total) || 0;
+        totalGrossRevenue += total;
+
+        const dayKey = o.createdAt ? o.createdAt.slice(0, 10) : "Recent";
+        if (!dailyMap[dayKey]) {
+          dailyMap[dayKey] = { orders: 0, revenue: 0 };
+        }
+        dailyMap[dayKey].orders++;
+        dailyMap[dayKey].revenue += total;
+
+        for (const it of o.items || []) {
+          const key = it.productId || it.productName || "Unknown Item";
+          if (!itemSalesMap[key]) {
+            itemSalesMap[key] = {
+              name: it.productName || key,
+              quantity: 0,
+              revenue: 0,
+            };
+          }
+          const qty = Number(it.quantity) || 1;
+          const price = Number(it.price) || 0;
+          itemSalesMap[key].quantity += qty;
+          itemSalesMap[key].revenue += qty * price;
+        }
+      }
+
+      const topProducts = Object.values(itemSalesMap)
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 10)
+        .map((p) => ({
+          name: p.name,
+          unitsSold: p.quantity,
+          revenue: `₹${p.revenue.toFixed(0)}`,
+        }));
+
+      const activeOrdersCount = completedOrdersCount + pendingOrdersCount;
+      const averageOrderValue =
+        activeOrdersCount > 0 ? (totalGrossRevenue / activeOrdersCount).toFixed(0) : "0";
+
+      return {
+        dateRange: {
+          start: start.toISOString().slice(0, 10),
+          end: end.toISOString().slice(0, 10),
+        },
+        financialSummary: {
+          totalGrossRevenue: `₹${totalGrossRevenue.toLocaleString("en-IN")}`,
+          totalRevenueNumber: totalGrossRevenue,
+          averageOrderValue: `₹${averageOrderValue}`,
+          totalOrdersPlaced: filteredOrders.length,
+          deliveredOrders: completedOrdersCount,
+          pendingOrders: pendingOrdersCount,
+          cancelledOrders: cancelledOrdersCount,
+        },
+        dailyBreakdown: Object.entries(dailyMap).map(([day, val]) => ({
+          date: day,
+          orders: val.orders,
+          revenue: `₹${val.revenue.toFixed(0)}`,
+        })),
+        topSellingProducts: topProducts,
+      };
+    }
+
+    case "export_orders_csv": {
+      const query = `
+        query ListOrders {
+          listOrders(limit: 1000) {
+            items {
+              id
+              customerId
+              customerName
+              deliveryAddress
+              deliveryFee
+              subtotal
+              total
+              status
+              createdAt
+              items {
+                productId
+                productName
+                quantity
+                variantSize
+                price
+              }
+            }
+          }
+        }
+      `;
+      const data = await executeGraphQL(query);
+      let orders: any[] = data?.listOrders?.items || [];
+
+      if (args?.status && args.status !== "ALL") {
+        orders = orders.filter((o) => (o.status || "").toUpperCase() === args.status.toUpperCase());
+      }
+      if (args?.startDate) {
+        const start = new Date(args.startDate);
+        orders = orders.filter((o) => !o.createdAt || new Date(o.createdAt) >= start);
+      }
+      if (args?.endDate) {
+        const end = new Date(args.endDate + "T23:59:59.999Z");
+        orders = orders.filter((o) => !o.createdAt || new Date(o.createdAt) <= end);
+      }
+
+      // Generate CSV
+      const headers = [
+        "Order ID",
+        "Date",
+        "Customer Name",
+        "Customer Phone",
+        "Status",
+        "Item Count",
+        "Subtotal",
+        "Delivery Fee",
+        "Total Amount",
+        "Delivery Address",
+        "Items Ordered",
+      ];
+
+      const csvRows = [headers.join(",")];
+
+      for (const o of orders) {
+        const addrParts = (o.deliveryAddress || "").split(":::");
+        const addrText = (addrParts[1] || o.deliveryAddress || "").replace(/"/g, '""');
+        const phone = addrParts[2] || "";
+        const dateStr = o.createdAt ? o.createdAt.slice(0, 10) : "";
+        const itemsSummary = (o.items || [])
+          .map((it: any) => `${it.productName} (${it.variantSize || ""}) x${it.quantity}`)
+          .join(" | ")
+          .replace(/"/g, '""');
+
+        const row = [
+          `"${o.id}"`,
+          `"${dateStr}"`,
+          `"${(o.customerName || "Customer").replace(/"/g, '""')}"`,
+          `"${phone}"`,
+          `"${o.status}"`,
+          (o.items || []).reduce((acc: number, cur: any) => acc + (cur.quantity || 1), 0),
+          o.subtotal || o.total,
+          o.deliveryFee || 0,
+          o.total,
+          `"${addrText}"`,
+          `"${itemsSummary}"`,
+        ];
+        csvRows.push(row.join(","));
+      }
+
+      const csvContent = csvRows.join("\n");
+
+      return {
+        totalOrdersExported: orders.length,
+        csvFileName: `gstore_orders_${Date.now()}.csv`,
+        csvContent,
+      };
+    }
+
+    case "set_store_availability": {
+      const getQuery = `
+        query GetAppConfig {
+          getProduct(id: "sys_config") {
+            id
+            description
+          }
+        }
+      `;
+      const existingData = await executeGraphQL(getQuery);
+      const existing = existingData?.getProduct;
+
+      let currentConfig: any = { minimumOrderAmount: 150.0, deliveryRadiusKm: 10.0, isStoreOpen: true, closingReason: "" };
+      if (existing && existing.description) {
+        try {
+          currentConfig = JSON.parse(existing.description);
+        } catch {
+          // fallback
+        }
+      }
+
+      const isStoreOpen = Boolean(args?.isOpen);
+      const closingReason = args?.closingReason !== undefined ? String(args.closingReason) : (isStoreOpen ? "" : (currentConfig.closingReason || "Store currently closed"));
+
+      const updatedConfig = {
+        ...currentConfig,
+        isStoreOpen,
+        closingReason,
+      };
+
+      if (existing) {
+        const updateMutation = `
+          mutation UpdateConfig($input: UpdateProductInput!) {
+            updateProduct(input: $input) {
+              id
+              description
+            }
+          }
+        `;
+        await executeGraphQL(updateMutation, {
+          input: {
+            id: "sys_config",
+            description: JSON.stringify(updatedConfig),
+          },
+        });
+      } else {
+        const createMutation = `
+          mutation CreateConfig($input: CreateProductInput!) {
+            createProduct(input: $input) {
+              id
+              description
+            }
+          }
+        `;
+        await executeGraphQL(createMutation, {
+          input: {
+            id: "sys_config",
+            name: "System App Config",
+            category: "metadata",
+            description: JSON.stringify(updatedConfig),
+            variants: [],
+          },
+        });
+      }
+
+      return {
+        message: isStoreOpen
+          ? "Store is now OPEN and accepting customer orders!"
+          : `Store is now CLOSED. Notice: "${closingReason}"`,
+        storeStatus: {
+          isStoreOpen,
+          closingReason,
+        },
+      };
+    }
+
+    case "create_order": {
+      const customerName = String(args.customerName || "Counter Customer").trim();
+      const customerPhone = String(args.customerPhone || "").trim();
+      const rawAddress = String(args.deliveryAddress || "Counter Pickup, Rajam").trim();
+      const status = args.status || "PENDING";
+      const deliveryFee = args.deliveryFee !== undefined ? Number(args.deliveryFee) : 0;
+
+      // Fetch products to match IDs & prices
+      const prodsQuery = `
+        query ListProducts {
+          listProducts(limit: 1000) {
+            items {
+              id
+              name
+              category
+              variants {
+                size
+                price
+                stock
+              }
+            }
+          }
+        }
+      `;
+      const prodData = await executeGraphQL(prodsQuery);
+      const allProds: any[] = (prodData?.listProducts?.items || []).filter(
+        (p: any) => !p.id.startsWith("sys_") && p.category !== "metadata"
+      );
+
+      const itemsInput: any[] = [];
+      let subtotal = 0;
+      const stockUpdatesToPerform: any[] = [];
+
+      for (const itemArg of args.items || []) {
+        const searchKey = String(itemArg.productIdOrName || "").toLowerCase().trim();
+        const matchedProd = allProds.find(
+          (p) => p.id.toLowerCase() === searchKey || p.name.toLowerCase().includes(searchKey)
+        );
+
+        const qty = Number(itemArg.quantity) || 1;
+        let unitPrice = itemArg.price !== undefined ? Number(itemArg.price) : 0;
+        let variantSize = itemArg.variantSize || "";
+        let prodId = matchedProd ? matchedProd.id : `p_custom_${Date.now().toString().slice(-4)}`;
+        let prodName = matchedProd ? matchedProd.name : itemArg.productIdOrName;
+
+        if (matchedProd && matchedProd.variants && matchedProd.variants.length > 0) {
+          const variants = matchedProd.variants;
+          let matchedVar = variants[0];
+          if (itemArg.variantSize) {
+            const varSearch = String(itemArg.variantSize).toLowerCase();
+            const found = variants.find((v: any) => v.size.toLowerCase().includes(varSearch));
+            if (found) matchedVar = found;
+          }
+          if (unitPrice === 0) {
+            unitPrice = matchedVar.price;
+          }
+          if (!variantSize) {
+            const parts = (matchedVar.size || "").split(":::");
+            variantSize = parts.length >= 2 ? `${parts[0]} ${parts[1]}` : matchedVar.size;
+          }
+
+          stockUpdatesToPerform.push({
+            product: matchedProd,
+            variant: matchedVar,
+            deductQty: qty,
+          });
+        }
+
+        subtotal += unitPrice * qty;
+        itemsInput.push({
+          productId: prodId,
+          productName: prodName,
+          quantity: qty,
+          price: unitPrice,
+          variantSize: variantSize || "Standard",
+        });
+      }
+
+      const totalAmount = subtotal + deliveryFee;
+      const orderId = `G-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+      const deliveryAddressCombined = `${rawAddress} ::: Rajam ::: ${customerPhone} ::: 1.0`;
+
+      const createOrderMutation = `
+        mutation CreateOrder($input: CreateOrderInput!) {
+          createOrder(input: $input) {
+            id
+            customerId
+            customerName
+            deliveryAddress
+            total
+            status
+            createdAt
+          }
+        }
+      `;
+
+      const orderInput = {
+        id: orderId,
+        customerId: `cust_${customerPhone || Date.now()}`,
+        customerName,
+        deliveryAddress: deliveryAddressCombined,
+        deliveryFee,
+        latitude: 18.4482,
+        longitude: 83.6616,
+        status,
+        subtotal,
+        total: totalAmount,
+        items: itemsInput,
+      };
+
+      await executeGraphQL(createOrderMutation, { input: orderInput });
+
+      // Deduct stock for ordered items
+      for (const st of stockUpdatesToPerform) {
+        try {
+          const updatedVars = (st.product.variants || []).map((v: any) => {
+            if (v.size === st.variant.size) {
+              return { ...v, stock: Math.max(0, v.stock - st.deductQty) };
+            }
+            return v;
+          });
+          const updateMutation = `
+            mutation UpdateProduct($input: UpdateProductInput!) {
+              updateProduct(input: $input) {
+                id
+                variants {
+                  size
+                  price
+                  stock
+                }
+              }
+            }
+          `;
+          await executeGraphQL(updateMutation, { input: { id: st.product.id, variants: updatedVars } });
+        } catch {
+          // non-critical
+        }
+      }
+
+      return {
+        message: `Order #${orderId} recorded successfully for ${customerName}`,
+        order: {
+          orderId,
+          customerName,
+          customerPhone,
+          deliveryAddress: rawAddress,
+          status,
+          subtotal: `₹${subtotal}`,
+          deliveryFee: `₹${deliveryFee}`,
+          totalAmount: `₹${totalAmount}`,
+          items: itemsInput.map((it) => ({
+            product: it.productName,
+            size: it.variantSize,
+            qty: it.quantity,
+            price: `₹${it.price}`,
+            lineTotal: `₹${it.price * it.quantity}`,
+          })),
+        },
+      };
+    }
+
+    case "generate_order_invoice": {
+      const query = `
+        query GetOrder($id: ID!) {
+          getOrder(id: $id) {
+            id
+            customerId
+            customerName
+            deliveryAddress
+            deliveryFee
+            subtotal
+            total
+            status
+            createdAt
+            items {
+              productId
+              productName
+              quantity
+              variantSize
+              price
+            }
+          }
+        }
+      `;
+      const data = await executeGraphQL(query, { id: args?.orderId });
+      const order = data?.getOrder;
+
+      if (!order) {
+        throw new Error(`Order with ID ${args?.orderId} not found.`);
+      }
+
+      const formatted = formatOrder(order);
+      const itemsListText = (formatted.items || [])
+        .map(
+          (it: any, i: number) =>
+            `${i + 1}. ${it.productName} (${it.size || "1 unit"}) x ${it.quantity} = ${it.price}`
+        )
+        .join("\n");
+
+      const invoiceText = `
+========================================
+         🏪 G-STORE / RICE MART
+        Main Road, Rajam, A.P.
+        📞 +91 9704173515
+========================================
+Order ID    : ${formatted.orderId}
+Date        : ${formatted.createdAt ? new Date(formatted.createdAt).toLocaleString("en-IN") : "Recent"}
+Customer    : ${formatted.customerName}
+Phone       : ${formatted.customerPhone || "N/A"}
+Address     : ${formatted.deliveryAddress}
+Status      : ${formatted.status}
+----------------------------------------
+ITEMS ORDERED:
+${itemsListText}
+----------------------------------------
+Subtotal    : ${formatted.subtotal || formatted.total}
+Delivery Fee: ${formatted.deliveryFee || "FREE (₹0)"}
+TOTAL DUE   : ${formatted.total} (Cash on Delivery / UPI)
+========================================
+Thank you for shopping at G-Store, Rajam!
+`.trim();
+
+      return {
+        orderId: formatted.orderId,
+        customerName: formatted.customerName,
+        customerPhone: formatted.customerPhone,
+        total: formatted.total,
+        status: formatted.status,
+        printableInvoice: invoiceText,
+        whatsAppShareText: invoiceText,
+      };
+    }
+
     case "update_store_settings": {
       const getQuery = `
         query GetAppConfig {
@@ -1439,7 +2106,7 @@ async function executeToolCall(name: string, args: any) {
       const existingData = await executeGraphQL(getQuery);
       const existing = existingData?.getProduct;
 
-      let currentConfig = { minimumOrderAmount: 150.0, deliveryRadiusKm: 10.0 };
+      let currentConfig: any = { minimumOrderAmount: 150.0, deliveryRadiusKm: 10.0, isStoreOpen: true, closingReason: "" };
       if (existing && existing.description) {
         try {
           currentConfig = JSON.parse(existing.description);
@@ -1449,10 +2116,15 @@ async function executeToolCall(name: string, args: any) {
       }
 
       const updatedConfig = {
+        ...currentConfig,
         minimumOrderAmount:
           args?.minimumOrderAmount !== undefined ? args.minimumOrderAmount : currentConfig.minimumOrderAmount,
         deliveryRadiusKm:
           args?.deliveryRadiusKm !== undefined ? args.deliveryRadiusKm : currentConfig.deliveryRadiusKm,
+        isStoreOpen:
+          args?.isStoreOpen !== undefined ? Boolean(args.isStoreOpen) : currentConfig.isStoreOpen,
+        closingReason:
+          args?.closingReason !== undefined ? String(args.closingReason) : currentConfig.closingReason,
       };
 
       if (existing) {
@@ -1495,9 +2167,12 @@ async function executeToolCall(name: string, args: any) {
         settings: {
           minimumOrderAmount: updatedConfig.minimumOrderAmount,
           deliveryRadiusKm: updatedConfig.deliveryRadiusKm,
+          isStoreOpen: updatedConfig.isStoreOpen,
+          closingReason: updatedConfig.closingReason,
           formatted: {
             minimumOrder: `₹${updatedConfig.minimumOrderAmount}`,
             deliveryRadius: `${updatedConfig.deliveryRadiusKm} km`,
+            status: updatedConfig.isStoreOpen ? "🟢 OPEN" : "🔴 CLOSED",
           },
         },
       };
