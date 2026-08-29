@@ -56,14 +56,29 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
     private val persister = JsonPersister(context)
     private val gson = Gson()
     private val defaultCategories = listOf(
-        Category(id = "c_rice", nameEn = "Rice Bags", imageUrl = "android.resource://com.aistudio.ricemart.pkqmsx/drawable/rice_bags_preview"),
-        Category(id = "c_dal", nameEn = "Dals & Pulses", imageUrl = "android.resource://com.aistudio.ricemart.pkqmsx/drawable/dals_pulses_preview"),
-        Category(id = "c_oil", nameEn = "Cooking Oils", imageUrl = "android.resource://com.aistudio.ricemart.pkqmsx/drawable/cooking_oils_preview"),
-        Category(id = "c_dairy", nameEn = "Dairy Essentials", imageUrl = "android.resource://com.aistudio.ricemart.pkqmsx/drawable/dairy_essentials_preview"),
-        Category(id = "c_spices", nameEn = "Spices & Masalas", imageUrl = "android.resource://com.aistudio.ricemart.pkqmsx/drawable/spices_masalas_preview"),
-        Category(id = "c_snacks", nameEn = "Snacks & Beverages", imageUrl = "https://images.unsplash.com/photo-1621996346565-e3d5d6281290?w=600&auto=format&fit=crop")
+        Category(id = "c_rice", nameEn = "Rice Bags", imageUrl = "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&auto=format&fit=crop"),
+        Category(id = "c_oil", nameEn = "Cooking Oils", imageUrl = "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&auto=format&fit=crop"),
+        Category(id = "c_dal", nameEn = "Dals & Pulses", imageUrl = "https://images.unsplash.com/photo-1585994192701-f1a505c8574a?w=600&auto=format&fit=crop"),
+        Category(id = "c_dairy", nameEn = "Dairy Essentials", imageUrl = "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=600&auto=format&fit=crop"),
+        Category(id = "c_spices", nameEn = "Spices & Masalas", imageUrl = "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=600&auto=format&fit=crop"),
+        Category(id = "c_dryfruits", nameEn = "Dry Fruits & Nuts", imageUrl = "https://images.unsplash.com/photo-1599599810769-bcde5a160d32?w=600&auto=format&fit=crop"),
+        Category(id = "c_snacks", nameEn = "Snacks & Namkeen", imageUrl = "https://images.unsplash.com/photo-1621996346565-e3d5d6281290?w=600&auto=format&fit=crop"),
+        Category(id = "c_biscuits", nameEn = "Biscuits & Bakery", imageUrl = "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=600&auto=format&fit=crop"),
+        Category(id = "c_beverages", nameEn = "Tea, Coffee & Drinks", imageUrl = "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&auto=format&fit=crop"),
+        Category(id = "c_cleaning", nameEn = "Home & Cleaning", imageUrl = "https://images.unsplash.com/photo-1583947215259-38e31be8751f?w=600&auto=format&fit=crop")
     )
-    private val categoriesState = MutableStateFlow(persister.loadList("aws_categories.json", Category::class.java).ifEmpty { defaultCategories })
+    private val categoriesState = MutableStateFlow(
+        run {
+            val saved = persister.loadList("aws_categories.json", Category::class.java)
+            if (saved.isEmpty()) {
+                defaultCategories
+            } else {
+                val savedIds = saved.map { it.id }.toSet()
+                val missingDefaults = defaultCategories.filter { it.id !in savedIds }
+                saved + missingDefaults
+            }
+        }
+    )
     private val giftConfigsState = MutableStateFlow(persister.loadList("aws_gifts.json", GiftItemConfig::class.java))
     private val productsState = MutableStateFlow(persister.loadList("aws_products.json", Product::class.java).ifEmpty { emptyList() })
     private val appConfigState = MutableStateFlow(run {

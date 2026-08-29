@@ -70,14 +70,18 @@ async function uploadToCloudinary(imageUrlOrData: string): Promise<string> {
   }
 }
 
-// High-quality category placeholder images
+// High-quality category placeholder images (10 Supermarket Categories)
 const categoryPlaceholders: Record<string, string> = {
   c_rice: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&auto=format&fit=crop",
   c_oil: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&auto=format&fit=crop",
   c_dal: "https://images.unsplash.com/photo-1585994192701-f1a505c8574a?w=600&auto=format&fit=crop",
   c_dairy: "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=600&auto=format&fit=crop",
   c_spices: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=600&auto=format&fit=crop",
+  c_dryfruits: "https://images.unsplash.com/photo-1599599810769-bcde5a160d32?w=600&auto=format&fit=crop",
   c_snacks: "https://images.unsplash.com/photo-1621996346565-e3d5d6281290?w=600&auto=format&fit=crop",
+  c_biscuits: "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=600&auto=format&fit=crop",
+  c_beverages: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&auto=format&fit=crop",
+  c_cleaning: "https://images.unsplash.com/photo-1583947215259-38e31be8751f?w=600&auto=format&fit=crop",
 };
 
 // Category mapping helper
@@ -87,7 +91,11 @@ const categoryNames: Record<string, string> = {
   c_dal: "Dals & Pulses",
   c_dairy: "Dairy Essentials",
   c_spices: "Spices & Masalas",
-  c_snacks: "Snacks & Beverages",
+  c_dryfruits: "Dry Fruits & Nuts",
+  c_snacks: "Snacks & Namkeen",
+  c_biscuits: "Biscuits & Bakery",
+  c_beverages: "Tea, Coffee & Drinks",
+  c_cleaning: "Home & Cleaning",
 };
 
 function normalizeCategory(cat: string): string {
@@ -95,9 +103,13 @@ function normalizeCategory(cat: string): string {
   if (lower.includes("rice") || lower === "c_rice") return "c_rice";
   if (lower.includes("oil") || lower === "c_oil") return "c_oil";
   if (lower.includes("dal") || lower.includes("pulse") || lower === "c_dal") return "c_dal";
-  if (lower.includes("dairy") || lower.includes("milk") || lower.includes("curd") || lower.includes("ghee") || lower.includes("paneer") || lower === "c_dairy") return "c_dairy";
-  if (lower.includes("spice") || lower.includes("masala") || lower === "c_spices") return "c_spices";
-  if (lower.includes("snack") || lower.includes("biscuit") || lower.includes("beverage") || lower.includes("drink") || lower.includes("tea") || lower.includes("coffee") || lower.includes("noodle") || lower === "c_snacks") return "c_snacks";
+  if (lower.includes("dairy") || lower.includes("milk") || lower.includes("curd") || lower.includes("paneer") || lower === "c_dairy") return "c_dairy";
+  if (lower.includes("dryfruit") || lower.includes("nut") || lower.includes("cashew") || lower.includes("almond") || lower.includes("raisin") || lower.includes("date") || lower === "c_dryfruits") return "c_dryfruits";
+  if (lower.includes("spice") || lower.includes("masala") || lower.includes("salt") || lower.includes("chilli") || lower.includes("turmeric") || lower === "c_spices") return "c_spices";
+  if (lower.includes("biscuit") || lower.includes("cookie") || lower.includes("bread") || lower.includes("bakery") || lower === "c_biscuits") return "c_biscuits";
+  if (lower.includes("beverage") || lower.includes("drink") || lower.includes("tea") || lower.includes("coffee") || lower.includes("soda") || lower === "c_beverages") return "c_beverages";
+  if (lower.includes("clean") || lower.includes("detergent") || lower.includes("wash") || lower.includes("soap") || lower.includes("toothpaste") || lower === "c_cleaning") return "c_cleaning";
+  if (lower.includes("snack") || lower.includes("namkeen") || lower.includes("noodle") || lower.includes("chips") || lower === "c_snacks") return "c_snacks";
   return "c_rice"; // default
 }
 
