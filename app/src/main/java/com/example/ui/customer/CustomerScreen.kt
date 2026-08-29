@@ -352,82 +352,62 @@ fun CustomerCatalogView(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 14.dp, end = 14.dp, top = 0.dp, bottom = 8.dp)
+                        .padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 10.dp)
                 ) {
-                    // Row 1: Logo & Delivery Location + Cart & Logout Icons
+                    // Row 1: Top Branding & Greeting + Actions (Cart & Logout)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Left: Greeting & Clickable Delivery Location
+                        // Left/Center: G Logo + G-STORE + Hi, Sai
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { onLocationClick() }
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(30.dp)
-                                    .background(Color.White.copy(alpha = 0.15f), CircleShape),
+                                    .size(28.dp)
+                                    .background(Color.White.copy(alpha = 0.2f), CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = "G",
-                                    fontSize = 16.sp,
+                                    fontSize = 15.sp,
                                     fontWeight = FontWeight.Black,
                                     color = Color.White
                                 )
                             }
                             Spacer(modifier = Modifier.width(8.dp))
-                            Column {
-                                val userName = AppState.currentUser?.name ?: "Guest"
+                            val userName = AppState.currentUser?.name ?: "Guest"
+                            Text(
+                                text = "G-STORE",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White,
+                                letterSpacing = 0.5.sp
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "•  Hi, $userName",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.White.copy(alpha = 0.9f)
+                            )
+                            androidx.compose.animation.AnimatedVisibility(visible = !isOnline) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = "G-STORE • Hi, $userName",
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.White.copy(alpha = 0.85f),
-                                            fontSize = 11.sp
-                                        )
-                                    )
-                                    androidx.compose.animation.AnimatedVisibility(visible = !isOnline) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Surface(
-                                                color = Color(0xFFDC2626),
-                                                shape = RoundedCornerShape(4.dp)
-                                            ) {
-                                                Text(
-                                                    text = "Offline",
-                                                    color = Color.White,
-                                                    fontSize = 8.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.LocationOn,
-                                        contentDescription = null,
-                                        tint = Color(0xFFFBBF24),
-                                        modifier = Modifier.size(13.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(2.dp))
-                                    Text(
-                                        text = "$addressDisplay ▼",
-                                        style = MaterialTheme.typography.bodySmall.copy(
-                                            fontWeight = FontWeight.Bold,
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Surface(
+                                        color = Color(0xFFDC2626),
+                                        shape = RoundedCornerShape(4.dp)
+                                    ) {
+                                        Text(
+                                            text = "Offline",
                                             color = Color.White,
-                                            fontSize = 12.sp
-                                        ),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -454,7 +434,7 @@ fun CustomerCatalogView(
                                             Icons.Default.ShoppingCart,
                                             contentDescription = "Cart",
                                             tint = Color.White,
-                                            modifier = Modifier.size(18.dp)
+                                            modifier = Modifier.size(19.dp)
                                         )
                                     }
                                 } else {
@@ -462,10 +442,12 @@ fun CustomerCatalogView(
                                         Icons.Default.ShoppingCart,
                                         contentDescription = "Cart",
                                         tint = Color.White,
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(19.dp)
                                     )
                                 }
                             }
+
+                            Spacer(modifier = Modifier.width(2.dp))
 
                             IconButton(
                                 onClick = onLogoutClick,
@@ -482,6 +464,39 @@ fun CustomerCatalogView(
                     }
 
                     Spacer(modifier = Modifier.height(6.dp))
+
+                    // Row 2: Delivery Location Bar
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onLocationClick() },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = Color(0xFFFBBF24),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Deliver to:",
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "$addressDisplay ▼",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     // Row 2: Sleek 38dp Search Bar with Clear Icon (Explicit readable text in light & dark mode)
                     Box(
