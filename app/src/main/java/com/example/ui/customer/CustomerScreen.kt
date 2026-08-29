@@ -589,6 +589,7 @@ fun CustomerCatalogView(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(allCats) { cat ->
+                                val isDark = AppState.isDarkMode
                                 val isSelected = (cat.id == "ALL" && appliedCategories.isEmpty()) || appliedCategories.contains(cat.id)
                                 Surface(
                                     onClick = {
@@ -596,7 +597,7 @@ fun CustomerCatalogView(
                                     },
                                     shape = RoundedCornerShape(20.dp),
                                     color = if (isSelected) RoyalEmerald else MaterialTheme.colorScheme.surface,
-                                    border = BorderStroke(1.dp, if (isSelected) RoyalEmerald else Color(0xFFE5E7EB)),
+                                    border = BorderStroke(1.dp, if (isSelected) RoyalEmerald else (if (isDark) Color(0xFF404040) else Color(0xFFE5E7EB))),
                                     shadowElevation = if (isSelected) 2.dp else 0.dp
                                 ) {
                                     Text(
@@ -613,6 +614,7 @@ fun CustomerCatalogView(
 
                     // Full-width Filter / Sort Bar
                     item(span = { GridItemSpan(2) }) {
+                        val isDark = AppState.isDarkMode
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -629,10 +631,10 @@ fun CustomerCatalogView(
                                 },
                                 modifier = Modifier.weight(1f).height(38.dp),
                                 colors = ButtonDefaults.outlinedButtonColors(
-                                    containerColor = if (appliedCategories.isNotEmpty()) Color(0xFFECFDF5) else MaterialTheme.colorScheme.surface,
-                                    contentColor = if (appliedCategories.isNotEmpty()) RoyalEmerald else MaterialTheme.colorScheme.onSurface
+                                    containerColor = if (appliedCategories.isNotEmpty()) (if (isDark) RoyalEmerald.copy(alpha = 0.25f) else Color(0xFFECFDF5)) else MaterialTheme.colorScheme.surface,
+                                    contentColor = if (appliedCategories.isNotEmpty()) (if (isDark) Color(0xFF34D399) else RoyalEmerald) else MaterialTheme.colorScheme.onSurface
                                 ),
-                                border = BorderStroke(1.dp, if (appliedCategories.isNotEmpty()) RoyalEmerald else Color(0xFFE5E7EB)),
+                                border = BorderStroke(1.dp, if (appliedCategories.isNotEmpty()) RoyalEmerald else (if (isDark) Color(0xFF404040) else Color(0xFFE5E7EB))),
                                 shape = RoundedCornerShape(10.dp),
                                 contentPadding = PaddingValues(horizontal = 10.dp)
                             ) {
@@ -659,10 +661,10 @@ fun CustomerCatalogView(
                                 },
                                 modifier = Modifier.weight(1f).height(38.dp),
                                 colors = ButtonDefaults.outlinedButtonColors(
-                                    containerColor = if (isSortActive) Color(0xFFECFDF5) else MaterialTheme.colorScheme.surface,
-                                    contentColor = if (isSortActive) RoyalEmerald else MaterialTheme.colorScheme.onSurface
+                                    containerColor = if (isSortActive) (if (isDark) RoyalEmerald.copy(alpha = 0.25f) else Color(0xFFECFDF5)) else MaterialTheme.colorScheme.surface,
+                                    contentColor = if (isSortActive) (if (isDark) Color(0xFF34D399) else RoyalEmerald) else MaterialTheme.colorScheme.onSurface
                                 ),
-                                border = BorderStroke(1.dp, if (isSortActive) RoyalEmerald else Color(0xFFE5E7EB)),
+                                border = BorderStroke(1.dp, if (isSortActive) RoyalEmerald else (if (isDark) Color(0xFF404040) else Color(0xFFE5E7EB))),
                                 shape = RoundedCornerShape(10.dp),
                                 contentPadding = PaddingValues(horizontal = 10.dp)
                             ) {
@@ -1007,7 +1009,7 @@ fun CustomerProductCard(
             .clickable { onProductClick(product) },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, Color(0xFFF1F3F4))
+        border = BorderStroke(1.dp, if (AppState.isDarkMode) Color(0xFF2E2E2E) else Color(0xFFF1F3F4))
     ) {
         Column(
             modifier = Modifier.fillMaxSize()
@@ -1017,7 +1019,7 @@ fun CustomerProductCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(115.dp)
-                    .background(Color(0xFFF8FAF9))
+                    .background(if (AppState.isDarkMode) Color(0xFF262626) else Color(0xFFF8FAF9))
             ) {
                 val imageUrl = product.imageUrls.getOrNull(product.thumbnailIndex)?.trim() ?: ""
                 if (imageUrl.isNotEmpty()) {
@@ -1376,13 +1378,14 @@ fun ProductDetailBottomSheet(
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 32.dp)
         ) {
+            val isDark = AppState.isDarkMode
             // 1. Large Image Hero (200dp with Fit scaling)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFFF8FAF9)),
+                    .background(if (isDark) Color(0xFF262626) else Color(0xFFF8FAF9)),
                 contentAlignment = Alignment.Center
             ) {
                 val imageUrl = product.imageUrls.getOrNull(product.thumbnailIndex)?.trim() ?: ""
@@ -1440,7 +1443,7 @@ fun ProductDetailBottomSheet(
                     text = product.nameTe,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = RoyalEmerald,
+                    color = if (isDark) Color(0xFF34D399) else RoyalEmerald,
                     modifier = Modifier.padding(top = 2.dp)
                 )
             }
@@ -1448,22 +1451,22 @@ fun ProductDetailBottomSheet(
             if (product.brand.isNotBlank()) {
                 Spacer(Modifier.height(6.dp))
                 Surface(
-                    color = Color(0xFFECFDF5),
+                    color = if (isDark) RoyalEmerald.copy(alpha = 0.25f) else Color(0xFFECFDF5),
                     shape = RoundedCornerShape(6.dp),
-                    border = BorderStroke(0.5.dp, RoyalEmerald.copy(alpha = 0.3f))
+                    border = BorderStroke(0.5.dp, if (isDark) Color(0xFF34D399).copy(alpha = 0.5f) else RoyalEmerald.copy(alpha = 0.3f))
                 ) {
                     Text(
                         text = "Brand: ${product.brand}",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = RoyalEmerald,
+                        color = if (isDark) Color(0xFF34D399) else RoyalEmerald,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
             }
 
             Spacer(Modifier.height(16.dp))
-            HorizontalDivider(color = Color(0xFFF1F3F4))
+            HorizontalDivider(color = if (isDark) Color(0xFF333333) else Color(0xFFF1F3F4))
             Spacer(Modifier.height(14.dp))
 
             // 3. Size / Variant Selector
@@ -1943,11 +1946,12 @@ fun CartItemRow(
     quantity: Int,
     onProductClick: (Product) -> Unit = {}
 ) {
+    val isDark = AppState.isDarkMode
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, Color(0xFFF1F3F4))
+        border = BorderStroke(1.dp, if (isDark) Color(0xFF2E2E2E) else Color(0xFFF1F3F4))
     ) {
         Row(
             modifier = Modifier
@@ -1960,7 +1964,7 @@ fun CartItemRow(
                 modifier = Modifier
                     .size(64.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFF8FAF9))
+                    .background(if (isDark) Color(0xFF262626) else Color(0xFFF8FAF9))
                     .clickable { onProductClick(product) },
                 contentAlignment = Alignment.Center
             ) {
@@ -1995,7 +1999,7 @@ fun CartItemRow(
                 Text(
                     "${variant.weight}${variant.unit}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = if (isDark) Color(0xFF94A3B8) else Color.Gray
                 )
                 Spacer(Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -2003,14 +2007,14 @@ fun CartItemRow(
                         "₹${variant.currentPrice.toInt()}",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold,
-                        color = RoyalEmerald
+                        color = if (isDark) Color(0xFF34D399) else RoyalEmerald
                     )
                     if (variant.mrp > variant.currentPrice) {
                         Spacer(Modifier.width(6.dp))
                         Text(
                             "₹${variant.mrp.toInt()}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray,
+                            color = if (isDark) Color(0xFF64748B) else Color.Gray,
                             textDecoration = TextDecoration.LineThrough
                         )
                     }
