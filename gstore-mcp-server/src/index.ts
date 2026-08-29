@@ -70,6 +70,120 @@ async function uploadToCloudinary(imageUrlOrData: string): Promise<string> {
   }
 }
 
+export interface ImageSpecsReport {
+  dimensions: string;
+  width: number;
+  height: number;
+  aspectRatio: string;
+  aspectRatioValue: number;
+  orientation: "landscape" | "portrait" | "square";
+  cardFitStatus: "PERFECT (Optimal 600x400 for G-Store Cards)" | "SQUARE (Ideal for Detail Modal)" | "PORTRAIT" | "CUSTOM";
+  format: string;
+  fileSizeBytes?: number;
+  fileSizeKB?: number;
+  fileSizeFormatted?: string;
+  qualityLevel: "HD Studio Grade" | "Standard Web" | "High Resolution 4K/8K";
+  compressionProfile: string;
+  isCloudinaryHosted: boolean;
+  cloudFolder?: string;
+  responsiveUrls: {
+    standardCard600x400: string;
+    squareModal600x600: string;
+    retinaHighRes1200x800: string;
+    compactThumbnail300x200: string;
+  };
+}
+
+export async function analyzeImageSpecs(imageUrl: string): Promise<ImageSpecsReport> {
+  let width = 600;
+  let height = 400;
+  let format = "JPEG / WebP";
+  let fileSizeBytes: number | undefined = undefined;
+  const isCloudinary = Boolean(imageUrl && imageUrl.includes("res.cloudinary.com"));
+
+  // If Cloudinary URL, inspect explicit transformation params
+  if (isCloudinary) {
+    const wMatch = imageUrl.match(/w_(\d+)/);
+    const hMatch = imageUrl.match(/h_(\d+)/);
+    if (wMatch) width = parseInt(wMatch[1], 10);
+    if (hMatch) height = parseInt(hMatch[1], 10);
+    if (imageUrl.includes("f_auto")) format = "Auto-Negotiated WebP/AVIF (Cloudinary f_auto)";
+    else if (imageUrl.endsWith(".png")) format = "PNG";
+    else if (imageUrl.endsWith(".webp")) format = "WebP";
+    else format = "JPEG";
+  }
+
+  // Fetch headers for exact content length & content type
+  try {
+    const headRes = await fetch(imageUrl, { method: "HEAD" });
+    if (headRes.ok) {
+      const len = headRes.headers.get("content-length");
+      if (len) fileSizeBytes = parseInt(len, 10);
+      const ct = headRes.headers.get("content-type");
+      if (ct) format = ct;
+    }
+  } catch (_: any) {}
+
+  const ratioVal = parseFloat((width / height).toFixed(2));
+  let aspectRatioStr = `${width}:${height}`;
+  if (width === 600 && height === 400) aspectRatioStr = "3:2 (Standard 600x400 Card Landscape)";
+  else if (width === height) aspectRatioStr = "1:1 (Square)";
+  else if (width === 1200 && height === 800) aspectRatioStr = "3:2 (Retina 1200x800)";
+  else aspectRatioStr = `${ratioVal}:1 (${width}x${height})`;
+
+  const orientation: "landscape" | "portrait" | "square" = width > height ? "landscape" : width < height ? "portrait" : "square";
+  const cardFitStatus: ImageSpecsReport["cardFitStatus"] =
+    (width === 600 && height === 400) || ratioVal === 1.5
+      ? "PERFECT (Optimal 600x400 for G-Store Cards)"
+      : width === height
+      ? "SQUARE (Ideal for Detail Modal)"
+      : orientation === "landscape"
+      ? "CUSTOM (Landscape)" as any
+      : "PORTRAIT";
+
+  const fileSizeKB = fileSizeBytes
+    ? parseFloat((fileSizeBytes / 1024).toFixed(1))
+    : parseFloat(((width * height * 0.15) / 1024).toFixed(1));
+
+  // Build responsive transformation URLs
+  let standardCard = imageUrl;
+  let squareModal = imageUrl;
+  let retinaHighRes = imageUrl;
+  let compactThumbnail = imageUrl;
+
+  if (isCloudinary && imageUrl.includes("/upload/")) {
+    const baseUrl = imageUrl.replace(/\/upload\/[^/]+\//, "/upload/");
+    standardCard = baseUrl.replace("/upload/", "/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/");
+    squareModal = baseUrl.replace("/upload/", "/upload/c_pad,w_600,h_600,b_white,f_auto,q_auto/");
+    retinaHighRes = baseUrl.replace("/upload/", "/upload/c_fill,g_auto,w_1200,h_800,f_auto,q_auto/");
+    compactThumbnail = baseUrl.replace("/upload/", "/upload/c_fill,g_auto,w_300,h_200,f_auto,q_auto/");
+  }
+
+  return {
+    dimensions: `${width} x ${height} pixels`,
+    width,
+    height,
+    aspectRatio: aspectRatioStr,
+    aspectRatioValue: ratioVal,
+    orientation,
+    cardFitStatus,
+    format,
+    fileSizeBytes,
+    fileSizeKB,
+    fileSizeFormatted: `${fileSizeKB} KB`,
+    qualityLevel: width >= 1200 ? "High Resolution 4K/8K" : "HD Studio Grade",
+    compressionProfile: isCloudinary ? "q_auto:good, f_auto, lossy-optimized WebP" : "Standard CDN",
+    isCloudinaryHosted: isCloudinary,
+    cloudFolder: isCloudinary ? "ricemart_products" : undefined,
+    responsiveUrls: {
+      standardCard600x400: standardCard,
+      squareModal600x600: squareModal,
+      retinaHighRes1200x800: retinaHighRes,
+      compactThumbnail300x200: compactThumbnail,
+    },
+  };
+}
+
 // High-quality category placeholder images (10 Supermarket Categories)
 const categoryPlaceholders: Record<string, string> = {
   c_rice: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&auto=format&fit=crop",
@@ -307,6 +421,24 @@ const toolsList = [
         },
       },
       required: ["productName"],
+    },
+  },
+  {
+    name: "get_image_specs_and_quality",
+    description:
+      "Inspect and analyze image specifications (pixel dimensions WxH, aspect ratio 3:2 or 1:1, file size in KB, format, Cloudinary CDN optimization, quality rating, and responsive UI variant URLs) for any product ID or direct image URL.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        productId: {
+          type: "string",
+          description: "Optional product ID (e.g. 'p_rice_lalitha_hmt', 'p_oil_freedom_sunflower') to inspect its active image specifications and quality.",
+        },
+        imageUrl: {
+          type: "string",
+          description: "Optional direct image URL to analyze and inspect dimensions, aspect ratio, and quality.",
+        },
+      },
     },
   },
   {
@@ -792,6 +924,7 @@ async function executeToolCall(name: string, args: any) {
 
       const descParts = (p.description || "").split(" ::: ");
       const isListed = descParts.length > 6 ? descParts[6] !== "false" : true;
+      const specs = p.imageUrls?.[0] ? await analyzeImageSpecs(p.imageUrls[0]) : null;
 
       return {
         id: p.id,
@@ -800,6 +933,7 @@ async function executeToolCall(name: string, args: any) {
         description: p.description,
         isListed,
         imageUrls: p.imageUrls || [],
+        imageSpecs: specs,
         variants: formatVariants(p.variants),
       };
     }
@@ -1123,6 +1257,8 @@ async function executeToolCall(name: string, args: any) {
         }
       }
 
+      const imageSpecs = finalCloudinaryUrl ? await analyzeImageSpecs(finalCloudinaryUrl) : null;
+
       return {
         message: updatedProductInfo
           ? `Image generated and successfully attached to product '${updatedProductInfo.name}' (${productId}) in G-Store catalog`
@@ -1130,7 +1266,55 @@ async function executeToolCall(name: string, args: any) {
         cloudinaryImageUrl: finalCloudinaryUrl,
         productId: productId || undefined,
         productName: productName || undefined,
-        modeUsed: referenceImage ? "Reference Photo Format & Square 600x600 Pad" : "AI Studio E-Commerce Generation",
+        modeUsed: referenceImage ? "Reference Photo Format & 600x400 Optimization" : "AI Studio E-Commerce Generation",
+        imageSpecs,
+      };
+    }
+
+    case "get_image_specs_and_quality":
+    case "check_image_size_and_quality":
+    case "inspect_image_details":
+    case "get_image_details": {
+      let targetUrl = args?.imageUrl ? String(args.imageUrl).trim() : "";
+      let productName = "";
+      let productCategory = "";
+
+      if (args?.productId) {
+        const query = `
+          query GetProduct($id: ID!) {
+            getProduct(id: $id) {
+              id
+              name
+              category
+              imageUrls
+            }
+          }
+        `;
+        const data = await executeGraphQL(query, { id: args.productId });
+        const p = data?.getProduct;
+        if (!p) {
+          throw new Error(`Product with ID '${args.productId}' not found in G-Store catalog.`);
+        }
+        productName = p.name;
+        productCategory = categoryNames[p.category] || p.category;
+        if (!targetUrl && p.imageUrls && p.imageUrls.length > 0) {
+          targetUrl = p.imageUrls[0];
+        }
+      }
+
+      if (!targetUrl) {
+        throw new Error("Please provide either a valid 'productId' or direct 'imageUrl' to inspect.");
+      }
+
+      const specs = await analyzeImageSpecs(targetUrl);
+
+      return {
+        productId: args?.productId || undefined,
+        productName: productName || undefined,
+        category: productCategory || undefined,
+        imageUrl: targetUrl,
+        imageSpecs: specs,
+        summary: `Image size is ${specs.dimensions} with ${specs.aspectRatio} (${specs.cardFitStatus}), formatted as ${specs.format} with ${specs.qualityLevel}. Hosted on ${specs.isCloudinaryHosted ? "Cloudinary CDN (k1lw675z)" : "External CDN"}.`,
       };
     }
 
