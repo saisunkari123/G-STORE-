@@ -286,9 +286,13 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
                               val actualProducts = cloudProducts.filter {
                                   it.id != "sys_categories" && it.id != "sys_gifts" && it.id != "sys_config"
                               }
-                             productsState.value = actualProducts
-                             persister.saveList("aws_products.json", actualProducts)
-                             Log.i("AwsProduct", "Cloud sync: ${actualProducts.size} products loaded from AppSync")
+                              if (actualProducts.isNotEmpty()) {
+                                  val localOnly = productsState.value.filter { local -> actualProducts.none { cloud -> cloud.id == local.id } }
+                                  val merged = actualProducts + localOnly
+                                  productsState.value = merged
+                                  persister.saveList("aws_products.json", merged)
+                                  Log.i("AwsProduct", "Cloud sync: ${merged.size} total products (${actualProducts.size} from AppSync, ${localOnly.size} local)")
+                              }
                          }
                     }
                 } catch (e: Exception) {
@@ -443,6 +447,23 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
                 "variants" to variantsInput
             )
 
+            val isExistingInCloud = productsState.value.any { it.id == prodWithId.id } && prodWithId.id.startsWith("p_") && !prodWithId.id.startsWith("p_${System.currentTimeMillis().toString().take(6)}")
+
+            val createMutation = """
+                mutation CreateProduct(${"$"}input: CreateProductInput!) {
+                    createProduct(input: ${"$"}input) {
+                        id
+                    }
+                }
+            """.trimIndent()
+
+            val createRequest = SimpleGraphQLRequest<String>(
+                createMutation,
+                mapOf("input" to inputMap),
+                String::class.java,
+                GsonVariablesSerializer()
+            )
+
             val updateMutation = """
                 mutation UpdateProduct(${"$"}input: UpdateProductInput!) {
                     updateProduct(input: ${"$"}input) {
@@ -450,64 +471,58 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
                     }
                 }
             """.trimIndent()
+
             val updateRequest = SimpleGraphQLRequest<String>(
                 updateMutation,
                 mapOf("input" to inputMap),
                 String::class.java,
                 GsonVariablesSerializer()
             )
-            Amplify.API.mutate(updateRequest,
-                { response ->
-                    if (response.data != null) {
-                        Log.i("AwsProduct", "Product updated in AWS successfully: ${response.data}")
-                        syncScope.launch { forceRefreshFromCloud() }
-                    } else {
-                        // Fallback to CreateProduct if not found
-                        val createMutation = """
-                            mutation CreateProduct(${"$"}input: CreateProductInput!) {
-                                createProduct(input: ${"$"}input) {
-                                    id
-                                }
-                            }
-                        """.trimIndent()
-                        val createRequest = SimpleGraphQLRequest<String>(
-                            createMutation,
-                            mapOf("input" to inputMap),
-                            String::class.java,
-                            GsonVariablesSerializer()
+
+            if (!isExistingInCloud) {
+                // Try CreateProduct directly for new products
+                Amplify.API.mutate(createRequest,
+                    { cRes -> 
+                        if (cRes.data != null && !cRes.hasErrors() && !cRes.data.contains("\"createProduct\":null")) {
+                            Log.i("AwsProduct", "Product created in AWS: ${cRes.data}")
+                        } else {
+                            // Fallback to update if already exists in cloud
+                            Amplify.API.mutate(updateRequest,
+                                { uRes -> Log.i("AwsProduct", "Product updated in AWS: ${uRes.data}") },
+                                { uErr -> Log.e("AwsProduct", "AWS Product update fallback failed", uErr) }
+                            )
+                        }
+                    },
+                    { cErr -> 
+                        // Fallback to update on error
+                        Amplify.API.mutate(updateRequest,
+                            { uRes -> Log.i("AwsProduct", "Product updated in AWS: ${uRes.data}") },
+                            { uErr -> Log.e("AwsProduct", "AWS Product update fallback failed", uErr) }
                         )
+                    }
+                )
+            } else {
+                // Try UpdateProduct for existing products
+                Amplify.API.mutate(updateRequest,
+                    { response ->
+                        if (response.data != null && !response.hasErrors() && !response.data.contains("\"updateProduct\":null")) {
+                            Log.i("AwsProduct", "Product updated in AWS successfully: ${response.data}")
+                        } else {
+                            // Fallback to CreateProduct if not found in cloud
+                            Amplify.API.mutate(createRequest,
+                                { cRes -> Log.i("AwsProduct", "Product created in AWS: ${cRes.data}") },
+                                { cErr -> Log.e("AwsProduct", "AWS Product create failed", cErr) }
+                            )
+                        }
+                    },
+                    { error ->
                         Amplify.API.mutate(createRequest,
-                            { cRes -> 
-                                Log.i("AwsProduct", "Product created in AWS: ${cRes.data}")
-                                syncScope.launch { forceRefreshFromCloud() }
-                            },
+                            { cRes -> Log.i("AwsProduct", "Product created in AWS: ${cRes.data}") },
                             { cErr -> Log.e("AwsProduct", "AWS Product create failed", cErr) }
                         )
                     }
-                },
-                { error ->
-                    val createMutation = """
-                        mutation CreateProduct(${"$"}input: CreateProductInput!) {
-                            createProduct(input: ${"$"}input) {
-                                id
-                            }
-                        }
-                    """.trimIndent()
-                    val createRequest = SimpleGraphQLRequest<String>(
-                        createMutation,
-                        mapOf("input" to inputMap),
-                        String::class.java,
-                        GsonVariablesSerializer()
-                    )
-                    Amplify.API.mutate(createRequest,
-                        { cRes -> 
-                            Log.i("AwsProduct", "Product created in AWS: ${cRes.data}")
-                            syncScope.launch { forceRefreshFromCloud() }
-                        },
-                        { cErr -> Log.e("AwsProduct", "AWS Product create failed", cErr) }
-                    )
-                }
-            )
+                )
+            }
         } catch (e: Exception) {
             Log.e("AwsProduct", "AWS Product sync failed", e)
         }

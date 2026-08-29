@@ -130,21 +130,21 @@ fun AdminScreen() {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                            .padding(horizontal = 14.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // 3 lines Menu Icon on the LEFT
                         IconButton(
                             onClick = { scope.launch { drawerState.open() } },
                             modifier = Modifier
-                                .size(38.dp)
+                                .size(32.dp)
                                 .background(RoyalEmerald.copy(alpha = 0.12f), CircleShape)
                         ) {
                             Icon(
                                 Icons.Default.Menu,
                                 contentDescription = "Menu",
                                 tint = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(18.dp)
                             )
                         }
 
@@ -152,7 +152,7 @@ fun AdminScreen() {
                         Text(
                             text = "G-STORE Admin",
                             fontWeight = FontWeight.Black,
-                            fontSize = 18.sp,
+                            fontSize = 16.sp,
                             color = MaterialTheme.colorScheme.onSurface,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                             modifier = Modifier.weight(1f)
@@ -162,7 +162,7 @@ fun AdminScreen() {
                         IconButton(
                             onClick = { AppState.isDarkMode = !AppState.isDarkMode },
                             modifier = Modifier
-                                .size(38.dp)
+                                .size(32.dp)
                                 .background(
                                     if (AppState.isDarkMode) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.05f),
                                     CircleShape
@@ -172,7 +172,7 @@ fun AdminScreen() {
                                 if (AppState.isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
                                 contentDescription = "Toggle Theme",
                                 tint = if (AppState.isDarkMode) Color(0xFFFBBF24) else Color(0xFF4B5563),
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
@@ -191,10 +191,12 @@ fun AdminScreen() {
                         Tab(
                             selected = adminTab == "ORDERS",
                             onClick = { adminTab = "ORDERS" },
+                            modifier = Modifier.height(38.dp),
                             text = { 
                                 Text(
                                     "Live Orders", 
-                                    fontWeight = FontWeight.Bold, 
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
                                     color = if (adminTab == "ORDERS") (if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                 ) 
                             }
@@ -202,10 +204,12 @@ fun AdminScreen() {
                         Tab(
                             selected = adminTab == "INVENTORY",
                             onClick = { adminTab = "INVENTORY" },
+                            modifier = Modifier.height(38.dp),
                             text = { 
                                 Text(
                                     "Inventory", 
-                                    fontWeight = FontWeight.Bold, 
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
                                     color = if (adminTab == "INVENTORY") (if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                 ) 
                             }
@@ -1561,47 +1565,49 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
         },
         modifier = Modifier.fillMaxSize()
     ) {
-        Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Product Catalog", fontSize = 18.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
+        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
+            // Search Bar and "+ New" button in ONE single compact row (matches Live Orders height)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search catalog by name or brand...", color = Color.Gray, fontSize = 12.5.sp) },
+                    leadingIcon = { Icon(Icons.Default.Search, null, tint = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald, modifier = Modifier.size(18.dp)) },
+                    modifier = Modifier.weight(1f).height(46.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    singleLine = true,
+                    textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 12.5.sp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedBorderColor = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald,
+                        unfocusedBorderColor = if (AppState.isDarkMode) Color(0xFF3A3A3A) else Color.LightGray
+                    )
+                )
+
                 Button(
                     onClick = onAddProductClicked, 
                     colors = ButtonDefaults.buttonColors(containerColor = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald),
                     shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                    modifier = Modifier.height(36.dp)
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                    modifier = Modifier.height(46.dp)
                 ) {
                     Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp), tint = Color.White)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("New Item", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text("New", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             }
-            
-            Spacer(modifier = Modifier.height(10.dp))
 
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = { Text("Search catalog by name or brand...", color = Color.Gray, fontSize = 13.sp) },
-                leadingIcon = { Icon(Icons.Default.Search, null, tint = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald) },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                shape = RoundedCornerShape(12.dp),
-                singleLine = true,
-                textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    focusedBorderColor = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald,
-                    unfocusedBorderColor = if (AppState.isDarkMode) Color(0xFF3A3A3A) else Color.LightGray
-                )
-            )
+            Spacer(modifier = Modifier.height(8.dp))
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Filter Buttons Row
+            // Filter Buttons Row (Compact 34dp height)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Category Filter Button
@@ -1611,19 +1617,19 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
                         tempSelectedCategories = appliedCategories
                         showCategoryFilterSheet = true
                     },
-                    modifier = Modifier.weight(1f).height(38.dp),
+                    modifier = Modifier.weight(1f).height(34.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (appliedCategories.isNotEmpty()) (if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald) else (if (AppState.isDarkMode) Color(0xFF242424) else MaterialTheme.colorScheme.surfaceVariant),
                         contentColor = if (appliedCategories.isNotEmpty()) Color.White else MaterialTheme.colorScheme.onSurface
                     ),
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp)
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 6.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.FilterList, contentDescription = null, modifier = Modifier.size(15.dp))
+                        Icon(Icons.Default.FilterList, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(catText, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(15.dp))
+                        Text(catText, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(14.dp))
                     }
                 }
 
@@ -1641,24 +1647,24 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
                         tempStockFilter = stockFilter
                         showSortSheet = true
                     },
-                    modifier = Modifier.weight(1f).height(38.dp),
+                    modifier = Modifier.weight(1f).height(34.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (isSortActive) (if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald) else (if (AppState.isDarkMode) Color(0xFF242424) else MaterialTheme.colorScheme.surfaceVariant),
                         contentColor = if (isSortActive) Color.White else MaterialTheme.colorScheme.onSurface
                     ),
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp)
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 6.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(15.dp))
+                        Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(sortStockText, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(15.dp))
+                        Text(sortStockText, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(14.dp))
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             
             if (filteredProducts.isEmpty()) {
                 Column(
@@ -1876,17 +1882,17 @@ fun AdminInventoryGridCard(
     onEditClicked: () -> Unit
 ) {
     val isDark = AppState.isDarkMode
-    val isAllOutOfStock = product.variants.all { it.stockQuantity <= 0 }
-    val isLowStock = product.variants.any { it.stockQuantity in 1..4 }
+    val isAllOutOfStock = product.variants.isEmpty() || product.variants.all { it.stockQuantity <= 0 }
+    val isLowStock = !isAllOutOfStock && product.variants.any { it.stockQuantity in 1..4 }
     val minPrice = product.variants.minOfOrNull { it.currentPrice } ?: 0.0
 
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, if (isDark) Color(0xFF333333) else Color(0xFFE5E7EB))
+        border = BorderStroke(1.dp, if (isDark) Color(0xFF2E2E2E) else Color(0xFFE5E7EB))
     ) {
         Column(
             modifier = Modifier.fillMaxWidth()
@@ -1895,11 +1901,11 @@ fun AdminInventoryGridCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(115.dp)
+                    .height(110.dp)
                     .background(if (isDark) Color(0xFF1E1E1E) else Color(0xFFF3F4F6))
             ) {
                 AsyncImage(
-                    model = product.imageUrls.getOrNull(product.thumbnailIndex) ?: "",
+                    model = product.imageUrls.getOrNull(product.thumbnailIndex) ?: (product.imageUrls.firstOrNull() ?: ""),
                     contentDescription = product.nameEn,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
@@ -1924,84 +1930,78 @@ fun AdminInventoryGridCard(
                             else -> "In Stock"
                         },
                         color = Color.White,
-                        fontSize = 9.5.sp,
+                        fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }
             }
 
-            // Card Body
+            // Card Body (Uncluttered & Clean)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(10.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                    .padding(8.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 // Brand Name
                 Text(
                     text = product.brand.ifBlank { "G-STORE" },
-                    fontSize = 11.sp,
+                    fontSize = 10.5.sp,
                     fontWeight = FontWeight.Black,
                     color = if (isDark) Color(0xFF34D399) else RoyalEmerald,
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
 
-                // Product Title
+                // Product Title (Max 2 lines, orphan-free)
                 Text(
                     text = formatAdminProductName(product.nameEn),
                     fontWeight = FontWeight.Bold,
-                    fontSize = 12.5.sp,
+                    fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
-                    lineHeight = 16.sp,
+                    lineHeight = 15.sp,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    modifier = Modifier.heightIn(min = 32.dp)
+                    modifier = Modifier.heightIn(min = 30.dp)
                 )
 
-                // Variants summary
-                Text(
-                    text = "${product.variants.size} sizes • from ₹${minPrice.toInt()}",
-                    fontSize = 10.5.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.Gray,
-                    maxLines = 1
-                )
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                // Bottom Action Buttons
+                // Bottom Row: Price & Sizes summary + Compact sleek pencil icon
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedButton(
-                        onClick = onClick,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(28.dp),
-                        contentPadding = PaddingValues(0.dp),
-                        shape = RoundedCornerShape(6.dp),
-                        border = BorderStroke(0.5.dp, if (isDark) Color(0xFF4B5563) else Color(0xFFD1D5DB))
-                    ) {
-                        Text("Details", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                    Column {
+                        Text(
+                            text = if (minPrice > 0) "₹${minPrice.toInt()}" else "₹0",
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "${product.variants.size} size${if (product.variants.size == 1) "" else "s"}",
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.Gray
+                        )
                     }
 
-                    Spacer(modifier = Modifier.width(6.dp))
-
+                    // Compact, non-cluttered pencil edit icon
                     IconButton(
                         onClick = onEditClicked,
                         modifier = Modifier
-                            .size(28.dp)
-                            .background((if (isDark) Color(0xFF34D399) else RoyalEmerald).copy(alpha = 0.12f), RoundedCornerShape(6.dp))
+                            .size(24.dp)
+                            .background(
+                                (if (isDark) Color(0xFF34D399) else RoyalEmerald).copy(alpha = 0.12f),
+                                CircleShape
+                            )
                     ) {
                         Icon(
                             Icons.Default.Edit,
                             contentDescription = "Edit",
                             tint = if (isDark) Color(0xFF34D399) else RoyalEmerald,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(12.dp)
                         )
                     }
                 }
@@ -2498,6 +2498,22 @@ fun VariantEditorDialog(productId: String, existingVariant: ProductVariant?, onD
     )
 }
 
+fun getCategoryFallbackImage(categoryId: String): String {
+    return when (categoryId.lowercase()) {
+        "c_rice" -> "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&h=400&fit=crop"
+        "c_oil" -> "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&h=400&fit=crop"
+        "c_dal" -> "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&h=400&fit=crop"
+        "c_dairy" -> "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=600&h=400&fit=crop"
+        "c_spices" -> "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=600&h=400&fit=crop"
+        "c_dryfruits" -> "https://images.unsplash.com/photo-1599599810769-bcde5a160d32?w=600&h=400&fit=crop"
+        "c_snacks" -> "https://images.unsplash.com/photo-1621996346565-e3d5d6281699?w=600&h=400&fit=crop"
+        "c_biscuits" -> "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=600&h=400&fit=crop"
+        "c_beverages" -> "https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=600&h=400&fit=crop"
+        "c_cleaning" -> "https://images.unsplash.com/photo-1583947215259-38e31be8751f?w=600&h=400&fit=crop"
+        else -> "https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&h=400&fit=crop"
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
@@ -2510,6 +2526,13 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
     var uploadError by rememberSaveable { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    // Initial Variant inputs for new items
+    var initWeight by rememberSaveable { mutableStateOf("1") }
+    var initUnit by rememberSaveable { mutableStateOf("Kg") }
+    var initPrice by rememberSaveable { mutableStateOf("") }
+    var initMrp by rememberSaveable { mutableStateOf("") }
+    var initStock by rememberSaveable { mutableStateOf("50") }
 
     val categories = remember(AppState.categoriesList) {
         AppState.categoriesList.map { Pair(it.id, it.nameEn) }
@@ -2529,13 +2552,14 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
-        title = { Text(if (existingProduct == null) "Product Info" else "Edit Product Info", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface) },
+        title = { Text(if (existingProduct == null) "Add New Product" else "Edit Product Info", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = nameEn,
                     onValueChange = { nameEn = it },
-                    label = { Text("Product Name") },
+                    label = { Text("Product Name *") },
+                    placeholder = { Text("e.g. Premium Basmati Rice") },
                     modifier = Modifier.fillMaxWidth(),
                     textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -2547,6 +2571,7 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
                         unfocusedBorderColor = Color.LightGray
                     )
                 )
+
                 // Category Selector Dropdown
                 Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
@@ -2582,10 +2607,12 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
                         }
                     }
                 }
+
                 OutlinedTextField(
                     value = brand,
                     onValueChange = { brand = it },
                     label = { Text("Brand Name") },
+                    placeholder = { Text("e.g. India Gate, Tata, Nestle") },
                     modifier = Modifier.fillMaxWidth(),
                     textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -2597,13 +2624,15 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
                         unfocusedBorderColor = Color.LightGray
                     )
                 )
+
                 OutlinedTextField(
                     value = descEn,
                     onValueChange = { descEn = it },
                     label = { Text("Description") },
+                    placeholder = { Text("Short product details...") },
                     modifier = Modifier.fillMaxWidth(),
                     textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface),
-                    minLines = 3,
+                    minLines = 2,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = MaterialTheme.colorScheme.onSurface,
                         unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
@@ -2613,28 +2642,136 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
                         unfocusedBorderColor = Color.LightGray
                     )
                 )
+
+                // Initial Variant Details (When adding new item)
+                if (existingProduct == null) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = Color.LightGray.copy(alpha = 0.5f))
+                    Text("Initial Pack Size & Pricing", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = RoyalEmerald)
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = initWeight,
+                            onValueChange = { initWeight = it },
+                            label = { Text("Size (e.g. 1, 500)") },
+                            modifier = Modifier.weight(1f),
+                            textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                focusedLabelColor = RoyalEmerald,
+                                focusedBorderColor = RoyalEmerald
+                            )
+                        )
+                        OutlinedTextField(
+                            value = initUnit,
+                            onValueChange = { initUnit = it },
+                            label = { Text("Unit") },
+                            modifier = Modifier.weight(1f),
+                            textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                focusedLabelColor = RoyalEmerald,
+                                focusedBorderColor = RoyalEmerald
+                            )
+                        )
+                    }
+
+                    // Quick selector chips for units
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        val quickUnits = listOf("Kg", "g", "Ltr", "ml", "Pcs")
+                        quickUnits.forEach { qu ->
+                            val isSelected = initUnit.trim().equals(qu, ignoreCase = true)
+                            AssistChip(
+                                onClick = { initUnit = qu },
+                                label = { Text(qu, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
+                                colors = AssistChipDefaults.assistChipColors(
+                                    containerColor = if (isSelected) RoyalEmerald.copy(alpha = 0.15f) else Color.Transparent,
+                                    labelColor = if (isSelected) RoyalEmerald else Color.Gray
+                                ),
+                                border = BorderStroke(1.dp, if (isSelected) RoyalEmerald else Color.LightGray.copy(alpha = 0.5f))
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = initPrice,
+                            onValueChange = { initPrice = it },
+                            label = { Text("Sale Price (₹) *") },
+                            placeholder = { Text("100") },
+                            modifier = Modifier.weight(1f),
+                            textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                focusedLabelColor = RoyalEmerald,
+                                focusedBorderColor = RoyalEmerald
+                            )
+                        )
+                        OutlinedTextField(
+                            value = initMrp,
+                            onValueChange = { initMrp = it },
+                            label = { Text("MRP (₹)") },
+                            placeholder = { Text("120") },
+                            modifier = Modifier.weight(1f),
+                            textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                focusedLabelColor = RoyalEmerald,
+                                focusedBorderColor = RoyalEmerald
+                            )
+                        )
+                    }
+
+                    OutlinedTextField(
+                        value = initStock,
+                        onValueChange = { initStock = it },
+                        label = { Text("Initial Stock Quantity") },
+                        placeholder = { Text("50") },
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedLabelColor = RoyalEmerald,
+                            focusedBorderColor = RoyalEmerald
+                        )
+                    )
+                }
                 
-                Text("Product Image", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Text("Product Image (Optional)", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(180.dp)
+                        .height(150.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(MaterialTheme.colorScheme.background)
                         .clickable { launcher.launch("image/*") },
                     contentAlignment = Alignment.Center
                 ) {
-                    if (selectedImageUri != null) {
-                        AsyncImage(model = selectedImageUri, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                    } else if (currentImageUrl.isNotBlank()) {
-                        AsyncImage(model = currentImageUrl, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                    } else {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.Add, null, tint = Color.Gray, modifier = Modifier.size(40.dp))
-                            Text("Upload Image", color = Color.Gray, fontSize = 12.sp)
-                        }
+                    val displayImage = when {
+                        selectedImageUri != null -> selectedImageUri
+                        currentImageUrl.isNotBlank() -> currentImageUrl
+                        else -> getCategoryFallbackImage(selectedCategoryId)
                     }
+                    AsyncImage(
+                        model = displayImage,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
                     
                     if (selectedImageUri != null || currentImageUrl.isNotBlank()) {
                         IconButton(
@@ -2643,11 +2780,15 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
                         ) {
                             Icon(Icons.Default.Close, null, tint = Color.Red, modifier = Modifier.size(16.dp))
                         }
+                    } else {
+                        Surface(
+                            color = Color.Black.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.padding(8.dp)
+                        ) {
+                            Text("Tap to upload custom image", color = Color.White, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                        }
                     }
-                }
-                
-                if (existingProduct == null) {
-                    Text("Note: Variants can be added after saving the basic product info.", fontSize = 11.sp, color = RoyalEmerald, fontWeight = FontWeight.Bold)
                 }
             }
         },
@@ -2668,7 +2809,6 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
                             isUploading = true
                             scope.launch {
                                 try {
-                                    // Copy URI to cache file on IO thread
                                     val tempFile = withContext(Dispatchers.IO) {
                                         getFileFromUri(context, selectedImageUri!!)
                                     }
@@ -2677,7 +2817,6 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
                                         isUploading = false
                                         return@launch
                                     }
-                                    // Upload to Cloudinary with AWS S3 fallback on IO thread
                                     val downloadUrl = withContext(Dispatchers.IO) {
                                         try {
                                             CloudinaryUploader.upload(tempFile)
@@ -2686,15 +2825,27 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
                                             com.example.data.repository.AwsStorageUploader.uploadProductImage(tempFile)
                                         }
                                     }
-                                    // Clean up temp file
                                     withContext(Dispatchers.IO) {
                                         try { tempFile.delete() } catch (_: Exception) {}
                                     }
-                                    saveProductWithImage(downloadUrl, nameEn, brand, descEn, selectedCategoryId, existingProduct, onDismiss)
+                                    saveProductWithImage(
+                                        imageUrl = downloadUrl,
+                                        nameEn = nameEn,
+                                        brand = brand,
+                                        descEn = descEn,
+                                        categoryId = selectedCategoryId,
+                                        initWeight = initWeight,
+                                        initUnit = initUnit,
+                                        initPrice = initPrice,
+                                        initMrp = initMrp,
+                                        initStock = initStock,
+                                        existingProduct = existingProduct,
+                                        onDismiss = onDismiss
+                                    )
                                 } catch (e: Exception) {
                                     e.printStackTrace()
                                     uploadError = if (com.example.util.NetworkUtils.isOfflineError(e)) {
-                                        "Device is offline. Please check your internet connection before uploading images."
+                                        "Device is offline. Please check your internet connection."
                                     } else {
                                         "Image upload failed: ${e.message ?: e.javaClass.simpleName}"
                                     }
@@ -2703,17 +2854,30 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
                                 }
                             }
                         } else {
-                            saveProductWithImage(currentImageUrl, nameEn, brand, descEn, selectedCategoryId, existingProduct, onDismiss)
+                            saveProductWithImage(
+                                imageUrl = currentImageUrl,
+                                nameEn = nameEn,
+                                brand = brand,
+                                descEn = descEn,
+                                categoryId = selectedCategoryId,
+                                initWeight = initWeight,
+                                initUnit = initUnit,
+                                initPrice = initPrice,
+                                initMrp = initMrp,
+                                initStock = initStock,
+                                existingProduct = existingProduct,
+                                onDismiss = onDismiss
+                            )
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald),
+                    colors = ButtonDefaults.buttonColors(containerColor = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald),
                     enabled = !isUploading && nameEn.isNotBlank()
                 ) {
                     if (isUploading) {
                         CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Uploading...", color = Color.White)
-                    } else Text("Save Product", color = Color.White)
+                        Text("Saving...", color = Color.White)
+                    } else Text(if (existingProduct == null) "Create Product" else "Save Changes", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
         },
@@ -2742,25 +2906,46 @@ private fun saveProductWithImage(
     brand: String,
     descEn: String,
     categoryId: String,
+    initWeight: String,
+    initUnit: String,
+    initPrice: String,
+    initMrp: String,
+    initStock: String,
     existingProduct: Product?,
     onDismiss: () -> Unit
 ) {
     if (existingProduct == null) {
+        val finalImageUrl = if (imageUrl.isNotBlank()) imageUrl else getCategoryFallbackImage(categoryId)
+        val pPrice = initPrice.toDoubleOrNull() ?: 100.0
+        val pMrp = initMrp.toDoubleOrNull() ?: pPrice
+        val pStock = initStock.toIntOrNull() ?: 50
+        val pWeight = initWeight.ifBlank { "1" }
+        val pUnit = initUnit.ifBlank { "Kg" }
+
+        val initialVariant = ProductVariant(
+            id = "v_${System.currentTimeMillis()}",
+            weight = pWeight,
+            unit = pUnit,
+            currentPrice = pPrice,
+            mrp = pMrp,
+            stockQuantity = pStock
+        )
+
         AppState.adminAddProduct(
-            nameEn,
-            brand,
-            descEn,
-            if (imageUrl.isBlank()) emptyList() else listOf(imageUrl),
-            emptyList(),
-            categoryId
+            nameEn = nameEn.trim(),
+            brand = brand.trim().ifBlank { "G-STORE" },
+            descEn = descEn.trim().ifBlank { "High quality ${nameEn.trim()} available at G-STORE." },
+            imageUrls = listOf(finalImageUrl),
+            variants = listOf(initialVariant),
+            categoryId = categoryId
         )
     } else {
         val updatedProduct = existingProduct.copy(
-            nameEn = nameEn,
-            brand = brand,
-            descriptionEn = descEn,
+            nameEn = nameEn.trim(),
+            brand = brand.trim().ifBlank { existingProduct.brand },
+            descriptionEn = descEn.trim(),
             categoryId = categoryId,
-            imageUrls = if (imageUrl.isNotBlank()) listOf(imageUrl) else emptyList(),
+            imageUrls = if (imageUrl.isNotBlank()) listOf(imageUrl) else existingProduct.imageUrls,
             lastUpdated = System.currentTimeMillis()
         )
         AppState.adminUpdateProduct(updatedProduct)
