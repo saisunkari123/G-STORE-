@@ -106,7 +106,7 @@ const toolsList = [
       properties: {
         orderId: {
           type: "string",
-          description: "The ID of the order to update",
+          description: "The ID of the order to update (e.g. 'G-1786896453001-823')",
         },
         newStatus: {
           type: "string",
@@ -198,6 +198,38 @@ const categoryNames: Record<string, string> = {
   c_spices: "Spices & Masalas",
 };
 
+// Helper to format orders
+function formatOrder(o: any) {
+  const addressParts = (o.deliveryAddress || "").split(":::");
+  const addressType = addressParts[0]?.trim() || "Home";
+  const addressText = addressParts[1]?.trim() || o.deliveryAddress;
+  const customerPhone = addressParts[2]?.trim() || "";
+  const distanceKm = addressParts[3] ? parseFloat(addressParts[3]).toFixed(1) + " km" : undefined;
+
+  return {
+    orderId: o.id,
+    customerId: o.customerId,
+    customerName: o.customerName,
+    customerPhone,
+    status: o.status,
+    total: `₹${o.total}`,
+    totalAmount: o.total,
+    subtotal: o.subtotal ? `₹${o.subtotal}` : undefined,
+    deliveryFee: o.deliveryFee ? `₹${o.deliveryFee}` : undefined,
+    deliveryAddress: addressText,
+    addressType,
+    distanceKm,
+    createdAt: o.createdAt,
+    items: (o.items || []).map((item: any) => ({
+      productId: item.productId,
+      productName: item.productName,
+      quantity: item.quantity,
+      size: item.variantSize,
+      price: `₹${item.price}`,
+    })),
+  };
+}
+
 // Tool execution logic querying live AWS AppSync backend
 async function executeToolCall(name: string, args: any) {
   switch (name) {
@@ -224,7 +256,7 @@ async function executeToolCall(name: string, args: any) {
       let rawItems = data?.listProducts?.items || [];
 
       // Filter out metadata records
-      rawItems = rawItems.filter((p: any) => p.category !== "metadata");
+      rawItems = rawItems.filter((p: any) => !p.id.startsWith("sys_") && p.category !== "metadata");
 
       if (args?.category) {
         const filter = String(args.category).toLowerCase();
@@ -353,17 +385,22 @@ async function executeToolCall(name: string, args: any) {
           listOrders(limit: $limit) {
             items {
               id
-              userId
-              orderStatus
-              total
-              subtotal
+              customerId
+              customerName
+              deliveryAddress
               deliveryFee
+              latitude
+              longitude
+              status
+              subtotal
+              total
               createdAt
               items {
-                name
-                size
+                productId
+                productName
                 quantity
                 price
+                variantSize
               }
             }
           }
@@ -375,11 +412,12 @@ async function executeToolCall(name: string, args: any) {
       if (args?.status) {
         const targetStatus = String(args.status).toUpperCase();
         orders = orders.filter(
-          (o: any) => o.orderStatus && o.orderStatus.toUpperCase() === targetStatus
+          (o: any) => o.status && o.status.toUpperCase() === targetStatus
         );
       }
 
-      return { count: orders.length, orders };
+      const formattedOrders = orders.map(formatOrder);
+      return { count: formattedOrders.length, orders: formattedOrders };
     }
 
     case "update_order_status": {
@@ -387,7 +425,7 @@ async function executeToolCall(name: string, args: any) {
         mutation UpdateOrder($input: UpdateOrderInput!) {
           updateOrder(input: $input) {
             id
-            orderStatus
+            status
             updatedAt
           }
         }
@@ -395,11 +433,11 @@ async function executeToolCall(name: string, args: any) {
       const result = await executeGraphQL(mutation, {
         input: {
           id: args?.orderId,
-          orderStatus: args?.newStatus,
+          status: args?.newStatus,
         },
       });
 
-      return { message: "Order status updated", order: result?.updateOrder };
+      return { message: "Order status updated successfully", order: result?.updateOrder };
     }
 
     case "get_store_metrics": {
@@ -408,7 +446,7 @@ async function executeToolCall(name: string, args: any) {
           listOrders(limit: 1000) {
             items {
               id
-              orderStatus
+              status
               total
               createdAt
             }
@@ -419,78 +457,138 @@ async function executeToolCall(name: string, args: any) {
       const orders = data?.listOrders?.items || [];
 
       const totalOrders = orders.length;
-      const pendingOrders = orders.filter((o: any) => o.orderStatus === "PENDING").length;
-      const preparingOrders = orders.filter((o: any) => o.orderStatus === "PREPARING").length;
-      const outForDelivery = orders.filter((o: any) => o.orderStatus === "OUT_FOR_DELIVERY").length;
-      const deliveredOrders = orders.filter((o: any) => o.orderStatus === "DELIVERED").length;
+      const pendingOrders = orders.filter((o: any) => o.status === "PENDING").length;
+      const preparingOrders = orders.filter((o: any) => o.status === "PREPARING").length;
+      const outForDelivery = orders.filter((o: any) => o.status === "OUT_FOR_DELIVERY").length;
+      const deliveredOrders = orders.filter((o: any) => o.status === "DELIVERED").length;
+      const cancelledOrders = orders.filter((o: any) => o.status === "CANCELLED").length;
 
       const totalRevenue = orders
-        .filter((o: any) => o.orderStatus !== "CANCELLED")
+        .filter((o: any) => o.status !== "CANCELLED")
         .reduce((sum: number, o: any) => sum + (Number(o.total) || 0), 0);
 
       return {
         metrics: {
           totalOrders,
           totalRevenue: `₹${totalRevenue.toFixed(2)}`,
-          pendingOrders,
-          preparingOrders,
-          outForDelivery,
-          deliveredOrders,
+          totalRevenueNumber: totalRevenue,
+          statusBreakdown: {
+            pending: pendingOrders,
+            preparing: preparingOrders,
+            outForDelivery: outForDelivery,
+            delivered: deliveredOrders,
+            cancelled: cancelledOrders,
+          },
         },
       };
     }
 
     case "get_store_settings": {
       const query = `
-        query ListAppConfigs {
-          listAppConfigs(limit: 1) {
-            items {
-              id
-              minimumOrderAmount
-              deliveryRadiusKm
-            }
+        query GetAppConfig {
+          getProduct(id: "sys_config") {
+            id
+            name
+            description
           }
         }
       `;
       const data = await executeGraphQL(query);
-      return data?.listAppConfigs?.items?.[0] || {
-        minimumOrderAmount: 150.0,
-        deliveryRadiusKm: 10.0,
+      const sysProd = data?.getProduct;
+
+      let config = { minimumOrderAmount: 150.0, deliveryRadiusKm: 10.0 };
+      if (sysProd && sysProd.description) {
+        try {
+          config = JSON.parse(sysProd.description);
+        } catch {
+          // fallback
+        }
+      }
+
+      return {
+        minimumOrderAmount: config.minimumOrderAmount ?? 150.0,
+        deliveryRadiusKm: config.deliveryRadiusKm ?? 10.0,
+        formatted: {
+          minimumOrder: `₹${config.minimumOrderAmount ?? 150.0}`,
+          deliveryRadius: `${config.deliveryRadiusKm ?? 10.0} km`,
+        },
       };
     }
 
     case "update_store_settings": {
-      const listQuery = `
-        query ListAppConfigs {
-          listAppConfigs(limit: 1) {
-            items {
+      const getQuery = `
+        query GetAppConfig {
+          getProduct(id: "sys_config") {
+            id
+            description
+          }
+        }
+      `;
+      const existingData = await executeGraphQL(getQuery);
+      const existing = existingData?.getProduct;
+
+      let currentConfig = { minimumOrderAmount: 150.0, deliveryRadiusKm: 10.0 };
+      if (existing && existing.description) {
+        try {
+          currentConfig = JSON.parse(existing.description);
+        } catch {
+          // fallback
+        }
+      }
+
+      const updatedConfig = {
+        minimumOrderAmount:
+          args?.minimumOrderAmount !== undefined ? args.minimumOrderAmount : currentConfig.minimumOrderAmount,
+        deliveryRadiusKm:
+          args?.deliveryRadiusKm !== undefined ? args.deliveryRadiusKm : currentConfig.deliveryRadiusKm,
+      };
+
+      if (existing) {
+        const updateMutation = `
+          mutation UpdateConfig($input: UpdateProductInput!) {
+            updateProduct(input: $input) {
               id
+              description
             }
           }
-        }
-      `;
-      const listData = await executeGraphQL(listQuery);
-      const existingId = listData?.listAppConfigs?.items?.[0]?.id || "default_config";
-
-      const mutation = `
-        mutation UpdateAppConfig($input: UpdateAppConfigInput!) {
-          updateAppConfig(input: $input) {
-            id
-            minimumOrderAmount
-            deliveryRadiusKm
+        `;
+        await executeGraphQL(updateMutation, {
+          input: {
+            id: "sys_config",
+            description: JSON.stringify(updatedConfig),
+          },
+        });
+      } else {
+        const createMutation = `
+          mutation CreateConfig($input: CreateProductInput!) {
+            createProduct(input: $input) {
+              id
+              description
+            }
           }
-        }
-      `;
+        `;
+        await executeGraphQL(createMutation, {
+          input: {
+            id: "sys_config",
+            name: "System App Config",
+            category: "metadata",
+            description: JSON.stringify(updatedConfig),
+            variants: [],
+          },
+        });
+      }
 
-      const updateData = await executeGraphQL(mutation, {
-        input: {
-          id: existingId,
-          minimumOrderAmount: args?.minimumOrderAmount,
-          deliveryRadiusKm: args?.deliveryRadiusKm,
+      return {
+        message: "Store settings updated successfully",
+        settings: {
+          minimumOrderAmount: updatedConfig.minimumOrderAmount,
+          deliveryRadiusKm: updatedConfig.deliveryRadiusKm,
+          formatted: {
+            minimumOrder: `₹${updatedConfig.minimumOrderAmount}`,
+            deliveryRadius: `${updatedConfig.deliveryRadiusKm} km`,
+          },
         },
-      });
-
-      return { message: "Store settings updated", config: updateData?.updateAppConfig };
+      };
     }
 
     default:
