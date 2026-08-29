@@ -17,9 +17,15 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.example.domain.model.Category
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
@@ -508,92 +514,141 @@ fun CustomerCatalogView(
                 .background(MaterialTheme.colorScheme.background)
                 .padding(padding)
         ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 32.dp)
-            ) {
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Category Filter Button
-                        val catText = if (appliedCategories.isEmpty()) "Category" else "Category (${appliedCategories.size})"
-                        Button(
-                            onClick = {
-                                tempSelectedCategories = appliedCategories
-                                showCategoryFilterSheet = true
-                            },
-                            modifier = Modifier.weight(1f).height(44.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (appliedCategories.isNotEmpty()) RoyalEmerald else MaterialTheme.colorScheme.surfaceVariant,
-                                contentColor = if (appliedCategories.isNotEmpty()) Color.White else MaterialTheme.colorScheme.onSurface
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.FilterList, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(catText, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
-                            }
-                        }
-
-                        // Sort By Button
-                        val sortText = when (selectedSort) {
-                            "Price: Low to High" -> "Sort: Low to High"
-                            "Price: High to Low" -> "Sort: High to Low"
-                            "What's New" -> "Sort: What's New"
-                            else -> "Sort By"
-                        }
-                        val isSortActive = selectedSort != "Default" || onlyWithDiscount
-                        Button(
-                            onClick = {
-                                tempSort = selectedSort
-                                tempOnlyWithDiscount = onlyWithDiscount
-                                showSortSheet = true
-                            },
-                            modifier = Modifier.weight(1f).height(44.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isSortActive) RoyalEmerald else MaterialTheme.colorScheme.surfaceVariant,
-                                contentColor = if (isSortActive) Color.White else MaterialTheme.colorScheme.onSurface
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(sortText, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
-                            }
-                        }
-                    }
-                }
-
-                item {
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-
-                if (filteredProducts.isEmpty()) {
-                    item {
-                        Column(
+            Box(modifier = Modifier.fillMaxSize()) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 100.dp)
+                ) {
+                    // Full-width Category Carousel Chips
+                    item(span = { GridItemSpan(2) }) {
+                        val allCats = listOf(Category(id = "ALL", nameEn = "All Products", imageUrl = "")) + AppState.categoriesList
+                        LazyRow(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = 40.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text("No items found matching '$searchQuery'", color = Color.Gray)
+                            items(allCats) { cat ->
+                                val isSelected = (cat.id == "ALL" && appliedCategories.isEmpty()) || appliedCategories.contains(cat.id)
+                                Surface(
+                                    onClick = {
+                                        appliedCategories = if (cat.id == "ALL") emptySet() else setOf(cat.id)
+                                    },
+                                    shape = RoundedCornerShape(20.dp),
+                                    color = if (isSelected) RoyalEmerald else MaterialTheme.colorScheme.surface,
+                                    border = BorderStroke(1.dp, if (isSelected) RoyalEmerald else Color(0xFFE5E7EB)),
+                                    shadowElevation = if (isSelected) 2.dp else 0.dp
+                                ) {
+                                    Text(
+                                        text = cat.nameEn,
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                                    )
+                                }
+                            }
                         }
                     }
-                } else {
-                    items(filteredProducts) { product ->
-                        CustomerProductCard(product, selectedSort)
+
+                    // Full-width Filter / Sort Bar
+                    item(span = { GridItemSpan(2) }) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Category Filter Button
+                            val catText = if (appliedCategories.isEmpty()) "Categories" else "Categories (${appliedCategories.size})"
+                            OutlinedButton(
+                                onClick = {
+                                    tempSelectedCategories = appliedCategories
+                                    showCategoryFilterSheet = true
+                                },
+                                modifier = Modifier.weight(1f).height(38.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = if (appliedCategories.isNotEmpty()) Color(0xFFECFDF5) else MaterialTheme.colorScheme.surface,
+                                    contentColor = if (appliedCategories.isNotEmpty()) RoyalEmerald else MaterialTheme.colorScheme.onSurface
+                                ),
+                                border = BorderStroke(1.dp, if (appliedCategories.isNotEmpty()) RoyalEmerald else Color(0xFFE5E7EB)),
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.FilterList, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(catText, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                }
+                            }
+
+                            // Sort By Button
+                            val sortText = when (selectedSort) {
+                                "Price: Low to High" -> "Low to High"
+                                "Price: High to Low" -> "High to Low"
+                                "What's New" -> "What's New"
+                                else -> "Sort"
+                            }
+                            val isSortActive = selectedSort != "Default" || onlyWithDiscount
+                            OutlinedButton(
+                                onClick = {
+                                    tempSort = selectedSort
+                                    tempOnlyWithDiscount = onlyWithDiscount
+                                    showSortSheet = true
+                                },
+                                modifier = Modifier.weight(1f).height(38.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = if (isSortActive) Color(0xFFECFDF5) else MaterialTheme.colorScheme.surface,
+                                    contentColor = if (isSortActive) RoyalEmerald else MaterialTheme.colorScheme.onSurface
+                                ),
+                                border = BorderStroke(1.dp, if (isSortActive) RoyalEmerald else Color(0xFFE5E7EB)),
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(sortText, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                }
+                            }
+                        }
                     }
+
+                    if (filteredProducts.isEmpty()) {
+                        item(span = { GridItemSpan(2) }) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 40.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(Icons.Default.SearchOff, null, tint = Color.LightGray, modifier = Modifier.size(48.dp))
+                                Spacer(Modifier.height(8.dp))
+                                Text("No items found matching '$searchQuery'", color = Color.Gray, fontSize = 14.sp)
+                            }
+                        }
+                    } else {
+                        items(filteredProducts) { product ->
+                            CustomerProductCard(product, selectedSort)
+                        }
+                    }
+                }
+
+                // Floating Quick Cart Bar at Bottom
+                if (AppState.cartItems.isNotEmpty()) {
+                    val totalQty = AppState.cartItems.values.sum()
+                    FloatingQuickCartBar(
+                        itemCount = totalQty,
+                        subtotal = AppState.cartSubtotal,
+                        onClick = onCartClick,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                    )
                 }
             }
         }
@@ -861,16 +916,14 @@ fun SectionHeader(title: String) {
 
 @Composable
 fun CustomerProductCard(product: Product, selectedSort: String = "Default") {
-    // Sort variants inside the product card based on the active filter
     val sortedVariants = remember(product.variants, selectedSort) {
         if (selectedSort == "Price: Low to High") {
             product.variants.sortedBy { it.currentPrice }
         } else {
-            product.variants.sortedByDescending { it.currentPrice } // Default is High to Low
+            product.variants.sortedByDescending { it.currentPrice }
         }
     }
     var selectedVariantIndex by remember { mutableStateOf(0) }
-    // Create a dummy variant so the card always renders — even for products with no variants yet
     val dummyVariant = com.example.domain.model.ProductVariant(
         id = "none", weight = "—", unit = "", currentPrice = 0.0, mrp = 0.0, stockQuantity = 0, sku = ""
     )
@@ -879,220 +932,406 @@ fun CustomerProductCard(product: Product, selectedSort: String = "Default") {
         ?: sortedVariants.firstOrNull()
         ?: dummyVariant
 
+    var showVariantSheet by remember { mutableStateOf(false) }
+
+    val isOutOfStock = !hasVariants || currentVariant.stockQuantity <= 0
+    val cartKey = "${product.id}#${currentVariant.id}"
+    val currentInCart = AppState.cartItems[cartKey] ?: 0
+
     Card(
         modifier = Modifier
-            .padding(horizontal = 16.dp, vertical = 12.dp)
             .fillMaxWidth()
-            .heightIn(min = 400.dp)
-            .shadow(12.dp, RoundedCornerShape(24.dp), ambientColor = RoyalEmerald.copy(alpha = 0.1f)),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            .shadow(2.dp, RoundedCornerShape(16.dp), ambientColor = Color.Black.copy(alpha = 0.04f)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, Color(0xFFF1F3F4))
     ) {
-        Box {
-            val imageUrl = product.imageUrls.getOrNull(product.thumbnailIndex)?.trim() ?: ""
-            val isValidUrl = imageUrl.isNotEmpty()
-
-            if (isValidUrl) {
-                // SubcomposeAsyncImage correctly triggers Coil loading from the first composition
-                SubcomposeAsyncImage(
-                    model = imageUrl,
-                    contentDescription = product.nameEn,
-                    modifier = Modifier.fillMaxWidth().height(240.dp),
-                    contentScale = ContentScale.Crop,
-                    loading = {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(240.dp)
-                                .background(Brush.verticalGradient(
-                                    listOf(RoyalEmerald.copy(alpha = 0.15f), RoyalEmerald.copy(alpha = 0.05f))
-                                ))
-                        )
-                    },
-                    error = {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(240.dp)
-                                .background(Brush.verticalGradient(
-                                    listOf(RoyalEmerald.copy(alpha = 0.15f), RoyalEmerald.copy(alpha = 0.05f))
-                                )),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(Icons.Default.ShoppingCart, null,
-                                    tint = RoyalEmerald.copy(alpha = 0.4f),
-                                    modifier = Modifier.size(48.dp))
-                                Spacer(Modifier.height(8.dp))
-                                Text(product.nameEn,
-                                    color = RoyalEmerald.copy(alpha = 0.6f),
-                                    fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            }
-                        }
-                    }
-                )
-            } else {
-                // No valid URL — show placeholder directly
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(240.dp)
-                        .background(Brush.verticalGradient(
-                            listOf(RoyalEmerald.copy(alpha = 0.15f), RoyalEmerald.copy(alpha = 0.05f))
-                        )),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.ShoppingCart, null,
-                            tint = RoyalEmerald.copy(alpha = 0.4f),
-                            modifier = Modifier.size(48.dp))
-                        Spacer(Modifier.height(8.dp))
-                        Text(product.nameEn,
-                            color = RoyalEmerald.copy(alpha = 0.6f),
-                            fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    }
-                }
-            }
-
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // 1. Top Image Box with Discount & Out of Stock Overlay
             Box(
                 modifier = Modifier
-                    .padding(12.dp)
-                    .align(Alignment.TopStart)
+                    .fillMaxWidth()
+                    .height(115.dp)
+                    .background(Color(0xFFF8FAF9))
             ) {
-                TrustBadge(if (product.brand.isNotBlank()) product.brand else "Mill-Direct")
-            }
-
-            if (currentVariant.currentPrice < currentVariant.mrp) {
-                val discount = ((currentVariant.mrp - currentVariant.currentPrice) / currentVariant.mrp * 100).toInt()
-                Surface(
-                    color = DeepGold,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.align(Alignment.TopEnd).padding(12.dp)
-                ) {
-                    Text(
-                        "$discount% OFF",
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Black,
-                        color = Color.White
+                val imageUrl = product.imageUrls.getOrNull(product.thumbnailIndex)?.trim() ?: ""
+                if (imageUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = product.nameEn,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(6.dp),
+                        contentScale = ContentScale.Fit
                     )
-                }
-            }
-        }
-
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Text(
-                    product.nameEn,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f)
-                )
-                Column(horizontalAlignment = Alignment.End) {
-                    if (hasVariants && currentVariant.mrp > 0) {
-                        Text(
-                            "₹${currentVariant.mrp.toInt()}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Gray,
-                            textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
-                        )
-                        Text(
-                            "₹${currentVariant.currentPrice.toInt()}",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = RoyalEmerald
-                        )
-                    } else {
-                        Text(
-                            "Price TBD",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = RoyalEmerald.copy(alpha = 0.6f)
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.ShoppingCart,
+                            contentDescription = null,
+                            tint = RoyalEmerald.copy(alpha = 0.3f),
+                            modifier = Modifier.size(36.dp)
                         )
                     }
                 }
-            }
 
-            if (product.descriptionEn.isNotBlank()) {
-                Text(
-                    product.descriptionEn,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray,
-                    maxLines = 2,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-            } else {
-                Spacer(Modifier.height(8.dp))
-            }
-
-            // Weight Selectors — only show when variants exist
-            if (hasVariants) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(vertical = 12.dp).horizontalScroll(rememberScrollState())
-                ) {
-                    sortedVariants.forEachIndexed { index, variant ->
-                        val isSelected = selectedVariantIndex == index
+                // Discount badge (top-left)
+                if (hasVariants && currentVariant.mrp > currentVariant.currentPrice) {
+                    val discount = ((currentVariant.mrp - currentVariant.currentPrice) / currentVariant.mrp * 100).toInt()
+                    if (discount > 0) {
                         Surface(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable { selectedVariantIndex = index },
-                            color = if (isSelected) RoyalEmerald else Color.Transparent,
-                            border = if (isSelected) null else BorderStroke(1.dp, Color.LightGray),
-                            shape = RoundedCornerShape(12.dp)
+                            color = Color(0xFFEA580C),
+                            shape = RoundedCornerShape(topStart = 16.dp, bottomEnd = 8.dp),
+                            modifier = Modifier.align(Alignment.TopStart)
                         ) {
                             Text(
-                                "${variant.weight}${variant.unit}",
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
+                                "$discount% OFF",
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color.White
                             )
                         }
                     }
                 }
-            } else {
-                Spacer(Modifier.height(12.dp))
+
+                // Brand Tag (bottom-left)
+                if (product.brand.isNotBlank()) {
+                    Surface(
+                        color = Color.White.copy(alpha = 0.9f),
+                        shape = RoundedCornerShape(4.dp),
+                        border = BorderStroke(0.5.dp, Color(0xFFE5E7EB)),
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(4.dp)
+                    ) {
+                        Text(
+                            product.brand.uppercase(),
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = RoyalEmerald,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                        )
+                    }
+                }
+
+                // Out of stock overlay
+                if (isOutOfStock) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.55f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Surface(
+                            color = Color(0xFFDC2626),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                "OUT OF STOCK",
+                                color = Color.White,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Black,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
             }
 
-            val isOutOfStock = !hasVariants || currentVariant.stockQuantity <= 0
-            val cartKey = "${product.id}#${currentVariant.id}"
-            val currentInCart = AppState.cartItems[cartKey] ?: 0
-
-            if (hasVariants && currentInCart > 0) {
-                QtyController(
-                    qty = currentInCart,
-                    onMinus = { AppState.updateCartQty(product.id, currentVariant.id, currentInCart - 1) },
-                    onPlus = { AppState.updateCartQty(product.id, currentVariant.id, currentInCart + 1) },
-                    maxStock = currentVariant.stockQuantity
+            // 2. Body Details
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+            ) {
+                // Product Title (2 lines max)
+                Text(
+                    text = product.nameEn,
+                    fontSize = 12.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 15.sp,
+                    modifier = Modifier.height(32.dp)
                 )
-            } else {
-                Button(
-                    onClick = { if (hasVariants) AppState.addToCart(product.id, currentVariant.id) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp),
-                    enabled = hasVariants && !isOutOfStock,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (hasVariants) RoyalEmerald else Color.Gray.copy(alpha = 0.3f)
-                    )
-                ) {
-                    Icon(Icons.Outlined.ShoppingBag, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
+
+                Spacer(Modifier.height(4.dp))
+
+                // Variant / Size chip
+                if (sortedVariants.size > 1) {
+                    Surface(
+                        onClick = { showVariantSheet = true },
+                        shape = RoundedCornerShape(6.dp),
+                        color = Color(0xFFF3F4F6),
+                        border = BorderStroke(0.5.dp, Color(0xFFD1D5DB)),
+                        modifier = Modifier.padding(vertical = 1.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                "${currentVariant.weight}${currentVariant.unit}",
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(Modifier.width(2.dp))
+                            Icon(
+                                Icons.Default.ArrowDropDown,
+                                contentDescription = "Select Variant",
+                                modifier = Modifier.size(13.dp),
+                                tint = Color.Gray
+                            )
+                        }
+                    }
+                } else if (hasVariants) {
                     Text(
-                        when {
-                            !hasVariants -> "COMING SOON"
-                            isOutOfStock -> "OUT OF STOCK"
-                            else -> "ADD TO CART"
+                        "${currentVariant.weight}${currentVariant.unit}",
+                        fontSize = 10.5.sp,
+                        color = Color.Gray,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(vertical = 1.dp)
+                    )
+                } else {
+                    Spacer(Modifier.height(16.dp))
+                }
+
+                Spacer(Modifier.height(6.dp))
+
+                // Price & Add to Cart Action Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Price stack
+                    Column {
+                        Text(
+                            "₹${currentVariant.currentPrice.toInt()}",
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = RoyalEmerald
+                        )
+                        if (hasVariants && currentVariant.mrp > currentVariant.currentPrice) {
+                            Text(
+                                "₹${currentVariant.mrp.toInt()}",
+                                fontSize = 10.sp,
+                                color = Color.Gray,
+                                textDecoration = TextDecoration.LineThrough
+                            )
+                        }
+                    }
+
+                    // Stepper / + ADD Button
+                    if (isOutOfStock) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFFE5E7EB)
+                        ) {
+                            Text(
+                                "SOON",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Gray,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                            )
+                        }
+                    } else if (currentInCart > 0) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = RoyalEmerald,
+                            shadowElevation = 2.dp
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 2.dp, vertical = 2.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clickable { AppState.updateCartQty(product.id, currentVariant.id, currentInCart - 1) },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Remove, "Minus", tint = Color.White, modifier = Modifier.size(12.dp))
+                                }
+                                Text(
+                                    text = "$currentInCart",
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 3.dp)
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clickable(enabled = currentInCart < currentVariant.stockQuantity) {
+                                            AppState.updateCartQty(product.id, currentVariant.id, currentInCart + 1)
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Add, "Plus", tint = if (currentInCart < currentVariant.stockQuantity) Color.White else Color.White.copy(alpha = 0.4f), modifier = Modifier.size(12.dp))
+                                }
+                            }
+                        }
+                    } else {
+                        Surface(
+                            onClick = { AppState.addToCart(product.id, currentVariant.id) },
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFFECFDF5),
+                            border = BorderStroke(1.dp, RoyalEmerald)
+                        ) {
+                            Text(
+                                "ADD",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = RoyalEmerald,
+                                modifier = Modifier.padding(horizontal = 11.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Modal to choose size variant if tapped
+    if (showVariantSheet) {
+        @OptIn(ExperimentalMaterial3Api::class)
+        ModalBottomSheet(
+            onDismissRequest = { showVariantSheet = false }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+                    .padding(bottom = 24.dp)
+            ) {
+                Text(
+                    text = "Select Size for ${product.nameEn}",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(16.dp))
+                sortedVariants.forEachIndexed { idx, v ->
+                    val isSel = selectedVariantIndex == idx
+                    Surface(
+                        onClick = {
+                            selectedVariantIndex = idx
+                            showVariantSheet = false
                         },
-                        fontWeight = FontWeight.Bold
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSel) Color(0xFFECFDF5) else MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, if (isSel) RoyalEmerald else Color(0xFFE5E7EB)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    "${v.weight}${v.unit}",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        "₹${v.currentPrice.toInt()}",
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = RoyalEmerald,
+                                        fontSize = 14.sp
+                                    )
+                                    if (v.mrp > v.currentPrice) {
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(
+                                            "₹${v.mrp.toInt()}",
+                                            fontSize = 12.sp,
+                                            color = Color.Gray,
+                                            textDecoration = TextDecoration.LineThrough
+                                        )
+                                    }
+                                }
+                            }
+                            if (isSel) {
+                                Icon(Icons.Default.CheckCircle, null, tint = RoyalEmerald, modifier = Modifier.size(20.dp))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FloatingQuickCartBar(
+    itemCount: Int,
+    subtotal: Double,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = RoyalEmerald,
+        shadowElevation = 8.dp,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(Color.White.copy(alpha = 0.2f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.ShoppingCart, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text(
+                        "$itemCount ${if (itemCount == 1) "ITEM" else "ITEMS"} • ₹${subtotal.toInt()}",
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        "Extra discounts applied",
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 10.sp
                     )
                 }
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "View Cart",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
+                Spacer(Modifier.width(4.dp))
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = Color.White, modifier = Modifier.size(16.dp))
             }
         }
     }
@@ -1313,86 +1552,117 @@ fun AddressCard(address: Address?, onEdit: () -> Unit) {
 
 @Composable
 fun CartItemRow(product: Product, variant: ProductVariant, quantity: Int) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, Color(0xFFF1F3F4))
     ) {
-        AsyncImage(
-            model = product.imageUrls.getOrNull(product.thumbnailIndex) ?: "",
-            contentDescription = product.nameEn,
+        Row(
             modifier = Modifier
-                .size(90.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color(0xFFF2F2F2)),
-            contentScale = ContentScale.Crop
-        )
-
-        Spacer(Modifier.width(16.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                product.nameEn,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                "${variant.weight}${variant.unit}",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "₹${variant.currentPrice.toInt()}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.ExtraBold,
-                color = DeepGold
-            )
-        }
-
-        Column(horizontalAlignment = Alignment.End) {
-            IconButton(
-                onClick = { AppState.updateCartQty(product.id, variant.id, 0) },
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(Icons.Default.DeleteOutline, contentDescription = "Remove", tint = Color.LightGray, modifier = Modifier.size(20.dp))
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+                .fillMaxWidth()
+                .padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Product image
+            Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(4.dp)
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFFF8FAF9)),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    Icons.Default.Remove,
-                    contentDescription = "Decrease",
-                    modifier = Modifier.size(16.dp).clickable { AppState.updateCartQty(product.id, variant.id, quantity - 1) },
-                    tint = RoyalEmerald
+                val imageUrl = product.imageUrls.getOrNull(product.thumbnailIndex) ?: ""
+                if (imageUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = product.nameEn,
+                        modifier = Modifier.size(54.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                } else {
+                    Icon(Icons.Default.ShoppingCart, null, tint = RoyalEmerald.copy(alpha = 0.4f), modifier = Modifier.size(24.dp))
+                }
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    product.nameEn,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    "$quantity",
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    "${variant.weight}${variant.unit}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
                 )
-                val atMaxStock = quantity >= variant.stockQuantity
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = "Increase",
-                    modifier = Modifier
-                        .size(16.dp)
-                        .then(
-                            if (!atMaxStock) Modifier.clickable { AppState.updateCartQty(product.id, variant.id, quantity + 1) }
-                            else Modifier
-                        ),
-                    tint = if (!atMaxStock) RoyalEmerald else Color.LightGray
-                )
+                Spacer(Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "₹${variant.currentPrice.toInt()}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = RoyalEmerald
+                    )
+                    if (variant.mrp > variant.currentPrice) {
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "₹${variant.mrp.toInt()}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray,
+                            textDecoration = TextDecoration.LineThrough
+                        )
+                    }
+                }
+            }
+
+            // Sleek Cart Stepper
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = RoyalEmerald,
+                shadowElevation = 1.dp
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(26.dp)
+                            .clickable { AppState.updateCartQty(product.id, variant.id, quantity - 1) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Remove, "Minus", tint = Color.White, modifier = Modifier.size(13.dp))
+                    }
+                    Text(
+                        text = "$quantity",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                    val atMaxStock = quantity >= variant.stockQuantity
+                    Box(
+                        modifier = Modifier
+                            .size(26.dp)
+                            .clickable(enabled = !atMaxStock) {
+                                AppState.updateCartQty(product.id, variant.id, quantity + 1)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            "Plus",
+                            tint = if (!atMaxStock) Color.White else Color.White.copy(alpha = 0.4f),
+                            modifier = Modifier.size(13.dp)
+                        )
+                    }
+                }
             }
         }
     }
@@ -1572,9 +1842,14 @@ fun AddressSelectionDialog(onDismiss: () -> Unit) {
                     latLng.latitude,
                     latLng.longitude
                 )
+                val cleanLandmark = if (address.isBlank() || address.contains("Fetching", ignoreCase = true)) {
+                    "Location: %.4f, %.4f".format(java.util.Locale.US, latLng.latitude, latLng.longitude)
+                } else {
+                    address
+                }
                 AppState.addNewAddress(
                     house = "Home",
-                    landmark = address.ifBlank { "Pinpoint Location" },
+                    landmark = cleanLandmark,
                     distance = dist,
                     lat = latLng.latitude,
                     lon = latLng.longitude
@@ -2557,6 +2832,7 @@ fun AWSMapPickerDialog(
     }
 
     LaunchedEffect(Unit) {
+        updateAddress(selectedLatLng)
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             try {
                 fusedLocationClient.lastLocation
@@ -2932,7 +3208,12 @@ fun AWSMapPickerDialog(
 
                     Button(
                         onClick = {
-                            onLocationSelected(selectedLatLng, addressText)
+                            val confirmedAddress = if (addressText.isBlank() || addressText.contains("Fetching", ignoreCase = true)) {
+                                "Location: %.4f, %.4f".format(java.util.Locale.US, selectedLatLng.latitude, selectedLatLng.longitude)
+                            } else {
+                                addressText
+                            }
+                            onLocationSelected(selectedLatLng, confirmedAddress)
                             onDismiss()
                         },
                         modifier = Modifier
