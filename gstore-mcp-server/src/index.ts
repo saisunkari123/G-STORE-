@@ -23,7 +23,8 @@ app.use(
   })
 );
 
-app.use(express.json());
+// NOTE: Do NOT use express.json() here. StreamableHTTPServerTransport needs
+// to consume the raw unparsed IncomingMessage stream directly via @hono/node-server.
 
 const PORT = process.env.PORT || 3000;
 
@@ -552,7 +553,7 @@ await server.connect(transport);
 // Universal handler for /mcp, /sse, and fallback endpoints
 const mcpHandler = async (req: express.Request, res: express.Response) => {
   try {
-    await transport.handleRequest(req, res, req.body);
+    await transport.handleRequest(req, res);
   } catch (err: any) {
     console.error("Transport error handling request:", err);
     if (!res.headersSent) {
