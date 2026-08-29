@@ -39,6 +39,10 @@ class MainActivity : ComponentActivity() {
       Log.e("AmplifyInit", "Could not initialize Amplify", error)
     }
     AppState.initializeDatabase(applicationContext)
+    try {
+      org.osmdroid.config.Configuration.getInstance().load(applicationContext, applicationContext.getSharedPreferences("osmdroid", android.content.Context.MODE_PRIVATE))
+      org.osmdroid.config.Configuration.getInstance().userAgentValue = applicationContext.packageName
+    } catch (_: Exception) {}
     AppState.restoreSession()
     enableEdgeToEdge()
     setContent {
