@@ -980,8 +980,7 @@ fun AdminOrdersView() {
                     items(filteredOrders, key = { it.id }) { order ->
                         AdminOrderGridCard(
                             order = order,
-                            onClick = { selectedOrderForDetail = order },
-                            onViewMap = { selectedOrderForMap = it }
+                            onClick = { selectedOrderForDetail = order }
                         )
                     }
                 }
@@ -993,8 +992,7 @@ fun AdminOrdersView() {
 @Composable
 fun AdminOrderGridCard(
     order: com.example.domain.model.Order,
-    onClick: () -> Unit,
-    onViewMap: (Order) -> Unit
+    onClick: () -> Unit
 ) {
     val context = LocalContext.current
     var isUpdatingStatus by remember { mutableStateOf(false) }
@@ -1073,7 +1071,7 @@ fun AdminOrderGridCard(
                 color = Color.Gray
             )
 
-            // Customer Name + Map & Call Quick Action Icons
+            // Customer Name & Phone Call Quick Action Icon
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1089,13 +1087,15 @@ fun AdminOrderGridCard(
                     modifier = Modifier.weight(1f)
                 )
 
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Map Icon Button on Card
+                // Call Icon Button on Card
+                if (order.customerPhone.isNotBlank()) {
                     IconButton(
-                        onClick = { onViewMap(order) },
+                        onClick = {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
+                                data = android.net.Uri.parse("tel:${order.customerPhone}")
+                            }
+                            context.startActivity(intent)
+                        },
                         modifier = Modifier
                             .size(26.dp)
                             .background(
@@ -1104,36 +1104,11 @@ fun AdminOrderGridCard(
                             )
                     ) {
                         Icon(
-                            Icons.Default.LocationOn,
-                            contentDescription = "Map Location",
+                            Icons.Default.Call,
+                            contentDescription = "Call",
                             tint = if (isDark) Color(0xFF34D399) else RoyalEmerald,
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier.size(14.dp)
                         )
-                    }
-
-                    // Call Icon Button on Card
-                    if (order.customerPhone.isNotBlank()) {
-                        IconButton(
-                            onClick = {
-                                val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
-                                    data = android.net.Uri.parse("tel:${order.customerPhone}")
-                                }
-                                context.startActivity(intent)
-                            },
-                            modifier = Modifier
-                                .size(26.dp)
-                                .background(
-                                    (if (isDark) Color(0xFF34D399) else RoyalEmerald).copy(alpha = 0.12f),
-                                    CircleShape
-                                )
-                        ) {
-                            Icon(
-                                Icons.Default.Call,
-                                contentDescription = "Call",
-                                tint = if (isDark) Color(0xFF34D399) else RoyalEmerald,
-                                modifier = Modifier.size(14.dp)
-                            )
-                        }
                     }
                 }
             }
