@@ -208,6 +208,129 @@ const toolsList = [
     },
   },
   {
+    name: "update_product_details",
+    description:
+      "Update a product's details (name, Telugu name, brand, category, description, Telugu description, image, or listing visibility). Uploads new images directly to Cloudinary.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        productId: {
+          type: "string",
+          description: "The unique ID of the product (e.g., 'p_rice_sona')",
+        },
+        name: {
+          type: "string",
+          description: "Optional new English display name",
+        },
+        nameTe: {
+          type: "string",
+          description: "Optional new Telugu display name (e.g., 'లలిత హెచ్.ఎమ్.టి రైస్')",
+        },
+        brand: {
+          type: "string",
+          description: "Optional brand name (e.g., 'Lalitha', 'Heritage', 'Amul', 'Fortune')",
+        },
+        category: {
+          type: "string",
+          description: "Optional new category: 'Dairy Essentials', 'Rice Bags', 'Cooking Oils', 'Dals & Pulses', or 'Spices & Masalas'",
+        },
+        description: {
+          type: "string",
+          description: "Optional new English description",
+        },
+        descriptionTe: {
+          type: "string",
+          description: "Optional new Telugu description",
+        },
+        imageUrl: {
+          type: "string",
+          description: "Optional new image URL. Automatically uploaded and optimized in Cloudinary folder 'ricemart_products'.",
+        },
+        isListed: {
+          type: "boolean",
+          description: "Optional visibility toggle. Set false to unlist/hide from the customer app.",
+        },
+      },
+      required: ["productId"],
+    },
+  },
+  {
+    name: "add_product_variant",
+    description:
+      "Add a new weight or volume size variant (e.g. 5kg, 10kg, 26kg, 500ml, 1L, 200g) under an existing product with selling price, MRP, and stock.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        productId: {
+          type: "string",
+          description: "The unique ID of the product (e.g., 'p_rice_sona')",
+        },
+        size: {
+          type: "string",
+          description: "Weight or volume size string (e.g., '5kg', '10kg', '26kg', '500ml', '1L', '200g')",
+        },
+        price: {
+          type: "number",
+          description: "Selling price in ₹ for this new size variant",
+        },
+        mrp: {
+          type: "number",
+          description: "Optional printed MRP in ₹ (defaults to ~15% above selling price)",
+        },
+        stock: {
+          type: "number",
+          description: "Initial stock count for this size variant (default 50)",
+        },
+      },
+      required: ["productId", "size", "price"],
+    },
+  },
+  {
+    name: "delete_product_variant",
+    description:
+      "Remove a specific size variant (e.g., remove the 5kg option) from a product listing.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        productId: {
+          type: "string",
+          description: "The unique ID of the product (e.g., 'p_rice_sona')",
+        },
+        variantSize: {
+          type: "string",
+          description: "The size/weight of the variant to delete (e.g., '5kg', '10kg', '500ml')",
+        },
+      },
+      required: ["productId", "variantSize"],
+    },
+  },
+  {
+    name: "bulk_update_stock_or_prices",
+    description:
+      "Perform batch/bulk updates to stock or prices across multiple products/variants in a single operation. Perfect for restocking wholesale deliveries or updating prices across multiple items.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        updates: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              productId: { type: "string" },
+              variantSize: { type: "string", description: "Optional specific variant size (e.g. '26kg'). If omitted, updates all variants of the product." },
+              newPrice: { type: "number", description: "Optional new selling price in ₹" },
+              stock: { type: "number", description: "Optional absolute stock quantity" },
+              addStock: { type: "number", description: "Optional stock increment (e.g. +50 bags to add to current stock)" },
+            },
+            required: ["productId"],
+          },
+          description: "List of product updates to apply in batch",
+        },
+      },
+      required: ["updates"],
+    },
+  },
+  {
     name: "get_low_stock_alerts",
     description: "Identify and list all products running low on stock (stock count below threshold, e.g. < 10 units/bags) so the store owner knows what to reorder.",
     inputSchema: {
@@ -641,6 +764,361 @@ async function executeToolCall(name: string, args: any) {
           name: updateResult?.updateProduct?.name,
           variants: formatVariants(updateResult?.updateProduct?.variants),
         },
+      };
+    }
+
+    case "update_product_details": {
+      const getQuery = `
+        query GetProduct($id: ID!) {
+          getProduct(id: $id) {
+            id
+            name
+            category
+            description
+            imageUrls
+            variants {
+              size
+              price
+              stock
+            }
+          }
+        }
+      `;
+      const existingData = await executeGraphQL(getQuery, { id: args?.productId });
+      const product = existingData?.getProduct;
+
+      if (!product) {
+        throw new Error(`Product with ID ${args?.productId} not found.`);
+      }
+
+      // Parse existing description format: "${brand} ::: ${nameTe} ::: ${shortEn} ::: ${shortTe} ::: ${descEn} ::: ${descTe} ::: ${isListed}"
+      const descParts = (product.description || "").split(" ::: ");
+      const oldBrand = descParts[0] || "";
+      const oldNameTe = descParts[1] || "";
+      const oldShortEn = descParts[2] || product.name;
+      const oldShortTe = descParts[3] || "";
+      const oldDescEn = descParts[4] || "";
+      const oldDescTe = descParts[5] || "";
+      const oldIsListed = descParts.length > 6 ? descParts[6] !== "false" : true;
+
+      const brand = args.brand !== undefined ? String(args.brand).trim() : oldBrand;
+      const nameTe = args.nameTe !== undefined ? String(args.nameTe).trim() : oldNameTe;
+      const descEn = args.description !== undefined ? String(args.description).trim() : oldDescEn;
+      const descTe = args.descriptionTe !== undefined ? String(args.descriptionTe).trim() : oldDescTe;
+      const isListed = args.isListed !== undefined ? Boolean(args.isListed) : oldIsListed;
+      const newName = args.name !== undefined ? String(args.name).trim() : product.name;
+      const shortEn = newName;
+      const shortTe = nameTe || oldShortTe;
+
+      const updatedDescString = `${brand} ::: ${nameTe} ::: ${shortEn} ::: ${shortTe} ::: ${descEn} ::: ${descTe} ::: ${isListed}`;
+
+      let updatedImageUrls = product.imageUrls || [];
+      if (args.imageUrl) {
+        const finalUrl = await uploadToCloudinary(args.imageUrl);
+        updatedImageUrls = [finalUrl];
+      }
+
+      const updateMutation = `
+        mutation UpdateProduct($input: UpdateProductInput!) {
+          updateProduct(input: $input) {
+            id
+            name
+            category
+            description
+            imageUrls
+            variants {
+              size
+              price
+              stock
+            }
+          }
+        }
+      `;
+
+      const input: any = {
+        id: product.id,
+        name: newName,
+        description: updatedDescString,
+        imageUrls: updatedImageUrls,
+      };
+
+      if (args.category) {
+        input.category = normalizeCategory(args.category);
+      }
+
+      const updateResult = await executeGraphQL(updateMutation, { input });
+      const updated = updateResult?.updateProduct;
+
+      return {
+        message: "Product details updated successfully",
+        product: {
+          id: updated?.id,
+          name: updated?.name,
+          category: categoryNames[updated?.category] || updated?.category,
+          description: updated?.description,
+          isListed,
+          imageUrls: updated?.imageUrls || [],
+          variants: formatVariants(updated?.variants),
+        },
+      };
+    }
+
+    case "add_product_variant": {
+      const getQuery = `
+        query GetProduct($id: ID!) {
+          getProduct(id: $id) {
+            id
+            name
+            category
+            description
+            imageUrls
+            variants {
+              size
+              price
+              stock
+            }
+          }
+        }
+      `;
+      const existingData = await executeGraphQL(getQuery, { id: args?.productId });
+      const product = existingData?.getProduct;
+
+      if (!product) {
+        throw new Error(`Product with ID ${args?.productId} not found.`);
+      }
+
+      const rawSizeInput = String(args.size).trim();
+      const sizeMatch = rawSizeInput.match(/^(\d+(?:\.\d+)?)\s*([a-zA-Z]+)$/);
+      const unitVal = sizeMatch ? sizeMatch[1] : rawSizeInput;
+      const unitType = sizeMatch ? sizeMatch[2] : (product.category === "c_rice" ? "kg" : "unit");
+
+      const sellingPrice = Number(args.price);
+      const mrpPrice = args.mrp ? Number(args.mrp) : Math.round(sellingPrice * 1.15);
+      const stockCount = args.stock !== undefined ? Number(args.stock) : 50;
+
+      const slug = (product.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "_").slice(0, 15);
+      const variantId = `v_${product.id}_${unitVal}${unitType}_${Date.now().toString().slice(-4)}`;
+      const sku = `SKU-${(product.category || "GEN").toUpperCase().replace("C_", "")}-${slug.toUpperCase()}-${unitVal}${unitType.toUpperCase()}`;
+      const variantSizeString = `${unitVal}:::${unitType}:::${mrpPrice.toFixed(1)}:::${sku}:::${variantId}`;
+
+      const existingVariants: any[] = product.variants || [];
+      const matchIndex = existingVariants.findIndex((v: any) => {
+        const parts = (v.size || "").split(":::");
+        if (parts.length >= 2) {
+          return parts[0].toLowerCase() === unitVal.toLowerCase() && parts[1].toLowerCase() === unitType.toLowerCase();
+        }
+        return v.size.toLowerCase().includes(rawSizeInput.toLowerCase());
+      });
+
+      let updatedVariants = [...existingVariants];
+      if (matchIndex >= 0) {
+        updatedVariants[matchIndex] = {
+          ...updatedVariants[matchIndex],
+          size: variantSizeString,
+          price: sellingPrice,
+          stock: stockCount,
+        };
+      } else {
+        updatedVariants.push({
+          size: variantSizeString,
+          price: sellingPrice,
+          stock: stockCount,
+        });
+      }
+
+      const updateMutation = `
+        mutation UpdateProduct($input: UpdateProductInput!) {
+          updateProduct(input: $input) {
+            id
+            name
+            variants {
+              size
+              price
+              stock
+            }
+          }
+        }
+      `;
+
+      const updateResult = await executeGraphQL(updateMutation, {
+        input: {
+          id: product.id,
+          variants: updatedVariants,
+        },
+      });
+
+      return {
+        message: matchIndex >= 0 ? `Updated existing variant ${rawSizeInput} for ${product.name}` : `Added new variant ${rawSizeInput} to ${product.name}`,
+        product: {
+          id: updateResult?.updateProduct?.id,
+          name: updateResult?.updateProduct?.name,
+          variants: formatVariants(updateResult?.updateProduct?.variants),
+        },
+      };
+    }
+
+    case "delete_product_variant": {
+      const getQuery = `
+        query GetProduct($id: ID!) {
+          getProduct(id: $id) {
+            id
+            name
+            variants {
+              size
+              price
+              stock
+            }
+          }
+        }
+      `;
+      const existingData = await executeGraphQL(getQuery, { id: args?.productId });
+      const product = existingData?.getProduct;
+
+      if (!product) {
+        throw new Error(`Product with ID ${args?.productId} not found.`);
+      }
+
+      const currentVariants: any[] = product.variants || [];
+      if (currentVariants.length <= 1) {
+        return {
+          error: "Cannot delete the only remaining variant of this product. Use delete_product to remove the whole product listing.",
+        };
+      }
+
+      const targetSize = String(args.variantSize).toLowerCase().trim();
+      const remaining = currentVariants.filter((v: any) => {
+        const parts = (v.size || "").split(":::");
+        const weight = parts.length >= 2 ? `${parts[0]}${parts[1]}`.toLowerCase() : v.size.toLowerCase();
+        return !weight.includes(targetSize) && !v.size.toLowerCase().includes(targetSize);
+      });
+
+      if (remaining.length === currentVariants.length) {
+        return {
+          message: `No variant found matching '${args.variantSize}'. Current variants: ${currentVariants.map((v) => v.size).join(", ")}`,
+        };
+      }
+
+      const updateMutation = `
+        mutation UpdateProduct($input: UpdateProductInput!) {
+          updateProduct(input: $input) {
+            id
+            name
+            variants {
+              size
+              price
+              stock
+            }
+          }
+        }
+      `;
+
+      const updateResult = await executeGraphQL(updateMutation, {
+        input: {
+          id: product.id,
+          variants: remaining,
+        },
+      });
+
+      return {
+        message: `Variant '${args.variantSize}' removed successfully from ${product.name}`,
+        product: {
+          id: updateResult?.updateProduct?.id,
+          name: updateResult?.updateProduct?.name,
+          variants: formatVariants(updateResult?.updateProduct?.variants),
+        },
+      };
+    }
+
+    case "bulk_update_stock_or_prices": {
+      const updates = Array.isArray(args?.updates) ? args.updates : [];
+      if (updates.length === 0) {
+        return { message: "No updates provided" };
+      }
+
+      const results: any[] = [];
+      for (const item of updates) {
+        try {
+          const getQuery = `
+            query GetProduct($id: ID!) {
+              getProduct(id: $id) {
+                id
+                name
+                variants {
+                  size
+                  price
+                  stock
+                }
+              }
+            }
+          `;
+          const existingData = await executeGraphQL(getQuery, { id: item.productId });
+          const product = existingData?.getProduct;
+          if (!product) {
+            results.push({ productId: item.productId, status: "ERROR", error: "Product not found" });
+            continue;
+          }
+
+          let modified = false;
+          const updatedVariants = (product.variants || []).map((v: any) => {
+            const isMatch =
+              !item.variantSize ||
+              v.size.toLowerCase().includes(String(item.variantSize).toLowerCase());
+
+            if (isMatch) {
+              modified = true;
+              let newStock = v.stock;
+              if (item.stock !== undefined) {
+                newStock = Number(item.stock);
+              } else if (item.addStock !== undefined) {
+                newStock = Math.max(0, v.stock + Number(item.addStock));
+              }
+
+              const newPrice = item.newPrice !== undefined ? Number(item.newPrice) : v.price;
+              return { ...v, price: newPrice, stock: newStock };
+            }
+            return v;
+          });
+
+          if (modified) {
+            const updateMutation = `
+              mutation UpdateProduct($input: UpdateProductInput!) {
+                updateProduct(input: $input) {
+                  id
+                  name
+                  variants {
+                    size
+                    price
+                    stock
+                  }
+                }
+              }
+            `;
+            await executeGraphQL(updateMutation, {
+              input: { id: product.id, variants: updatedVariants },
+            });
+            results.push({
+              productId: product.id,
+              productName: product.name,
+              status: "UPDATED",
+              updatedVariants: formatVariants(updatedVariants),
+            });
+          } else {
+            results.push({
+              productId: product.id,
+              productName: product.name,
+              status: "SKIPPED",
+              reason: `No variant matched size '${item.variantSize}'`,
+            });
+          }
+        } catch (err: any) {
+          results.push({ productId: item.productId, status: "ERROR", error: err.message });
+        }
+      }
+
+      return {
+        totalRequested: updates.length,
+        totalUpdated: results.filter((r) => r.status === "UPDATED").length,
+        results,
       };
     }
 
