@@ -502,9 +502,9 @@ fun AdminSidePanelContent(onLogoutClicked: () -> Unit, onManageCategoriesClicked
         if (recentOrders.size >= 2) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(0.5.dp, Color.LightGray.copy(alpha = 0.5f))
+                border = BorderStroke(1.dp, if (AppState.isDarkMode) Color(0xFF333333) else Color(0xFFE5E7EB))
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
@@ -564,7 +564,7 @@ fun AdminSidePanelContent(onLogoutClicked: () -> Unit, onManageCategoriesClicked
 
                             drawPath(
                                 path = path,
-                                color = RoyalEmerald,
+                                color = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald,
                                 style = androidx.compose.ui.graphics.drawscope.Stroke(
                                     width = 3.dp.toPx(),
                                     cap = androidx.compose.ui.graphics.StrokeCap.Round
@@ -573,7 +573,7 @@ fun AdminSidePanelContent(onLogoutClicked: () -> Unit, onManageCategoriesClicked
 
                             points.forEach { pt ->
                                 drawCircle(
-                                    color = RoyalEmerald,
+                                    color = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald,
                                     radius = 4.dp.toPx(),
                                     center = pt
                                 )
@@ -598,9 +598,9 @@ fun AdminSidePanelContent(onLogoutClicked: () -> Unit, onManageCategoriesClicked
         if (brandSalesMap.isNotEmpty()) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(0.5.dp, Color.LightGray.copy(alpha = 0.5f))
+                border = BorderStroke(1.dp, if (AppState.isDarkMode) Color(0xFF333333) else Color(0xFFE5E7EB))
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
@@ -623,10 +623,10 @@ fun AdminSidePanelContent(onLogoutClicked: () -> Unit, onManageCategoriesClicked
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "$unitsSold bags",
+                                text = "$unitsSold units",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = RoyalEmerald
+                                color = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald
                             )
                         }
                     }
@@ -636,21 +636,22 @@ fun AdminSidePanelContent(onLogoutClicked: () -> Unit, onManageCategoriesClicked
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-            shape = RoundedCornerShape(12.dp)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, if (AppState.isDarkMode) Color(0xFF333333) else Color(0xFFE5E7EB))
         ) {
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Total Revenue", fontSize = 12.sp, color = Color.Gray)
-                    Text("₹${totalSales.toInt()}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("₹${totalSales.toInt()}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Pending Orders", fontSize = 12.sp, color = Color.Gray)
-                    Text("$pendingCount", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("$pendingCount", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("All Orders Count", fontSize = 12.sp, color = Color.Gray)
-                    Text("$totalOrdersCount", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("$totalOrdersCount", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 }
             }
         }
@@ -873,7 +874,7 @@ fun AdminOrdersView() {
             order.customerName.replace("\\s".toRegex(), "").lowercase().contains(cleanQuery) ||
             order.customerPhone.replace("\\s".toRegex(), "").lowercase().contains(cleanQuery)
             
-        val matchesStatus = selectedStatusFilter == null || order.status == selectedStatusFilter
+        val matchesStatus = cleanQuery.isNotEmpty() || selectedStatusFilter == null || order.status == selectedStatusFilter
         
         matchesSearch && matchesStatus
     }.sortedByDescending { it.createdAt }
@@ -1478,6 +1479,13 @@ fun FilterRadioButtonRow(
     }
 }
 
+private fun formatAdminProductName(name: String): String {
+    val trimmed = name.trim()
+    val lastSpaceIdx = trimmed.lastIndexOf(' ')
+    if (lastSpaceIdx == -1) return trimmed
+    return trimmed.substring(0, lastSpaceIdx) + "\u00A0" + trimmed.substring(lastSpaceIdx + 1)
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (Product) -> Unit) {
@@ -1488,9 +1496,18 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
     var tempSort by remember { mutableStateOf("Default") }
     var stockFilter by remember { mutableStateOf("All") } // "All", "In Stock", "Out of Stock"
     var tempStockFilter by remember { mutableStateOf("All") }
+    var selectedProductForDetail by remember { mutableStateOf<Product?>(null) }
 
     var showCategoryFilterSheet by remember { mutableStateOf(false) }
     var showSortSheet by remember { mutableStateOf(false) }
+
+    if (selectedProductForDetail != null) {
+        AdminProductDetailSheet(
+            product = selectedProductForDetail!!,
+            onDismiss = { selectedProductForDetail = null },
+            onEditClicked = onEditProductClicked
+        )
+    }
 
     val filteredProducts = AppState.productsList.filter { product ->
         val cleanQuery = searchQuery.replace("\\s".toRegex(), "").lowercase()
@@ -1498,9 +1515,10 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
                 product.nameEn.replace("\\s".toRegex(), "").lowercase().contains(cleanQuery) ||
                 product.brand.replace("\\s".toRegex(), "").lowercase().contains(cleanQuery)
         
-        val matchesCategory = appliedCategories.isEmpty() || appliedCategories.contains(product.categoryId)
+        // If search query is active, search across ALL products (ignoring category filter)
+        val matchesCategory = cleanQuery.isNotEmpty() || appliedCategories.isEmpty() || appliedCategories.contains(product.categoryId)
         
-        val matchesStock = when (stockFilter) {
+        val matchesStock = cleanQuery.isNotEmpty() || when (stockFilter) {
             "In Stock" -> product.variants.any { it.stockQuantity > 0 }
             "Out of Stock" -> product.variants.all { it.stockQuantity <= 0 }
             else -> true
@@ -1543,40 +1561,47 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
         },
         modifier = Modifier.fillMaxSize()
     ) {
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Product Catalog", fontSize = 20.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
-                Button(onClick = onAddProductClicked, colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald)) {
+                Text("Product Catalog", fontSize = 18.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
+                Button(
+                    onClick = onAddProductClicked, 
+                    colors = ButtonDefaults.buttonColors(containerColor = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald),
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                    modifier = Modifier.height(36.dp)
+                ) {
                     Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp), tint = Color.White)
-                    Text("New Item", modifier = Modifier.padding(start = 4.dp), color = Color.White)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("New Item", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
                 }
             }
             
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Search catalog by name or brand...", color = Color.Gray) },
-                leadingIcon = { Icon(Icons.Default.Search, null, tint = RoyalEmerald) },
-                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Search catalog by name or brand...", color = Color.Gray, fontSize = 13.sp) },
+                leadingIcon = { Icon(Icons.Default.Search, null, tint = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald) },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
-                textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface),
+                textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = MaterialTheme.colorScheme.onSurface,
                     unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    focusedBorderColor = RoyalEmerald,
-                    unfocusedBorderColor = Color.LightGray
+                    focusedBorderColor = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald,
+                    unfocusedBorderColor = if (AppState.isDarkMode) Color(0xFF3A3A3A) else Color.LightGray
                 )
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Filter Buttons Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Category Filter Button
@@ -1586,19 +1611,19 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
                         tempSelectedCategories = appliedCategories
                         showCategoryFilterSheet = true
                     },
-                    modifier = Modifier.weight(1f).height(40.dp),
+                    modifier = Modifier.weight(1f).height(38.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (appliedCategories.isNotEmpty()) RoyalEmerald else MaterialTheme.colorScheme.surfaceVariant,
+                        containerColor = if (appliedCategories.isNotEmpty()) (if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald) else (if (AppState.isDarkMode) Color(0xFF242424) else MaterialTheme.colorScheme.surfaceVariant),
                         contentColor = if (appliedCategories.isNotEmpty()) Color.White else MaterialTheme.colorScheme.onSurface
                     ),
                     shape = RoundedCornerShape(10.dp),
                     contentPadding = PaddingValues(horizontal = 8.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.FilterList, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.FilterList, contentDescription = null, modifier = Modifier.size(15.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(catText, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Text(catText, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(15.dp))
                     }
                 }
 
@@ -1616,24 +1641,24 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
                         tempStockFilter = stockFilter
                         showSortSheet = true
                     },
-                    modifier = Modifier.weight(1f).height(40.dp),
+                    modifier = Modifier.weight(1f).height(38.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isSortActive) RoyalEmerald else MaterialTheme.colorScheme.surfaceVariant,
+                        containerColor = if (isSortActive) (if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald) else (if (AppState.isDarkMode) Color(0xFF242424) else MaterialTheme.colorScheme.surfaceVariant),
                         contentColor = if (isSortActive) Color.White else MaterialTheme.colorScheme.onSurface
                     ),
                     shape = RoundedCornerShape(10.dp),
                     contentPadding = PaddingValues(horizontal = 8.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(15.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(sortStockText, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Text(sortStockText, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(15.dp))
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             
             if (filteredProducts.isEmpty()) {
                 Column(
@@ -1643,15 +1668,23 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("No items found", color = Color.Gray)
+                    Icon(Icons.Default.Inventory2, null, modifier = Modifier.size(56.dp), tint = RoyalEmerald.copy(alpha = 0.3f))
+                    Text("No items found", color = Color.Gray, fontSize = 14.sp)
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                // 2-Column Grid Layout for Products in Inventory
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f)
                 ) {
                     items(filteredProducts, key = { it.id }) { product ->
-                        InventoryItemCard(product, onEditClicked = onEditProductClicked)
+                        AdminInventoryGridCard(
+                            product = product,
+                            onClick = { selectedProductForDetail = product },
+                            onEditClicked = { onEditProductClicked(product) }
+                        )
                     }
                 }
             }
@@ -1662,7 +1695,8 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
 
     if (showCategoryFilterSheet) {
         ModalBottomSheet(
-            onDismissRequest = { showCategoryFilterSheet = false }
+            onDismissRequest = { showCategoryFilterSheet = false },
+            containerColor = MaterialTheme.colorScheme.surface
         ) {
             Column(
                 modifier = Modifier
@@ -1673,7 +1707,7 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
                 Text(
                     text = "Select Categories",
                     fontWeight = FontWeight.Black,
-                    fontSize = 20.sp,
+                    fontSize = 18.sp,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
@@ -1699,15 +1733,15 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     OutlinedButton(
                         onClick = { showCategoryFilterSheet = false },
-                        modifier = Modifier.weight(1f).height(50.dp),
+                        modifier = Modifier.weight(1f).height(46.dp),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("Cancel", fontWeight = FontWeight.Bold)
@@ -1718,8 +1752,8 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
                             appliedCategories = tempSelectedCategories
                             showCategoryFilterSheet = false
                         },
-                        modifier = Modifier.weight(1f).height(50.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald),
+                        modifier = Modifier.weight(1f).height(46.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("Apply Filter", color = Color.White, fontWeight = FontWeight.Bold)
@@ -1731,7 +1765,8 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
 
     if (showSortSheet) {
         ModalBottomSheet(
-            onDismissRequest = { showSortSheet = false }
+            onDismissRequest = { showSortSheet = false },
+            containerColor = MaterialTheme.colorScheme.surface
         ) {
             Column(
                 modifier = Modifier
@@ -1742,7 +1777,7 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
                 Text(
                     text = "Sort & Filter",
                     fontWeight = FontWeight.Black,
-                    fontSize = 20.sp,
+                    fontSize = 18.sp,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
@@ -1752,7 +1787,7 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Gray,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                    modifier = Modifier.padding(vertical = 6.dp)
                 )
 
                 FilterRadioButtonRow(
@@ -1776,14 +1811,14 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
                     onClick = { tempSort = "What's New" }
                 )
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp, color = Color.LightGray)
+                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), thickness = 0.5.dp, color = Color.LightGray)
 
                 Text(
                     text = "STOCK STATUS",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Gray,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                    modifier = Modifier.padding(vertical = 6.dp)
                 )
 
                 FilterRadioButtonRow(
@@ -1802,15 +1837,15 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
                     onClick = { tempStockFilter = "Out of Stock" }
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     OutlinedButton(
                         onClick = { showSortSheet = false },
-                        modifier = Modifier.weight(1f).height(50.dp),
+                        modifier = Modifier.weight(1f).height(46.dp),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("Cancel", fontWeight = FontWeight.Bold)
@@ -1822,8 +1857,8 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
                             stockFilter = tempStockFilter
                             showSortSheet = false
                         },
-                        modifier = Modifier.weight(1f).height(50.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald),
+                        modifier = Modifier.weight(1f).height(46.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("Apply", color = Color.White, fontWeight = FontWeight.Bold)
@@ -1835,61 +1870,229 @@ fun AdminInventoryView(onAddProductClicked: () -> Unit, onEditProductClicked: (P
 }
 
 @Composable
-fun InventoryItemCard(product: Product, onEditClicked: (Product) -> Unit) {
+fun AdminInventoryGridCard(
+    product: Product,
+    onClick: () -> Unit,
+    onEditClicked: () -> Unit
+) {
+    val isDark = AppState.isDarkMode
+    val isAllOutOfStock = product.variants.all { it.stockQuantity <= 0 }
+    val isLowStock = product.variants.any { it.stockQuantity in 1..4 }
+    val minPrice = product.variants.minOfOrNull { it.currentPrice } ?: 0.0
+
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, if (isDark) Color(0xFF333333) else Color(0xFFE5E7EB))
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Product Image Box (600x400 aspect ratio)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(115.dp)
+                    .background(if (isDark) Color(0xFF1E1E1E) else Color(0xFFF3F4F6))
+            ) {
+                AsyncImage(
+                    model = product.imageUrls.getOrNull(product.thumbnailIndex) ?: "",
+                    contentDescription = product.nameEn,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+
+                // Stock / Visibility Badge
+                Surface(
+                    color = when {
+                        !product.isEnabled -> Color.Red.copy(alpha = 0.85f)
+                        isAllOutOfStock -> Color.Red.copy(alpha = 0.85f)
+                        isLowStock -> Color(0xFFF59E0B).copy(alpha = 0.9f)
+                        else -> (if (isDark) Color(0xFF059669) else RoyalEmerald).copy(alpha = 0.9f)
+                    },
+                    shape = RoundedCornerShape(topStart = 0.dp, bottomStart = 8.dp, topEnd = 0.dp, bottomEnd = 0.dp),
+                    modifier = Modifier.align(Alignment.TopEnd)
+                ) {
+                    Text(
+                        text = when {
+                            !product.isEnabled -> "Hidden"
+                            isAllOutOfStock -> "Out of Stock"
+                            isLowStock -> "Low Stock"
+                            else -> "In Stock"
+                        },
+                        color = Color.White,
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            // Card Body
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // Brand Name
+                Text(
+                    text = product.brand.ifBlank { "G-STORE" },
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Black,
+                    color = if (isDark) Color(0xFF34D399) else RoyalEmerald,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+
+                // Product Title
+                Text(
+                    text = formatAdminProductName(product.nameEn),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.5.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    lineHeight = 16.sp,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.heightIn(min = 32.dp)
+                )
+
+                // Variants summary
+                Text(
+                    text = "${product.variants.size} sizes • from ₹${minPrice.toInt()}",
+                    fontSize = 10.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.Gray,
+                    maxLines = 1
+                )
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                // Bottom Action Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(
+                        onClick = onClick,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(28.dp),
+                        contentPadding = PaddingValues(0.dp),
+                        shape = RoundedCornerShape(6.dp),
+                        border = BorderStroke(0.5.dp, if (isDark) Color(0xFF4B5563) else Color(0xFFD1D5DB))
+                    ) {
+                        Text("Details", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    IconButton(
+                        onClick = onEditClicked,
+                        modifier = Modifier
+                            .size(28.dp)
+                            .background((if (isDark) Color(0xFF34D399) else RoyalEmerald).copy(alpha = 0.12f), RoundedCornerShape(6.dp))
+                    ) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Edit",
+                            tint = if (isDark) Color(0xFF34D399) else RoyalEmerald,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AdminProductDetailSheet(
+    product: Product,
+    onDismiss: () -> Unit,
+    onEditClicked: (Product) -> Unit
+) {
     var showAddVariantDialog by remember { mutableStateOf(false) }
     var variantToEdit by remember { mutableStateOf<ProductVariant?>(null) }
     var variantToDelete by remember { mutableStateOf<ProductVariant?>(null) }
     var showProductDeleteConfirmation by remember { mutableStateOf(false) }
-    // Local shadow of isEnabled so the toggle feels instant (state updates from flow are async)
     var isListed by remember(product.id) { mutableStateOf(product.isEnabled) }
     var showHideConfirmation by remember { mutableStateOf(false) }
+    val isDark = AppState.isDarkMode
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color(0xFFEEEEEE))
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
-                // Product Thumbnail in Inventory
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 10.dp)
+                .padding(bottom = 32.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Top Image & Info
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 AsyncImage(
                     model = product.imageUrls.getOrNull(product.thumbnailIndex) ?: "",
                     contentDescription = null,
                     modifier = Modifier
-                        .size(80.dp)
+                        .size(90.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.background),
+                        .background(if (isDark) Color(0xFF1E1E1E) else Color(0xFFF3F4F6)),
                     contentScale = ContentScale.Crop
                 )
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        product.nameEn, 
-                        fontWeight = FontWeight.Bold, 
-                        fontSize = 18.sp, 
-                        color = MaterialTheme.colorScheme.onSurface
+                        text = product.nameEn,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 17.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        lineHeight = 21.sp
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(product.brand, fontSize = 12.sp, color = RoyalEmerald, fontWeight = FontWeight.Black)
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(color = Color(0xFFEEEEEE))
-            
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp), 
-                horizontalArrangement = Arrangement.SpaceBetween, 
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Listed toggle — hides/shows product from customer catalog, does NOT delete it
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(modifier = Modifier.height(3.dp))
                     Text(
-                        "Listed",
+                        text = "Brand: ${product.brand.ifBlank { "G-STORE" }}",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (isListed) RoyalEmerald else Color.Gray,
+                        color = if (isDark) Color(0xFF34D399) else RoyalEmerald
+                    )
+                    val catName = AppState.categoriesList.find { it.id == product.categoryId }?.nameEn ?: product.categoryId
+                    Text(
+                        text = "Category: $catName",
+                        fontSize = 11.5.sp,
+                        color = Color.Gray
+                    )
+                }
+            }
+
+            HorizontalDivider(color = if (isDark) Color(0xFF333333) else Color(0xFFEEEEEE))
+
+            // Listed Toggle & Actions Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Listed Toggle
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = if (isListed) "Listed in Store" else "Hidden from Store",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isListed) (if (isDark) Color(0xFF34D399) else RoyalEmerald) else Color.Red,
                         modifier = Modifier.padding(end = 8.dp)
                     )
                     Switch(
@@ -1904,23 +2107,36 @@ fun InventoryItemCard(product: Product, onEditClicked: (Product) -> Unit) {
                         },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
-                            checkedTrackColor = RoyalEmerald
+                            checkedTrackColor = if (isDark) Color(0xFF34D399) else RoyalEmerald
                         ),
-                        modifier = Modifier.scale(0.8f)
+                        modifier = Modifier.scale(0.85f)
                     )
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { onEditClicked(product) }) {
-                        Icon(Icons.Default.Edit, "Edit Product", tint = Color.Gray)
+                // Edit & Delete Action Buttons
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { onDismiss(); onEditClicked(product) },
+                        colors = ButtonDefaults.buttonColors(containerColor = if (isDark) Color(0xFF34D399) else RoyalEmerald),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        modifier = Modifier.height(34.dp)
+                    ) {
+                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.White)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Edit Info", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
-                    // Separate trash icon for permanent deletion
-                    IconButton(onClick = { showProductDeleteConfirmation = true }) {
-                        Icon(Icons.Default.Delete, "Delete Product", tint = Color.Red.copy(alpha = 0.7f))
+
+                    IconButton(
+                        onClick = { showProductDeleteConfirmation = true },
+                        modifier = Modifier
+                            .size(34.dp)
+                            .background(Color.Red.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red, modifier = Modifier.size(16.dp))
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
 
             if (showHideConfirmation) {
                 AlertDialog(
@@ -1944,37 +2160,16 @@ fun InventoryItemCard(product: Product, onEditClicked: (Product) -> Unit) {
                 )
             }
 
-            if (!isListed) {
-                Surface(
-                    color = Color.Red.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(Icons.Default.VisibilityOff, contentDescription = null, tint = Color.Red, modifier = Modifier.size(16.dp))
-                        Text(
-                            text = "Hidden from customers",
-                            fontSize = 12.sp,
-                            color = Color.Red,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-
             if (showProductDeleteConfirmation) {
                 AlertDialog(
                     onDismissRequest = { showProductDeleteConfirmation = false },
                     title = { Text("Delete Product", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
-                    text = { Text("Permanently delete \"${product.nameEn}\" and all its variants? This cannot be undone.\n\nTip: Use the Listed toggle to hide it from customers instead.") },
+                    text = { Text("Permanently delete \"${product.nameEn}\" and all its variants? This cannot be undone.") },
                     confirmButton = {
                         TextButton(onClick = {
                             showProductDeleteConfirmation = false
                             AppState.adminDeleteProduct(product.id)
+                            onDismiss()
                         }) {
                             Text("Delete Permanently", color = Color.Red, fontWeight = FontWeight.Bold)
                         }
@@ -1987,76 +2182,107 @@ fun InventoryItemCard(product: Product, onEditClicked: (Product) -> Unit) {
                 )
             }
 
-            Text("Variants", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
-            
-            product.variants.sortedByDescending { it.weight.toDoubleOrNull() ?: 0.0 }.forEach { variant ->
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp, color = Color.LightGray)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+            HorizontalDivider(color = if (isDark) Color(0xFF333333) else Color(0xFFEEEEEE))
+
+            // Variants Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "VARIANTS & PRICING (${product.variants.size})",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color.Gray,
+                    letterSpacing = 1.sp
+                )
+                Button(
+                    onClick = { showAddVariantDialog = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = (if (isDark) Color(0xFF34D399) else RoyalEmerald).copy(alpha = 0.15f)),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                    modifier = Modifier.height(28.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("${variant.weight} ${variant.unit}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("₹${variant.currentPrice.toInt()}", fontWeight = FontWeight.Black, color = RoyalEmerald)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("MRP ₹${variant.mrp.toInt()}", fontSize = 12.sp, color = Color.Gray, textDecoration = TextDecoration.LineThrough)
-                        }
-                        if (variant.stockQuantity < 5) {
-                            Surface(
-                                color = Color(0xFFFEE2E2),
-                                shape = RoundedCornerShape(6.dp),
-                                modifier = Modifier.padding(top = 2.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Warning,
-                                        contentDescription = "Low Stock Warning",
-                                        tint = Color.Red,
-                                        modifier = Modifier.size(10.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = "Low Stock: only ${variant.stockQuantity} left",
-                                        color = Color.Red,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 10.sp
-                                    )
-                                }
-                            }
-                        } else {
-                            Text(
-                                text = "Stock: ${variant.stockQuantity}",
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp
-                            )
-                        }
-                        Text(if(variant.stockQuantity > 0) "Available" else "Out of Stock", color = if(variant.stockQuantity > 0) RoyalEmerald else Color.Red, fontSize = 11.sp)
-                    }
-                    
-                    Row {
-                        IconButton(onClick = { variantToEdit = variant }) {
-                            Icon(Icons.Default.Edit, "Edit Variant", tint = RoyalEmerald, modifier = Modifier.size(20.dp))
-                        }
-                        IconButton(onClick = { variantToDelete = variant }) {
-                            Icon(Icons.Default.Delete, "Delete Variant", tint = Color.Red.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
-                        }
-                    }
+                    Icon(Icons.Default.Add, null, modifier = Modifier.size(14.dp), tint = if (isDark) Color(0xFF34D399) else RoyalEmerald)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Add Variant", fontSize = 11.sp, color = if (isDark) Color(0xFF34D399) else RoyalEmerald, fontWeight = FontWeight.Bold)
                 }
             }
 
-            Button(
-                onClick = { showAddVariantDialog = true },
-                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald.copy(alpha = 0.1f)),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Icon(Icons.Default.Add, null, tint = RoyalEmerald, modifier = Modifier.size(16.dp))
-                Text("Add New Variant", color = RoyalEmerald, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            // Variants List Cards
+            product.variants.sortedByDescending { it.weight.toDoubleOrNull() ?: 0.0 }.forEach { variant ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = if (isDark) Color(0xFF242424) else Color(0xFFF8FAFC)),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(0.5.dp, if (isDark) Color(0xFF3A3A3A) else Color(0xFFE2E8F0))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "${variant.weight} ${variant.unit}",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "₹${variant.currentPrice.toInt()}",
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 15.sp,
+                                    color = if (isDark) Color(0xFF34D399) else RoyalEmerald
+                                )
+                                if (variant.mrp > variant.currentPrice) {
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "MRP ₹${variant.mrp.toInt()}",
+                                        fontSize = 12.sp,
+                                        color = Color.Gray,
+                                        textDecoration = TextDecoration.LineThrough
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(2.dp))
+                            if (variant.stockQuantity < 5) {
+                                Text(
+                                    text = if (variant.stockQuantity <= 0) "⚠️ Out of Stock" else "⚠️ Low Stock: ${variant.stockQuantity} left",
+                                    color = Color.Red,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            } else {
+                                Text(
+                                    text = "Stock: ${variant.stockQuantity} units available",
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            IconButton(
+                                onClick = { variantToEdit = variant },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(Icons.Default.Edit, "Edit", tint = if (isDark) Color(0xFF34D399) else RoyalEmerald, modifier = Modifier.size(16.dp))
+                            }
+                            IconButton(
+                                onClick = { variantToDelete = variant },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(Icons.Default.Delete, "Delete", tint = Color.Red.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -2075,13 +2301,13 @@ fun InventoryItemCard(product: Product, onEditClicked: (Product) -> Unit) {
     if (variantToDelete != null) {
         AlertDialog(
             onDismissRequest = { variantToDelete = null },
-            title = { Text("Delete Variant") },
+            title = { Text("Delete Variant", fontWeight = FontWeight.Bold) },
             text = { Text("Are you sure you want to delete the ${variantToDelete!!.weight} ${variantToDelete!!.unit} variant?") },
             confirmButton = {
-                TextButton(onClick = { 
+                TextButton(onClick = {
                     AppState.adminDeleteProductVariant(product.id, variantToDelete!!.id)
-                    variantToDelete = null 
-                }) { Text("Delete", color = Color.Red) }
+                    variantToDelete = null
+                }) { Text("Delete", color = Color.Red, fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
                 TextButton(onClick = { variantToDelete = null }) { Text("Cancel") }

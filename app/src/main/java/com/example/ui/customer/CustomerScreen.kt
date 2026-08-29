@@ -305,7 +305,8 @@ fun CustomerCatalogView(
             it.nameEn.replace("\\s".toRegex(), "").lowercase().contains(cleanQuery) ||
             it.brand.replace("\\s".toRegex(), "").lowercase().contains(cleanQuery)
         )
-        val matchesCategory = appliedCategories.isEmpty() || appliedCategories.contains(it.categoryId)
+        // If search query is active, search across ALL products (ignoring category filter); otherwise filter by category
+        val matchesCategory = cleanQuery.isNotEmpty() || appliedCategories.isEmpty() || appliedCategories.contains(it.categoryId)
         val matchesDiscount = !onlyWithDiscount || it.variants.any { v -> v.currentPrice < v.mrp }
         matchesQuery && matchesCategory && matchesDiscount
     }.let { list ->
