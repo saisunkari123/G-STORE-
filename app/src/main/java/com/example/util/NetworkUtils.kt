@@ -58,15 +58,15 @@ object NetworkUtils {
         val msg = throwable?.toString() ?: ""
         return when {
             msg.contains("UserNotConfirmedException", ignoreCase = true) || msg.contains("not confirmed", ignoreCase = true) ->
-                "User is not confirmed. Please confirm sign up first."
+                "Account is not confirmed. Please complete verification."
             msg.contains("UserNotFoundException", ignoreCase = true) || msg.contains("not found", ignoreCase = true) ->
-                "Email is not registered. Please create an account."
+                "This mobile number is not registered. Please create an account."
             msg.contains("NotAuthorizedException", ignoreCase = true) || msg.contains("not authorized", ignoreCase = true) ->
-                "Password incorrect. Please try again."
+                "Incorrect mobile number or password. Please check your details and try again."
             msg.contains("UsernameExistsException", ignoreCase = true) || msg.contains("already exists", ignoreCase = true) ->
-                "An account with this phone/email already exists."
+                "An account with this mobile number already exists. Please log in."
             msg.contains("InvalidParameterException", ignoreCase = true) || msg.contains("invalid parameter", ignoreCase = true) ->
-                "Please enter valid phone number and password."
+                "Please enter a valid 10-digit mobile number and password."
             else -> "$defaultActionName failed: ${throwable?.localizedMessage ?: "Unknown error"}"
         }
     }

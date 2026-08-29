@@ -354,6 +354,11 @@ object AppState {
         isNetworkLoading = true
         
         val digitsOnly = phone.filter { it.isDigit() }
+        if (digitsOnly.length < 10) {
+            authError = "Please enter a valid 10-digit mobile number"
+            isNetworkLoading = false
+            return
+        }
         val cleanPhone = if (digitsOnly.length > 10) digitsOnly.takeLast(10) else digitsOnly
         val formattedPhone = if (cleanPhone.length == 10) "+91$cleanPhone" else phone.trim()
 
