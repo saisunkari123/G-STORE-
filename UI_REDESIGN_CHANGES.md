@@ -23,12 +23,12 @@ The customer shopping interface of G-Store has been transformed into a modern qu
 ## 🎨 UI Redesign Details
 
 ### 1. Clutter-Free Grid Cards (`CustomerProductCard`)
-- **Clean 2-Element Text Layout**:
-  - Only displays **Product Name** (2 lines max) and **Pack Size / Weight** (e.g. `500 ml` or `26 kg`).
-  - **Removed Text Clutter**: Removed multi-line descriptions and watermark brand badges from the small card to keep the grid clean, modern, and easily scannable.
-- **Fixed Uniform Image Canvas (115dp)**:
-  - Every card features a fixed 115dp image container with `ContentScale.Fit` and 6dp padding inside `#F8FAF9`.
-  - Ensures milk packets, rice bags, and bottles sit in a consistent, uniform canvas with **zero image distortion or uneven card heights**.
+- **Clean 2-Element Text Layout with Balanced Word Wrapping**:
+  - Displays **Product Name** (2 lines max) with smart word binding (`formatProductNameNoOrphan`), guaranteeing that whenever a product title wraps to a 2nd line, it contains **at least 2 words** rather than a single trailing orphan word.
+  - Displays **Pack Size / Weight** (e.g. `500 ml` or `26 kg`).
+- **Full-Bleed 600×400 (3:2) Image Canvas (115dp)**:
+  - Every card features a fixed 115dp image container with `ContentScale.Crop` matching 600×400 standard product images edge-to-edge.
+  - Zero image distortion or letterbox margin bars.
 - **Interactive Multi-Size Pill**:
   - If a product has multiple sizes, a clean `X Sizes ▾` chip allows switching variants directly or viewing pack options.
 - **Instant `+ ADD` $\rightarrow$ `- 1 +` Stepper**:
@@ -36,15 +36,15 @@ The customer shopping interface of G-Store has been transformed into a modern qu
 
 ---
 
-### 2. Rich Product Details Bottom Sheet (`ProductDetailBottomSheet`)
+### 2. Streamlined English-Only Product Details Bottom Sheet (`ProductDetailBottomSheet`)
 - **Full View on Tap**:
   - Tapping any product image or title on the **Home Grid** or in the **Cart** opens a full quick-commerce bottom sheet.
-- **Rich Information Displayed**:
-  - Large 200dp high-res image hero with `ContentScale.Fit` and discount badge.
-  - English and Telugu Product Names (e.g. *లలిత హెచ్.ఎమ్.టి రైస్*).
-  - Brand Tag (e.g. `Brand: AMUL`, `Brand: HERITAGE`).
+- **Information Displayed**:
+  - 200dp high-res image hero with discount badge.
+  - English Product Name and Brand Tag (e.g. `Brand: AMUL`, `Brand: HERITAGE`).
+  - All Telugu subtitles and descriptions removed for a clean, uniform English interface.
   - Horizontal pack size selector cards showing weight, selling price, MRP, and savings.
-  - "About Product" section with full English & Telugu descriptions.
+  - "About Product" section with clean English description.
   - Sticky bottom action bar with live price, strikethrough MRP, and a large **"ADD TO CART"** button / **`- qty +` stepper**.
 
 ---
