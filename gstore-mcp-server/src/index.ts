@@ -29,7 +29,6 @@ const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || "8SR-robZhuJf
 
 async function uploadToCloudinary(imageUrlOrData: string): Promise<string> {
   try {
-    // If it's already a Cloudinary URL from this account, don't re-upload
     if (imageUrlOrData.includes(`res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}`)) {
       return imageUrlOrData;
     }
@@ -53,7 +52,6 @@ async function uploadToCloudinary(imageUrlOrData: string): Promise<string> {
 
     const data: any = await res.json();
     if (data && data.secure_url) {
-      console.log("Uploaded image to Cloudinary:", data.secure_url);
       return data.secure_url;
     }
     return imageUrlOrData;
@@ -103,6 +101,10 @@ const toolsList = [
         category: {
           type: "string",
           description: "Optional category filter (e.g., 'Rice Bags', 'Cooking Oils', 'Dals & Pulses', 'Dairy Essentials', 'Spices & Masalas')",
+        },
+        includeUnlisted: {
+          type: "boolean",
+          description: "If true, includes hidden/unlisted products as well. Default false.",
         },
       },
     },
@@ -416,23 +418,31 @@ async function executeToolCall(name: string, args: any) {
       // Filter out metadata records
       rawItems = rawItems.filter((p: any) => !p.id.startsWith("sys_") && p.category !== "metadata");
 
+      const products = rawItems
+        .map((p: any) => {
+          const descParts = (p.description || "").split(" ::: ");
+          const isListed = descParts.length > 6 ? descParts[6] !== "false" : true;
+          return {
+            id: p.id,
+            name: p.name,
+            category: categoryNames[p.category] || p.category,
+            description: p.description,
+            isListed,
+            imageUrls: p.imageUrls || [],
+            variants: formatVariants(p.variants),
+          };
+        })
+        .filter((p: any) => args?.includeUnlisted || p.isListed);
+
       if (args?.category) {
         const filter = String(args.category).toLowerCase();
-        rawItems = rawItems.filter(
+        const filtered = products.filter(
           (p: any) =>
-            (p.category && p.category.toLowerCase().includes(filter)) ||
-            (categoryNames[p.category] && categoryNames[p.category].toLowerCase().includes(filter))
+            p.category.toLowerCase().includes(filter) ||
+            p.name.toLowerCase().includes(filter)
         );
+        return { count: filtered.length, products: filtered };
       }
-
-      const products = rawItems.map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        category: categoryNames[p.category] || p.category,
-        description: p.description,
-        imageUrls: p.imageUrls || [],
-        variants: formatVariants(p.variants),
-      }));
 
       return { count: products.length, products };
     }
@@ -458,11 +468,15 @@ async function executeToolCall(name: string, args: any) {
       const p = data?.getProduct;
       if (!p) return { message: "Product not found" };
 
+      const descParts = (p.description || "").split(" ::: ");
+      const isListed = descParts.length > 6 ? descParts[6] !== "false" : true;
+
       return {
         id: p.id,
         name: p.name,
         category: categoryNames[p.category] || p.category,
         description: p.description,
+        isListed,
         imageUrls: p.imageUrls || [],
         variants: formatVariants(p.variants),
       };
@@ -478,7 +492,7 @@ async function executeToolCall(name: string, args: any) {
       const mrpPrice = args.mrp ? Number(args.mrp) : Math.round(sellingPrice * 1.15);
       const stockCount = args.stock !== undefined ? Number(args.stock) : 50;
 
-      // Parse size input into value and unit (e.g., '500ml' -> 500, 'ml', '1L' -> 1, 'L', '26kg' -> 26, 'kg')
+      // Parse size input into value and unit
       const rawSizeInput = (args.size || (categoryKey === "c_rice" ? "26kg" : categoryKey === "c_oil" ? "1L" : categoryKey === "c_dairy" ? "500ml" : "1kg")).trim();
       const sizeMatch = rawSizeInput.match(/^(\d+(?:\.\d+)?)\s*([a-zA-Z]+)$/);
       const unitVal = sizeMatch ? sizeMatch[1] : (categoryKey === "c_rice" ? "26" : "500");
@@ -488,7 +502,7 @@ async function executeToolCall(name: string, args: any) {
       const sku = `SKU-${categoryKey.toUpperCase().replace("C_", "")}-${slug.toUpperCase().slice(0, 6)}-${unitVal}`;
       const variantSizeString = `${unitVal}:::${unitType}:::${mrpPrice.toFixed(1)}:::${sku}:::${variantId}`;
 
-      // Upload image to Cloudinary (or use default category placeholder uploaded to Cloudinary)
+      // Upload image to Cloudinary
       const sourceImage = args.imageUrl || categoryPlaceholders[categoryKey] || categoryPlaceholders["c_dairy"];
       const finalCloudinaryUrl = await uploadToCloudinary(sourceImage);
 
@@ -513,7 +527,7 @@ async function executeToolCall(name: string, args: any) {
         id: productId,
         name: cleanName,
         category: categoryKey,
-        description: args.description || `${cleanName} - Fresh and authentic ${categoryNames[categoryKey] || "grocery item"} available at G-Store.`,
+        description: `G-Store :::  ::: ${cleanName} :::  ::: ${args.description || cleanName} :::  ::: true`,
         imageUrls: [finalCloudinaryUrl],
         variants: [
           {
@@ -534,6 +548,7 @@ async function executeToolCall(name: string, args: any) {
           name: created?.name,
           category: categoryNames[created?.category] || created?.category,
           description: created?.description,
+          isListed: true,
           cloudinaryImageUrl: finalCloudinaryUrl,
           variants: formatVariants(created?.variants),
         },
