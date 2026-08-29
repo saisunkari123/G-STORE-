@@ -352,7 +352,7 @@ fun CustomerCatalogView(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 10.dp)
+                        .padding(start = 14.dp, end = 14.dp, top = 0.dp, bottom = 8.dp)
                 ) {
                     // Row 1: Logo & Delivery Location + Cart & Logout Icons
                     Row(
@@ -483,7 +483,7 @@ fun CustomerCatalogView(
 
                     Spacer(modifier = Modifier.height(6.dp))
 
-                    // Row 2: Sleek 38dp Search Bar with Clear Icon
+                    // Row 2: Sleek 38dp Search Bar with Clear Icon (Explicit readable text in light & dark mode)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -508,7 +508,7 @@ fun CustomerCatalogView(
                                 if (searchQuery.isEmpty()) {
                                     Text(
                                         "Search for quality products...",
-                                        color = Color.Gray,
+                                        color = Color(0xFF64748B),
                                         fontSize = 12.5.sp
                                     )
                                 }
@@ -517,7 +517,7 @@ fun CustomerCatalogView(
                                     onValueChange = { searchQuery = it },
                                     singleLine = true,
                                     textStyle = androidx.compose.ui.text.TextStyle(
-                                        color = MaterialTheme.colorScheme.onSurface,
+                                        color = Color(0xFF1E293B),
                                         fontSize = 12.5.sp,
                                         fontWeight = FontWeight.Medium
                                     ),
@@ -528,7 +528,7 @@ fun CustomerCatalogView(
                                 Icon(
                                     Icons.Default.Close,
                                     contentDescription = "Clear",
-                                    tint = Color.Gray,
+                                    tint = Color(0xFF64748B),
                                     modifier = Modifier
                                         .size(16.dp)
                                         .clickable { searchQuery = "" }
@@ -1102,7 +1102,7 @@ fun CustomerProductCard(
 
                     Spacer(Modifier.height(2.dp))
 
-                    // Variant / Size chip (Fixed 22dp container)
+                    // Variant / Size chip (Fixed 22dp container with dark mode contrast)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1113,8 +1113,8 @@ fun CustomerProductCard(
                             Surface(
                                 onClick = { showVariantSheet = true },
                                 shape = RoundedCornerShape(5.dp),
-                                color = Color(0xFFF3F4F6),
-                                border = BorderStroke(0.5.dp, Color(0xFFD1D5DB))
+                                color = if (AppState.isDarkMode) Color(0xFF262626) else Color(0xFFF3F4F6),
+                                border = BorderStroke(0.5.dp, if (AppState.isDarkMode) Color(0xFF4A4A4A) else Color(0xFFD1D5DB))
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -1124,27 +1124,27 @@ fun CustomerProductCard(
                                         "${currentVariant.weight}${currentVariant.unit}",
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        color = if (AppState.isDarkMode) Color.White else MaterialTheme.colorScheme.onSurface
                                     )
                                     Spacer(Modifier.width(2.dp))
                                     Icon(
                                         Icons.Default.ArrowDropDown,
                                         contentDescription = "Select Variant",
                                         modifier = Modifier.size(12.dp),
-                                        tint = Color.Gray
+                                        tint = if (AppState.isDarkMode) Color(0xFFD1D5DB) else Color.Gray
                                     )
                                 }
                             }
                         } else if (hasVariants) {
                             Surface(
                                 shape = RoundedCornerShape(5.dp),
-                                color = Color(0xFFF9FAFB),
-                                border = BorderStroke(0.5.dp, Color(0xFFE5E7EB))
+                                color = if (AppState.isDarkMode) Color(0xFF262626) else Color(0xFFF9FAFB),
+                                border = BorderStroke(0.5.dp, if (AppState.isDarkMode) Color(0xFF404040) else Color(0xFFE5E7EB))
                             ) {
                                 Text(
                                     "${currentVariant.weight}${currentVariant.unit}",
                                     fontSize = 10.sp,
-                                    color = Color.Gray,
+                                    color = if (AppState.isDarkMode) Color(0xFFD1D5DB) else Color.Gray,
                                     fontWeight = FontWeight.Medium,
                                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                                 )
@@ -1236,14 +1236,14 @@ fun CustomerProductCard(
                         Surface(
                             onClick = { AppState.addToCart(product.id, currentVariant.id) },
                             shape = RoundedCornerShape(7.dp),
-                            color = Color(0xFFECFDF5),
+                            color = if (AppState.isDarkMode) RoyalEmerald.copy(alpha = 0.2f) else Color(0xFFECFDF5),
                             border = BorderStroke(1.dp, RoyalEmerald)
                         ) {
                             Text(
                                 "ADD",
                                 fontSize = 10.5.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = RoyalEmerald,
+                                color = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald,
                                 modifier = Modifier.padding(horizontal = 11.dp, vertical = 4.dp)
                             )
                         }
@@ -1257,7 +1257,8 @@ fun CustomerProductCard(
     if (showVariantSheet) {
         @OptIn(ExperimentalMaterial3Api::class)
         ModalBottomSheet(
-            onDismissRequest = { showVariantSheet = false }
+            onDismissRequest = { showVariantSheet = false },
+            containerColor = MaterialTheme.colorScheme.surface
         ) {
             Column(
                 modifier = Modifier
@@ -1280,8 +1281,8 @@ fun CustomerProductCard(
                             showVariantSheet = false
                         },
                         shape = RoundedCornerShape(12.dp),
-                        color = if (isSel) Color(0xFFECFDF5) else MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, if (isSel) RoyalEmerald else Color(0xFFE5E7EB)),
+                        color = if (isSel) (if (AppState.isDarkMode) RoyalEmerald.copy(alpha = 0.25f) else Color(0xFFECFDF5)) else MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, if (isSel) RoyalEmerald else (if (AppState.isDarkMode) Color(0xFF404040) else Color(0xFFE5E7EB))),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 4.dp)
@@ -1297,13 +1298,14 @@ fun CustomerProductCard(
                                 Text(
                                     "${v.weight}${v.unit}",
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp
+                                    fontSize = 14.sp,
+                                    color = if (isSel && AppState.isDarkMode) Color(0xFF34D399) else MaterialTheme.colorScheme.onSurface
                                 )
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         "₹${v.currentPrice.toInt()}",
                                         fontWeight = FontWeight.ExtraBold,
-                                        color = RoyalEmerald,
+                                        color = if (isSel && AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald,
                                         fontSize = 14.sp
                                     )
                                     if (v.mrp > v.currentPrice) {
@@ -1318,7 +1320,7 @@ fun CustomerProductCard(
                                 }
                             }
                             if (isSel) {
-                                Icon(Icons.Default.CheckCircle, null, tint = RoyalEmerald, modifier = Modifier.size(20.dp))
+                                Icon(Icons.Default.CheckCircle, null, tint = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald, modifier = Modifier.size(20.dp))
                             }
                         }
                     }
@@ -1467,8 +1469,8 @@ fun ProductDetailBottomSheet(
                         Surface(
                             onClick = { selectedVariantIndex = idx },
                             shape = RoundedCornerShape(12.dp),
-                            color = if (isSelected) Color(0xFFECFDF5) else MaterialTheme.colorScheme.surface,
-                            border = BorderStroke(1.5.dp, if (isSelected) RoyalEmerald else Color(0xFFE5E7EB)),
+                            color = if (isSelected) (if (AppState.isDarkMode) RoyalEmerald.copy(alpha = 0.25f) else Color(0xFFECFDF5)) else MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.5.dp, if (isSelected) (if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald) else (if (AppState.isDarkMode) Color(0xFF404040) else Color(0xFFE5E7EB))),
                             shadowElevation = if (isSelected) 2.dp else 0.dp
                         ) {
                             Column(
@@ -1479,14 +1481,14 @@ fun ProductDetailBottomSheet(
                                     "${v.weight}${v.unit}",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
-                                    color = if (isSelected) RoyalEmerald else MaterialTheme.colorScheme.onSurface
+                                    color = if (isSelected && AppState.isDarkMode) Color(0xFF34D399) else if (isSelected) RoyalEmerald else MaterialTheme.colorScheme.onSurface
                                 )
                                 Spacer(Modifier.height(2.dp))
                                 Text(
                                     "₹${v.currentPrice.toInt()}",
                                     fontWeight = FontWeight.ExtraBold,
                                     fontSize = 14.sp,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    color = if (isSelected && AppState.isDarkMode) Color(0xFF34D399) else MaterialTheme.colorScheme.onSurface
                                 )
                                 if (v.mrp > v.currentPrice) {
                                     Text(
@@ -1501,7 +1503,7 @@ fun ProductDetailBottomSheet(
                     }
                 }
                 Spacer(Modifier.height(16.dp))
-                HorizontalDivider(color = Color(0xFFF1F3F4))
+                HorizontalDivider(color = if (AppState.isDarkMode) Color(0xFF333333) else Color(0xFFF1F3F4))
                 Spacer(Modifier.height(14.dp))
             }
 
@@ -1518,7 +1520,7 @@ fun ProductDetailBottomSheet(
                     Text(
                         text = product.descriptionEn,
                         fontSize = 13.sp,
-                        color = Color.Gray,
+                        color = if (AppState.isDarkMode) Color(0xFFCCCCCC) else Color.Gray,
                         lineHeight = 18.sp
                     )
                 }
@@ -1527,7 +1529,7 @@ fun ProductDetailBottomSheet(
                     Text(
                         text = product.descriptionTe,
                         fontSize = 13.sp,
-                        color = Color.Gray,
+                        color = if (AppState.isDarkMode) Color(0xFFCCCCCC) else Color.Gray,
                         lineHeight = 18.sp
                     )
                 }
@@ -1537,8 +1539,8 @@ fun ProductDetailBottomSheet(
             // 5. Price & Sticky Add to Cart Action Row
             Surface(
                 shape = RoundedCornerShape(16.dp),
-                color = Color(0xFFF9FAFB),
-                border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                color = if (AppState.isDarkMode) Color(0xFF242424) else Color(0xFFF9FAFB),
+                border = BorderStroke(1.dp, if (AppState.isDarkMode) Color(0xFF3A3A3A) else Color(0xFFE5E7EB)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
