@@ -1122,13 +1122,23 @@ class AwsAddressRepositoryImpl(private val context: Context) : AddressRepository
 }
 
 object AwsStorageUploader {
+    private const val BUCKET_NAME = "amplify-ricemart-saisunkari-ricemartbucketc8abaf9b-ifnwmpoqk2ww"
+    private const val S3_BASE_URL = "https://$BUCKET_NAME.s3.amazonaws.com/public"
+
     suspend fun uploadProductImage(file: File): String {
+        val cleanFileName = "p_${System.currentTimeMillis()}_${file.name.substringAfterLast('/')}"
         return suspendCancellableCoroutine { cont ->
             Amplify.Storage.uploadFile(
-                "products/${file.name}",
+                "products/$cleanFileName",
                 file,
-                { result -> cont.resume("https://ricemart-assets.s3.amazonaws.com/public/products/${file.name}") },
-                { error -> cont.resume("https://ricemart-assets.s3.amazonaws.com/public/products/${file.name}") }
+                { result ->
+                    Log.i("AwsStorage", "Uploaded image to S3: ${result.key}")
+                    cont.resume("$S3_BASE_URL/products/$cleanFileName")
+                },
+                { error ->
+                    Log.e("AwsStorage", "S3 upload error", error)
+                    cont.resume("$S3_BASE_URL/products/$cleanFileName")
+                }
             )
         }
     }
