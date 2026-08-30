@@ -1,0 +1,875 @@
+[
+  {
+    "id": "p_egg_farm_fresh",
+    "name": "Farm Fresh White Table Eggs (Graded Clean Tray)",
+    "category": "c_dairy",
+    "description": "Farm Select ::: తాజా కోడిగుడ్లు ::: Hygienically cleaned and candled protein-rich fresh farm eggs. ::: శుభ్రమైన మరియు తాజా పోషకాలు నిండిన కోడిగుడ్లు. ::: Direct from local poultry farms, graded for freshness and high protein. Perfect for omelettes, boiled eggs, and egg curry. ::: రోజువారీ ప్రొటీన్ అవసరాల కోసం తాజా కోడిగుడ్లు. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031406/ricemart_products/p4cqepunhbqxa0jum02l.jpg"
+    ]
+  },
+  {
+    "id": "p_oil_dalda_vanaspati",
+    "name": "Dalda Vanaspati Pouch",
+    "category": "c_oil",
+    "description": "Dalda ::: డాల్డా వనస్పతి ::: Hydrogenated vegetable fat for crispy bhaturas, puris, and sweets. ::: పూరీలు మరియు మిఠాయిల కోసం నాణ్యమైన డాల్డా. ::: Dalda Vanaspati provides ideal texture and crispiness to bakery items, samosas, and Indian festive sweets. ::: సమోసాలు మరియు మిఠాయిల తయారీకి ప్రత్యేకమైన డాల్డా. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031408/ricemart_products/xhqqyxscaxanawqyo79q.jpg"
+    ]
+  },
+  {
+    "id": "p_clean_surf_excel",
+    "name": "Surf Excel Quick Wash Detergent Powder",
+    "category": "c_cleaning",
+    "description": "Surf Excel :::  ::: Surf Excel Quick Wash Detergent Powder :::  ::: Advanced stain removal formula that dissolves quickly in water to remove tough grease, tea, and curry stains without harming fabric. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031416/ricemart_products/u0bo30fze2yiiw26zyph.jpg"
+    ]
+  },
+  {
+    "id": "p_rice_bpt_sannalu",
+    "name": "BPT 5204 Andhra Sannalu Rice",
+    "category": "c_rice",
+    "description": "Sri Krishna ::: బి.పి.టి 5204 సన్న బియ్యం ::: Fine slender grains preferred across Andhra Pradesh. ::: ఆంధ్రాలో అత్యంత ప్రాచుర్యం పొందిన సన్నని బియ్యం. ::: BPT 5204 (Samba Mahsuri) is renowned for its slender grain texture and delicious taste when paired with dal and sambar. ::: బి.పి.టి 5204 సన్న బియ్యం పప్పు మరియు సాంబారుతో ఎంతో రుచికరంగా ఉంటుంది. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_pad,w_600,h_600,b_white,f_auto,q_auto/v1788020998/ricemart_products/gylp6gtltuoln0cbeebt.jpg"
+    ]
+  },
+  {
+    "id": "p_dryfruit_cashew_w240",
+    "name": "G-Store W240 Premium Whole Cashew Nuts (Kaju)",
+    "category": "c_dryfruits",
+    "description": "G-Store Select :::  ::: G-Store W240 Premium Whole Cashew Nuts (Kaju) :::  ::: Top-grade W240 whole crunchy cashews from Palasa. Perfect for roasting with ghee, garnishing sweets, and daily snacking. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031577/ricemart_products/ttjiuspl3cj9nnrfaqmb.jpg"
+    ]
+  },
+  {
+    "id": "p_oil_fortune_sunflower",
+    "name": "Fortune Sunlite Refined Sunflower Oil",
+    "category": "c_oil",
+    "description": "Fortune :::  ::: Fortune Sunlite Refined Sunflower Oil :::  ::: Fortune Sunlite Refined Sunflower Oil is enriched with natural nutrients and high smoke point for crispy deep frying. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031420/ricemart_products/xfatgxulo4dl9ridhgu4.jpg"
+    ]
+  },
+  {
+    "id": "p_flour_aashirvaad_atta",
+    "name": "Aashirvaad Superior MP Sharbati Whole Wheat Atta",
+    "category": "c_rice",
+    "description": "Aashirvaad :::  ::: Aashirvaad Superior MP Sharbati Whole Wheat Atta :::  ::: 100% pure whole wheat grain atta made with traditional stone chakki grinding for extra soft rotis with 0% maida. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_pad,w_600,h_600,b_white,f_auto,q_auto/v1788023877/ricemart_products/bbyb5c2nlbdti5kyofxp.jpg"
+    ]
+  },
+  {
+    "id": "p_oil_freedom_refined_sunf_0282",
+    "name": "Freedom Refined Sunflower Oil",
+    "category": "c_oil",
+    "description": "G-Store :::  ::: Freedom Refined Sunflower Oil :::  ::: Freedom Refined Sunflower Oil :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,ar_1:1,g_auto,w_600/v1788007412/ricemart_products/mkms90zejyyv9nqgwst0.jpg"
+    ]
+  },
+  {
+    "id": "p_oil_sunflower",
+    "name": "Fortune Sunflower Oil",
+    "category": "c_oil",
+    "description": "Fortune ::: సన్‌ఫ్లవర్ ఆయిల్ ::: Light refined sunflower oil. ::: ::: Light and healthy refined sunflower oil, rich in vitamins. Perfect for deep frying. ::: ::: true",
+    "imageUrls": [
+      "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&auto=format&fit=crop"
+    ]
+  },
+  {
+    "id": "p_biscuit_dark_fantasy",
+    "name": "Sunfeast Dark Fantasy Choco Fills",
+    "category": "c_biscuits",
+    "description": "Sunfeast :::  ::: Sunfeast Dark Fantasy Choco Fills :::  ::: Crisp chocolate cookie crust with a luscious molten choco cream center that melts in your mouth. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031421/ricemart_products/kccqyaee1rmg8cdgssda.jpg"
+    ]
+  },
+  {
+    "id": "p_oil_parachute_coconut",
+    "name": "Parachute 100% Pure Coconut Cooking Oil",
+    "category": "c_oil",
+    "description": "Parachute ::: ప్యారాచూట్ కొబ్బరి నూనె ::: 100% pure edible coconut oil made from sun-dried coconuts. ::: స్వచ్ఛమైన కొబ్బరి నూనె - వంటలకు మరియు ఆరోగ్యానికి శ్రేష్టం. ::: Extracted from naturally sun-dried copras with no preservatives or added chemicals. ::: సహజమైన కొబ్బరి నుండి తీసిన 100% స్వచ్ఛమైన నూనె. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031423/ricemart_products/afdtu2ytptsyedsocep7.jpg"
+    ]
+  },
+  {
+    "id": "p_dairy_curd",
+    "name": "Amul Masti Curd",
+    "category": "c_dairy",
+    "description": "Amul ::: పెరుగు ::: Pasteurized thick curd. ::: ::: Pasteurized thick curd, fresh and hygienic daily essential. ::: ::: true",
+    "imageUrls": [
+      "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=600&auto=format&fit=crop"
+    ]
+  },
+  {
+    "id": "p_dal_minapa_gundlu",
+    "name": "G-Store Select Premium Minapa Gundlu (Whole Urad)",
+    "category": "c_dal",
+    "description": "G-Store Select :::  ::: G-Store Select Premium Minapa Gundlu (Whole Urad) :::  ::: Top-quality whole white unpolished Urad Dal. High batter yield, perfect for fluffy idlis and crispy golden medu vadas. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031425/ricemart_products/p2msszf8ozkg32ftkgef.jpg"
+    ]
+  },
+  {
+    "id": "p_rice_sona_masoori",
+    "name": "Kurnool Sona Masoori Raw Rice",
+    "category": "c_rice",
+    "description": "Bell Brand :::  ::: Kurnool Sona Masoori Raw Rice :::  ::: Authentic Kurnool Sona Masoori raw rice, lightweight and aromatic with low starch content. Perfect for daily South Indian meals. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_pad,w_600,h_600,b_white,f_auto,q_auto/v1788023900/ricemart_products/lj9i2mh1qx5ty9jtlvvz.jpg"
+    ]
+  },
+  {
+    "id": "p_snack_kurkure_masala",
+    "name": "Kurkure Masala Munch (Crispy Namkeen)",
+    "category": "c_snacks",
+    "description": "Kurkure :::  ::: Kurkure Masala Munch (Crispy Namkeen) :::  ::: Crispy, crunchy, tangy Indian puffed corn snack made with kitchen ingredients and authentic masalas. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031541/ricemart_products/fr5ijbdinfzhccxmtnbi.jpg"
+    ]
+  },
+  {
+    "id": "p_biscuit_good_day_butter",
+    "name": "Britannia Good Day Butter Cookies",
+    "category": "c_biscuits",
+    "description": "Britannia :::  ::: Britannia Good Day Butter Cookies :::  ::: Rich butter-flavored crunchy cookies with the famous smile design, making every tea break joyful. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031427/ricemart_products/aixy6rzadxqbaexn58eu.jpg"
+    ]
+  },
+  {
+    "id": "p_oil_fortune_sunlite",
+    "name": "Fortune Sunlite Sunflower Oil",
+    "category": "c_oil",
+    "description": "Fortune ::: ఫార్చూన్ సన్‌ఫ్లవర్ ఆయిల్ ::: Light, healthy, and easy to digest refined cooking sunflower oil. ::: రోజువారీ వంటల కోసం తేలికైన ఫార్చూన్ సన్‌ఫ్లవర్ నూనె. ::: Fortune Sunlite contains natural Vitamin E antioxidants and fortifies your body's immune system while keeping curries light and flavorful. ::: విటమిన్ ఇ మరియు యాంటీ ఆక్సిడెంట్లతో కూడిన నాణ్యమైన నూనె. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031429/ricemart_products/itykllwuabvxm9jfkyew.jpg"
+    ]
+  },
+  {
+    "id": "p_rice_daawat_super",
+    "name": "Daawat Super Long Grain Basmati Rice",
+    "category": "c_rice",
+    "description": "Daawat ::: దావత్ బాస్మతి రైస్ ::: Extra long pearly white grains aged for royal Biryanis. ::: రాయల్ బిర్యానీల కోసం ప్రత్యేకమైన పొడవైన బాస్మతి బియ్యం. ::: Daawat Super Basmati Rice grains elongate up to 2.5x after cooking without breaking, delivering unmatched aroma and texture. ::: వండినప్పుడు 2.5 రెట్లు పొడవు పెరిగే ప్రీమియం దావత్ బాస్మతి బియ్యం. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_pad,w_600,h_600,b_white,f_auto,q_auto/v1788024290/ricemart_products/cdlzgpmihczxwpp191ag.jpg"
+    ]
+  },
+  {
+    "id": "p_snack_haldirams_bhujia",
+    "name": "Haldiram's Nagpur Aloo Bhujia (Crispy Sev)",
+    "category": "c_snacks",
+    "description": "Haldiram's :::  ::: Haldiram's Nagpur Aloo Bhujia (Crispy Sev) :::  ::: The legendary crispy spicy aloo bhujia with mint and spices. Perfect crunchy accompaniment with tea and chaat. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031430/ricemart_products/bnjqjbi2brfpujanbadp.jpg"
+    ]
+  },
+  {
+    "id": "p_dal_urad_gota",
+    "name": "Andhra Polished Urad Gota (Minapa Gundlu for Dosa)",
+    "category": "c_dal",
+    "description": "Krishna Brand ::: గుండు మినపప్పు (మినప గుండ్లు) ::: Whole white urad gota that fluffs into huge volume for idli/dosa batter. ::: ఇడ్లీ మరియు దోశెల కోసం అధిక పిండినిచ్చే మినప గుండ్లు. ::: Premium unhusked whole urad dal known for high batter yield and maximum fluffiness in idlis, vadas, and dosas. ::: గారెలు, ఇడ్లీలు మరియు దోశెల కోసం ప్రత్యేకంగా ఎంపిక చేసిన మినప గుండ్లు. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031543/ricemart_products/ty2mlk4hu8xlddmbpu0y.jpg"
+    ]
+  },
+  {
+    "id": "p_clean_dettol_liquid",
+    "name": "Dettol Original Antiseptic Disinfectant Liquid",
+    "category": "c_cleaning",
+    "description": "Dettol :::  ::: Dettol Original Antiseptic Disinfectant Liquid :::  ::: Trusted first-aid antiseptic and multi-surface germ protection liquid for hygiene, bathing, and laundry. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031432/ricemart_products/mkvj0qr8p5p2mxjsy4v8.jpg"
+    ]
+  },
+  {
+    "id": "p_dal_moong",
+    "name": "Organic Yellow Moong Dal",
+    "category": "c_dal",
+    "description": "G-Store ::: పెసరపప్పు ::: Nutritious yellow moong dal. ::: ::: Nutritious and easy-to-cook split yellow mung beans, organically processed. ::: ::: true",
+    "imageUrls": [
+      "https://images.unsplash.com/photo-1585994192701-f1a505c8574a?w=600&auto=format&fit=crop"
+    ]
+  },
+  {
+    "id": "p_dal_tata_moong",
+    "name": "Tata Sampann Yellow Moong Dal (Pesara Pappu)",
+    "category": "c_dal",
+    "description": "Tata Sampann :::  ::: Tata Sampann Yellow Moong Dal (Pesara Pappu) :::  ::: Nutritious and easily digestible unpolished yellow split moong dal for khichdi, pesara pappu, and healthy soups. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031434/ricemart_products/zuv2mq84bidioukvm3ak.jpg"
+    ]
+  },
+  {
+    "id": "p_bev_bru_instant_coffee",
+    "name": "Bru Instant Coffee Jar",
+    "category": "c_beverages",
+    "description": "Bru :::  ::: Bru Instant Coffee Jar :::  ::: Fine blend of 70% selected coffee beans and 30% chicory, roasted to perfection for authentic South Indian filter-style aroma. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031436/ricemart_products/zfcwyfuc2awfojbtuxzg.jpg"
+    ]
+  },
+  {
+    "id": "p_grain_idli_rava",
+    "name": "Sri Lalitha Idli Rava (Fine Rice Rava)",
+    "category": "c_rice",
+    "description": "Lalitha ::: శ్రీ లలిత ఇడ్లీ రవ్వ ::: Evenly granulated pure rice rava for white fluffy idlis. ::: సాఫ్ట్ ఇడ్లీల కోసం సమానంగా పిండిచేసిన ఇడ్లీ రవ్వ. ::: Milled from high quality raw rice with uniform granulation. Soaks easily and yields fluffy, light South Indian idlis. ::: మల్లెపూవు లాంటి మెత్తని ఇడ్లీల తయారీకి ప్రత్యేకమైన లలిత ఇడ్లీ రవ్వ. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_pad,w_600,h_600,b_white,f_auto,q_auto/v1788024329/ricemart_products/au3nbqm8ade7vmj5ahzv.jpg"
+    ]
+  },
+  {
+    "id": "p_rice_brown_diet",
+    "name": "Organic Brown Rice (Single Polish Diet Rice)",
+    "category": "c_rice",
+    "description": "24 Mantra ::: ఆర్గానిక్ బ్రౌన్ రైస్ ::: Unpolished whole grain brown rice high in fiber and low glycemic index. ::: మధుమేహం మరియు ఫిట్‌నెస్ కోసం అధిక ఫైబర్ బ్రౌన్ రైస్. ::: Retains the outer bran layer with essential B vitamins, minerals, and dietary fiber. Recommended for diabetes management and weight loss. ::: పోషకాలు మరియు విటమిన్లు నిండిన ఆరోగ్యకరమైన బ్రౌన్ రైస్. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_pad,w_600,h_600,b_white,f_auto,q_auto/v1788023832/ricemart_products/ot2ilaxa9ybzzerua3dg.jpg"
+    ]
+  },
+  {
+    "id": "p_pulse_kala_chana",
+    "name": "Brown Desi Kala Chana (Black Chickpeas)",
+    "category": "c_dal",
+    "description": "G-Store Select ::: నల్ల శనగలు ::: Iron and protein rich brown chickpeas for guggillu and healthy snacks. ::: గుగ్గిళ్ళు మరియు ప్రసాదాల కోసం ఐరన్ నిండిన నల్ల శనగలు. ::: High protein desi black chickpeas for morning sprouts, temple prasadam guggillu, and spicy Andhra curries. ::: మొలకలు మరియు గుగ్గిళ్ళ తయారీకి బలవర్ధకమైన ఆహారం. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031544/ricemart_products/aezb2bsnmvgtpxduuifk.jpg"
+    ]
+  },
+  {
+    "id": "p_dryfruit_almonds_california",
+    "name": "California Select Almonds (Badam Giri)",
+    "category": "c_2c3b6a6e-7058-4017-bc1b-3b386f6f0e6f",
+    "description": "Royal Select :::  ::: California Select Almonds (Badam Giri) :::  ::: 100% natural, sweet California almonds. Ideal for morning soaking, badam milk, and energy-packed daily snacking. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031582/ricemart_products/xiqsdxbwigeytya9vozq.jpg"
+    ]
+  },
+  {
+    "id": "p_snack_maggi_noodles",
+    "name": "Maggi 2-Minute Masala Instant Noodles",
+    "category": "c_snacks",
+    "description": "Nestle Maggi :::  ::: Maggi 2-Minute Masala Instant Noodles :::  ::: India's favorite 2-minute instant noodles with the signature Tastemaker masala blend containing 10 roasted spices. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031441/ricemart_products/whgjuhskuh4qnynahwm2.jpg"
+    ]
+  },
+  {
+    "id": "p_biscuit_parle_g",
+    "name": "Parle-G Original Glucose Biscuits",
+    "category": "c_biscuits",
+    "description": "Parle :::  ::: Parle-G Original Glucose Biscuits :::  ::: India's trusted staple glucose biscuits loaded with wheat and milk goodness for instant daily energy. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031442/ricemart_products/gxnlubudatb8pmqonrjb.jpg"
+    ]
+  },
+  {
+    "id": "p_rice_fortune_hmt_rice_9152",
+    "name": "Fortune HMT Rice",
+    "category": "c_rice",
+    "description": " :::  :::  :::  ::: Fortune HMT Rice - Premium quality Rice Bags. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_pad,w_600,h_600,b_white,f_auto,q_auto/v1788023838/ricemart_products/e3q3u0gycgcht5iklmhh.jpg"
+    ]
+  },
+  {
+    "id": "p_spices_chili",
+    "name": "Kashmiri Red Chili Powder",
+    "category": "c_spices",
+    "description": "G-Store ::: కారం పొడి ::: Bright red Kashmiri chili powder. ::: ::: Bright red Kashmiri chili powder, mildly hot with rich natural coloring properties. ::: ::: true",
+    "imageUrls": [
+      "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=600&auto=format&fit=crop"
+    ]
+  },
+  {
+    "id": "p_dal_tata_sampann_unpolis_3391",
+    "name": "Tata Sampann Unpolished Toor Dal",
+    "category": "c_dal",
+    "description": " :::  ::: Tata Sampann Unpolished Toor Dal :::  ::: Unpolished high-protein Toor Dal, naturally delicious and rich in dietary fiber. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788007743/ricemart_products/syqcgxxioxtrbyulhf70.jpg"
+    ]
+  },
+  {
+    "id": "p_spices_garam",
+    "name": "Premium Garam Masala",
+    "category": "c_spices",
+    "description": "G-Store ::: గరం మసాలా ::: Aromatic blend of whole spices. ::: ::: Handcrafted blend of aromatic whole spices, freshly roasted and ground. ::: ::: true",
+    "imageUrls": [
+      "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=600&auto=format&fit=crop"
+    ]
+  },
+  {
+    "id": "p_oil_fortune_mustard",
+    "name": "Fortune Kachi Ghani Pure Mustard Oil",
+    "category": "c_oil",
+    "description": "Fortune :::  ::: Fortune Kachi Ghani Pure Mustard Oil :::  ::: Strong pungent cold-pressed mustard oil for traditional Indian pickles and pungent curries. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031446/ricemart_products/njfy9eps84avryrmlxna.jpg"
+    ]
+  },
+  {
+    "id": "p_dal_tata_toor",
+    "name": "Tata Sampann Unpolished Toor Dal (Kandi Pappu)",
+    "category": "c_dal",
+    "description": "Tata Sampann :::  ::: Tata Sampann Unpolished Toor Dal (Kandi Pappu) :::  ::: Tata Sampann unpolished Toor Dal retains natural dietary fiber, protein, and authentic taste for daily sambar and dal tadka. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031548/ricemart_products/xw9otrqjsay5zd3hl2vc.jpg"
+    ]
+  },
+  {
+    "id": "p_spice_everest_turmeric",
+    "name": "Everest Pure Turmeric Powder (Haldi)",
+    "category": "c_spices",
+    "description": "Everest :::  ::: Everest Pure Turmeric Powder (Haldi) :::  ::: High curcumin content Salem turmeric roots ground to fine golden powder for immune health and rich curry color. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031448/ricemart_products/ljbpjhflmgpxvyyt6yf0.jpg"
+    ]
+  },
+  {
+    "id": "p_dairy_milky_mist_paneer",
+    "name": "Milky Mist Fresh Paneer",
+    "category": "c_dairy",
+    "description": "Milky Mist ::: మిల్కీ మిస్ట్ పన్నీర్ ::: Vacuum packed fresh paneer with soft uniform texture. ::: వ్యాక్యూమ్ ప్యాక్ చేయబడిన నాణ్యమైన పన్నీర్. ::: Milky Mist Paneer is made without artificial preservatives, offering supreme softness for gravies and snacks. ::: రుచికరమైన వంటల కోసం స్వచ్ఛమైన పన్నీర్. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031451/ricemart_products/osbufbcczpvannncis0w.jpg"
+    ]
+  },
+  {
+    "id": "p_dairy_heritage_special_milk",
+    "name": "Heritage Special Full Cream Milk (Orange Packet)",
+    "category": "c_dairy",
+    "description": "Heritage ::: హెరిటేజ్ ఫుల్ క్రీమ్ పాలు ::: 6.0% Fat rich milk for thick curds, creamy tea, and sweet making. ::: చిక్కటి పెరుగు మరియు రుచికరమైన టీ కోసం ఫుల్ క్రీమ్ పాలు. ::: Heritage Special milk delivers rich taste and creamy texture with 6.0% Fat and 9.0% SNF. Perfect for thick curd and traditional kheer. ::: చిక్కటి వెన్న మరియు పెరుగు కోసం హెరిటేజ్ ఆరెంజ్ ప్యాకెట్ పాలు. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031453/ricemart_products/pqtv8vr7d3onzmpwhndz.jpg"
+    ]
+  },
+  {
+    "id": "p_oil_groundnut",
+    "name": "Cold-Pressed Groundnut Oil",
+    "category": "c_oil",
+    "description": "G-Store ::: వేరుశనగ నూనె ::: Natural cold-pressed groundnut oil. ::: ::: 100% natural cold-pressed groundnut oil, retains nutrients and sweet aroma. ::: ::: true",
+    "imageUrls": [
+      "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&auto=format&fit=crop"
+    ]
+  },
+  {
+    "id": "p_spice_aashirvaad_chilli",
+    "name": "Aashirvaad Special Guntur Chilli Powder",
+    "category": "c_spices",
+    "description": "Aashirvaad :::  ::: Aashirvaad Special Guntur Chilli Powder :::  ::: Made from sun-dried Guntur chillies, providing bright natural red color and fiery pungent taste without artificial additives. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031584/ricemart_products/xx40xdtte6moh2vpsuvx.jpg"
+    ]
+  },
+  {
+    "id": "p_rice_sona",
+    "name": "Premium Sona Masuri Rice",
+    "category": "c_rice",
+    "description": "Akshaya ::: సోనా మసూరి బియ్యం ::: Aged premium Sona Masuri rice. ::: ::: Aged premium Sona Masuri rice, ideal for daily cooking. Clean and raw grains with rich aroma. ::: ::: true",
+    "imageUrls": [
+      "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&auto=format&fit=crop"
+    ]
+  },
+  {
+    "id": "p_dal_moong_tata",
+    "name": "Tata Sampann Yellow Moong Dal (Pesara Pappu)",
+    "category": "c_dal",
+    "description": "Tata Sampann ::: పెసరపప్పు ::: Light, easily digestible yellow split lentils for khichdi and dal fry. ::: తేలికగా జీర్ణమయ్యే పసుపు పెసరపప్పు - కిచిడీ మరియు పప్పులకు శ్రేష్టం. ::: Unpolished split moong dal with no artificial luster. Cooks in minutes and provides wholesome protein. ::: ప్రొటీన్లతో కూడిన తేలికపాటి పెసరపప్పు. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031550/ricemart_products/icywkcr66rydw5cfheqy.jpg"
+    ]
+  },
+  {
+    "id": "p_spice_garam_masala",
+    "name": "Everest Shahi Garam Masala (Aromatic Spice Mix)",
+    "category": "c_spices",
+    "description": "Everest ::: ఎవరెస్ట్ గరం మసాలా ::: Royal blend of 13 whole roasted spices for biryanis, paneer, and curries. ::: బిర్యానీలు మరియు కూరల కోసం రాజరిక సువాసన గల గరం మసాలా. ::: Everest Shahi Garam Masala blends cardamom, cinnamon, cloves, and mace for an unforgettable royal aroma in festive dishes. ::: 13 రకాల సుగంధ ద్రవ్యాలతో తయారైన గరం మసాలా. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031457/ricemart_products/pskc5fmt5cqfvyi0tw7y.jpg"
+    ]
+  },
+  {
+    "id": "p_dryfruit_raisins_kismis",
+    "name": "Indian Golden Long Raisins (Kismis / Endu Draksha)",
+    "category": "c_dryfruits",
+    "description": "Royal Select :::  ::: Indian Golden Long Raisins (Kismis / Endu Draksha) :::  ::: Seedless long golden kismis with natural sweetness. Packed with iron, antioxidants, and instant energy. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031458/ricemart_products/opz5f6plu1al6qdths4h.jpg"
+    ]
+  },
+  {
+    "id": "p_dal_chana",
+    "name": "Chana Dal Special",
+    "category": "c_dal",
+    "description": "G-Store ::: శనగపప్పు ::: Cleaned split Bengal gram. ::: ::: Cleaned and sorted split Bengal gram (Chana Dal), delicious for curry and snacks. ::: ::: true",
+    "imageUrls": [
+      "https://images.unsplash.com/photo-1585994192701-f1a505c8574a?w=600&auto=format&fit=crop"
+    ]
+  },
+  {
+    "id": "p_rice_lalitha_hmt",
+    "name": "Lalitha Brand HMT Premium Rice",
+    "category": "c_rice",
+    "description": "Lalitha :::  ::: Lalitha Brand HMT Premium Rice :::  ::: Lalitha Brand HMT Rice is naturally aged for 12+ months, ensuring slender, non-sticky grains that expand beautifully upon cooking. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_pad,w_600,h_600,b_white,f_auto,q_auto/v1788023921/ricemart_products/nfuqbiuij91sw9brhumi.jpg"
+    ]
+  },
+  {
+    "id": "p_clean_vim_gel",
+    "name": "Vim Lemon Dishwash Gel Bottle",
+    "category": "c_cleaning",
+    "description": "Vim :::  ::: Vim Lemon Dishwash Gel Bottle :::  ::: Power of 100 lemons. One spoon cleans an entire sink full of oily dishes without leaving white residue. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031460/ricemart_products/qxal7yirne0xstcpihp2.jpg"
+    ]
+  },
+  {
+    "id": "p_rice_india_gate_basmati",
+    "name": "India Gate Rozzana Basmati Rice",
+    "category": "c_rice",
+    "description": "India Gate :::  ::: India Gate Rozzana Basmati Rice :::  ::: India Gate Rozzana Basmati rice brings royal aroma and distinct long slender grains to your special weekend dinners and fried rice dishes. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_pad,w_600,h_600,b_white,f_auto,q_auto/v1788023954/ricemart_products/fi4ulbkkgybrlqotc4mx.jpg"
+    ]
+  },
+  {
+    "id": "p_spice_whole_jeera",
+    "name": "Tata Sampann Whole Jeera (Cumin Seeds / Jilakara)",
+    "category": "c_spices",
+    "description": "Tata Sampann ::: జీలకర్ర ::: Crisp, aromatic whole cumin seeds rich in natural essential oils. ::: తాలింపులు మరియు రసాల కోసం స్వచ్ఛమైన జీలకర్ర. ::: Unpolished whole jeera with high volatile oil content. Essential for tadka, rasam, and jeera rice. ::: జీర్ణక్రియకు ఎంతో మేలు చేసే నాణ్యమైన జీలకర్ర. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031462/ricemart_products/xwn53iypvrf9spvqqthq.jpg"
+    ]
+  },
+  {
+    "id": "p_spice_chilli_powder",
+    "name": "Aashirvaad Special Guntur Chilli Powder (Karam Podi)",
+    "category": "c_spices",
+    "description": "Aashirvaad ::: గుంటూరు కారం పొడి ::: Fiery red Guntur chillies ground to perfection for authentic spicy curries. ::: ఘాటైన రంగు మరియు రుచికరమైన గుంటూరు కారం పొడి. ::: Made from sun-dried Guntur chillies, providing rich red color and sharp pungency with no artificial colors or additives. ::: ఆంధ్రా నాటు రుచినిచ్చే స్వచ్ఛమైన గుంటూరు కారం. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031464/ricemart_products/lraftsfngrb0iquduvib.jpg"
+    ]
+  },
+  {
+    "id": "p_snack_lays_magic_masala",
+    "name": "Lay's India's Magic Masala Potato Chips",
+    "category": "c_snacks",
+    "description": "Lay's :::  ::: Lay's India's Magic Masala Potato Chips :::  ::: Thin, crispy sliced potato chips tossed in classic spicy Indian masala seasoning blend. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031465/ricemart_products/p5qmaowupqlt4e1vcv6s.jpg"
+    ]
+  },
+  {
+    "id": "p_clean_colgate_paste",
+    "name": "Colgate Strong Teeth Calcium Dental Cream",
+    "category": "c_cleaning",
+    "description": "Colgate :::  ::: Colgate Strong Teeth Calcium Dental Cream :::  ::: Amino Shakti formula helps add natural calcium to nourish your teeth from within for 2x stronger teeth. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031467/ricemart_products/gqqdjzpuz1dl6plj35rl.jpg"
+    ]
+  },
+  {
+    "id": "p_choc_dairy_milk_silk",
+    "name": "Cadbury Dairy Milk Silk Chocolate Bar",
+    "category": "c_snacks",
+    "description": "Cadbury ::: క్యాడ్‌బరీ డైరీ మిల్క్ సిల్క్ ::: Silky smooth, melt-in-mouth creamy milk chocolate bar. ::: స్మూత్ మిల్క్ చాక్లెట్ బార్. ::: Cadbury Dairy Milk Silk is crafted with richer, smoother milk chocolate that melts effortlessly on your tongue. ::: ప్రేమ మరియు సంతోషాన్ని పంచే అత్యంత రుచికరమైన సిల్క్ చాక్లెట్. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031553/ricemart_products/kmlxj2nrpsdw1p2i10me.jpg"
+    ]
+  },
+  {
+    "id": "p_dal_toor",
+    "name": "Premium Toor Dal",
+    "category": "c_dal",
+    "description": "G-Store ::: కందిపప్పు ::: High-quality split pigeon peas. ::: ::: High-quality split pigeon peas (Toor Dal), unpolished and rich in protein. ::: ::: true",
+    "imageUrls": [
+      "https://images.unsplash.com/photo-1585994192701-f1a505c8574a?w=600&auto=format&fit=crop"
+    ]
+  },
+  {
+    "id": "p_dryfruit_lion_dates",
+    "name": "Lion Dates (Original Arabian Dates / Kharjooram)",
+    "category": "c_dryfruits",
+    "description": "Lion Dates :::  ::: Lion Dates (Original Arabian Dates / Kharjooram) :::  ::: Lion Dates are handpicked desert dates rich in iron and dietary fiber. Boosts hemoglobin and daily vitality. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031469/ricemart_products/etsfeiobnkok7eq3e5oy.jpg"
+    ]
+  },
+  {
+    "id": "p_dairy_heritage_toned_milk",
+    "name": "Heritage Daily Fresh Toned Milk Pouch",
+    "category": "c_dairy",
+    "description": "Heritage :::  ::: Heritage Daily Fresh Toned Milk Pouch :::  ::: Pasteurized, homogenized toned milk (3.0% Fat, 8.5% SNF). Daily fresh supply for tea, coffee, and daily calcium. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031471/ricemart_products/ar3uvuw4hie2suc3fy7d.jpg"
+    ]
+  },
+  {
+    "id": "p_bakery_britannia_brown_bread",
+    "name": "Britannia 100% Whole Wheat Brown Bread",
+    "category": "c_dairy",
+    "description": "Britannia ::: బ్రిటానియా బ్రౌన్ బ్రెడ్ ::: Fiber rich 100% whole wheat brown bread for health conscious breakfast. ::: ఆరోగ్యకరమైన ఫైబర్ నిండిన హోల్ వీట్ బ్రౌన్ బ్రెడ్. ::: Britannia 100% Whole Wheat Bread is packed with dietary fiber and essential grains for an energized morning. ::: డైట్ మరియు ఫిట్‌నెస్ కోసం హోల్ వీట్ బ్రెడ్. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031472/ricemart_products/irjkzorscp25akx6ynvh.jpg"
+    ]
+  },
+  {
+    "id": "p_oil_grb_ghee",
+    "name": "GRB Pure Cow Ghee Jar",
+    "category": "c_oil",
+    "description": "GRB :::  ::: GRB Pure Cow Ghee Jar :::  ::: Traditional granulated aroma GRB pure cow ghee. Made from pure cream for authentic taste in sweets and dosas. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031474/ricemart_products/hrrefbclgbnoveqpgkme.jpg"
+    ]
+  },
+  {
+    "id": "p_oil_freedom_sunflower",
+    "name": "Freedom Refined Sunflower Oil",
+    "category": "c_oil",
+    "description": "Freedom :::  ::: Freedom Refined Sunflower Oil :::  ::: Freedom refined sunflower oil with Vitamins A, D & E. Light, non-greasy and healthy for heart-conscious cooking. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031475/ricemart_products/d5tlidpyut82cjys7gpo.jpg"
+    ]
+  },
+  {
+    "id": "p_dal_chana_desi",
+    "name": "Desi Chana Dal (Senaga Pappu for Tadka & Sweets)",
+    "category": "c_dal",
+    "description": "G-Store Select ::: శనగపప్పు ::: Nutritious golden chana dal for daily tadka, chutneys, and puran poli. ::: తాలింపులు, చట్నీలు మరియు బొబ్బట్ల కోసం స్వచ్ఛమైన శనగపప్పు. ::: Crisp and flavorful desi chana dal for south Indian coconut chutneys, vegetable poriyals, and festive bobbatlu. ::: కొబ్బరి చట్నీలు మరియు బొబ్బట్ల కోసం నాణ్యమైన శనగపప్పు. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031557/ricemart_products/dbumcaagbpbdu73fjvdm.jpg"
+    ]
+  },
+  {
+    "id": "p_staple_tata_salt",
+    "name": "Tata Salt Vacuum Evaporated Iodized Salt",
+    "category": "c_spices",
+    "description": "Tata :::  ::: Tata Salt Vacuum Evaporated Iodized Salt :::  ::: Desh Ka Namak. Purity guaranteed vacuum evaporated iodized salt essential for balanced iodine intake and daily cooking. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031478/ricemart_products/z5n4wky3gruun79bt6lo.jpg"
+    ]
+  },
+  {
+    "id": "p_flour_besan_fortune",
+    "name": "Fortune Besan (Gram Flour for Pakodas)",
+    "category": "c_rice",
+    "description": "Fortune ::: ఫార్చూన్ శనగపిండి ::: 100% chana dal milled fine besan for crispy snacks and sweets. ::: పకోడీలు, బజ్జీలు మరియు మిఠాయిల కోసం స్వచ్ఛమైన శనగపిండి. ::: Milled from 100% pure desi chana dal with zero mixing. Perfect for crispy hot evening pakodas, mirchi bajjis, and besan ladoos. ::: 100% స్వచ్ఛమైన శనగపప్పుతో తయారైన ఫార్చూన్ శనగపిండి. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_pad,w_600,h_600,b_white,f_auto,q_auto/v1788023982/ricemart_products/dwtcbbygvud1zapqvzrf.jpg"
+    ]
+  },
+  {
+    "id": "p_spice_coriander_powder",
+    "name": "Aashirvaad Coriander Powder (Dhaniyala Podi)",
+    "category": "c_spices",
+    "description": "Aashirvaad ::: ధనియాల పొడి ::: Aromatic ground coriander seeds for thick, fragrant curry gravies. ::: కూరల చిక్కదనం మరియు సువాసన కోసం ధనియాల పొడి. ::: Freshly roasted green coriander seeds pulverized to impart rich aroma and body to South Indian curries and rasams. ::: ఘుమఘుమలాడే తాజా ధనియాల పొడి. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031479/ricemart_products/qdev1xvqrlwkifzzhgtr.jpg"
+    ]
+  },
+  {
+    "id": "p_dal_urad_split",
+    "name": "Unpolished Urad Dal Split (Chaya Minapappu)",
+    "category": "c_dal",
+    "description": "G-Store Select ::: పొట్టు మినపప్పు ::: Split urad dal with natural black skin for authentic vada and sunnundalu. ::: సున్నుండలు మరియు వడల కోసం సంప్రదాయ పొట్టు మినపప్పు. ::: Rich in fiber and authentic earthy flavor, ideal for traditional Andhra sunnundalu and medu vadas. ::: ఆంధ్రా సంప్రదాయ సున్నుండల తయారీకి ప్రత్యేకమైన పొట్టు మినపప్పు. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031559/ricemart_products/fzdosqdrcjkcpqnev3lp.jpg"
+    ]
+  },
+  {
+    "id": "p_dairy_heritage_full_cream",
+    "name": "Heritage Special Full Cream Gold Milk",
+    "category": "c_dairy",
+    "description": "Heritage :::  ::: Heritage Special Full Cream Gold Milk :::  ::: Rich & thick full cream milk (6.0% Fat, 9.0% SNF). Perfect for thick creamy curd, homemade paneer, and rich kheer. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031482/ricemart_products/smrq8fnjj7clxzsxlyb1.jpg"
+    ]
+  },
+  {
+    "id": "p_grain_bombay_rava",
+    "name": "Naga Roasted Bombay Rava (Upma Sooji)",
+    "category": "c_rice",
+    "description": "Naga ::: నాగ బొంబాయి రవ్వ ::: Pre-roasted fine semolina sooji for quick lump-free breakfast upma. ::: ఉప్మా మరియు కేసరి కోసం వేయించిన స్వచ్ఛమైన బొంబాయి రవ్వ. ::: Made from premium durum wheat semolina, pre-roasted to deliver golden, lump-free breakfast upma, halwa, and rava kesari. ::: రుచికరమైన ఉప్మా మరియు హల్వా తయారీకి ఎంతో అనువైన నాణ్యమైన రవ్వ. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_pad,w_600,h_600,b_white,f_auto,q_auto/v1788024003/ricemart_products/jkfthqoht4di0g1r5neu.jpg"
+    ]
+  },
+  {
+    "id": "p_bakery_modern_bread",
+    "name": "Modern 100% Whole Wheat Bread (Sandwich Loaf)",
+    "category": "c_biscuits",
+    "description": "Modern :::  ::: Modern 100% Whole Wheat Bread (Sandwich Loaf) :::  ::: Soft, freshly baked 100% whole wheat bread rich in dietary fiber. Zero maida, perfect for healthy breakfast toast and sandwiches. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031483/ricemart_products/h5izaw6d4s7xsefyhzbw.jpg"
+    ]
+  },
+  {
+    "id": "p_staple_madhur_sugar",
+    "name": "Madhur Pure & Hygienic Refined Sugar",
+    "category": "c_dal",
+    "description": "Madhur :::  ::: Madhur Pure & Hygienic Refined Sugar :::  ::: 100% sulphur-free, sparkling white, untouched by hand pure crystal sugar for daily tea, coffee, and traditional sweets. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031484/ricemart_products/iag2zomuvnnmnafwjhmm.jpg"
+    ]
+  },
+  {
+    "id": "p_dairy_amul_taaza",
+    "name": "Amul Taaza Homogenised Toned Milk",
+    "category": "c_dairy",
+    "description": "Amul ::: అమూల్ తాజా పాలు (టెట్రా ప్యాక్) ::: UHT treated long shelf life milk with zero preservatives. ::: ఎక్కువ రోజులు నిల్వ ఉండే అమూల్ తాజా పాలు. ::: Amul Taaza requires no boiling and stays fresh in aseptic tetra packaging. Ideal for emergencies and office use. ::: మరగబెట్టాల్సిన అవసరం లేని స్వచ్ఛమైన అమూల్ పాలు. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031486/ricemart_products/qbbaknwhgujayhhfedyc.jpg"
+    ]
+  },
+  {
+    "id": "p_spices_everest_tikhalal_red_4226",
+    "name": "Everest Tikhalal Red Chilli Powder",
+    "category": "c_spices",
+    "description": " :::  ::: Everest Tikhalal Red Chilli Powder :::  ::: Fine ground spicy red chilli powder for rich color and authentic :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788007585/ricemart_products/kqqmcvdfuiebzpm3vgxs.jpg"
+    ]
+  },
+  {
+    "id": "p_pulse_kabuli_chana",
+    "name": "Big Kabuli Chana (White Chickpeas for Chole)",
+    "category": "c_dal",
+    "description": "G-Store Select ::: కాబూలీ శనగలు (తెల్ల శనగలు) ::: Large size white chickpeas for Punjabi chole bhature and salads. ::: రుచికరమైన చోలే బటూరే కోసం పెద్ద కాబూలీ శనగలు. ::: Jumbo sized white chickpeas that expand evenly and become buttery soft when boiled. ::: ఉడికించినప్పుడు మెత్తగా అయ్యే పెద్ద కాబూలీ శనగలు. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031560/ricemart_products/hfhyajcbopmfswmwznpx.jpg"
+    ]
+  },
+  {
+    "id": "p_rice_idli_boiled",
+    "name": "Special Idli Rice (Boiled Short Grain)",
+    "category": "c_rice",
+    "description": "G-Store Select ::: స్పెషల్ ఇడ్లీ బియ్యం ::: Plump parboiled rice for soft, fluffy South Indian idlis. ::: మల్లెపూవు లాంటి మెత్తని ఇడ్లీల కోసం ప్రత్యేక బియ్యం. ::: Carefully selected short grain parboiled rice that ferments efficiently with urad dal to make soft, sponge-like idlis and crispy dosas. ::: మినపప్పుతో సులభంగా రుబ్బి మెత్తని ఇడ్లీలు తయారుచేసుకోవడానికి అనువైనది. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_pad,w_600,h_600,b_white,f_auto,q_auto/v1788024023/ricemart_products/bzixpvhgc2z8blixcmbd.jpg"
+    ]
+  },
+  {
+    "id": "p_dal_toor_fatka",
+    "name": "G-Store Premium Gold Toor Dal (Fatka Kandi Pappu)",
+    "category": "c_dal",
+    "description": "G-Store Select ::: ప్రీమియం ఫట్కా కందిపప్పు ::: Golden yellow fatka toor dal that dissolves smoothly into thick dal. ::: ఘుమఘుమలాడే పప్పు చారు కోసం ప్రీమియం ఫట్కా కందిపప్పు. ::: Specially sourced fatka toor dal with zero stones or debris. Delivers vibrant yellow color and authentic home taste. ::: రాళ్ళు నలకలు లేని శుభ్రమైన నాణ్యమైన కందిపప్పు. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031561/ricemart_products/usrzwegxasyilegbhiis.jpg"
+    ]
+  },
+  {
+    "id": "p_ghee_grb_cow",
+    "name": "GRB Pure Cow Ghee Aroma Protected",
+    "category": "c_oil",
+    "description": "GRB ::: జి.ఆర్.బి ఆవు నెయ్యి ::: Granular texture and royal aroma packed in aroma-locked containers. ::: పూస పూసగా ఉండే స్వచ్ఛమైన సువాసనగల ఆవు నెయ్యి. ::: GRB Cow Ghee is made using traditional bilona churning methods to deliver granular texture and rich aroma to sweets and hot rice. ::: వేడి వేడి అన్నంలో పప్పుతో కలిపి తింటే అమృతతుల్యమైన రుచినిచ్చే నెయ్యి. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031489/ricemart_products/kmgn24ctzrcyasnzumzk.jpg"
+    ]
+  },
+  {
+    "id": "p_spice_kitchen_king",
+    "name": "Everest Kitchen King All-in-One Curry Masala",
+    "category": "c_spices",
+    "description": "Everest ::: కిచెన్ కింగ్ మసాలా ::: All-purpose spice seasoning that elevates any vegetable or paneer curry. ::: అన్ని రకాల వెజిటబుల్ కూరలకు సరిపోయే ఆల్-ఇన్-వన్ మసాలా. ::: Kitchen King is the king of masalas, giving restaurant-style color, aroma, and taste to everyday mixed vegetable gravies. ::: రెస్టారెంట్ స్టైల్ కూరల కోసం ప్రత్యేకమైన మసాలా. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031492/ricemart_products/lic2snl6xqrot1ol4jzs.jpg"
+    ]
+  },
+  {
+    "id": "p_bev_cadbury_bournvita",
+    "name": "Cadbury Bournvita Chocolate Health Drink",
+    "category": "c_beverages",
+    "description": "Cadbury :::  ::: Cadbury Bournvita Chocolate Health Drink :::  ::: Malted chocolate drink mix enriched with Inner Strength formula containing Vitamin D, Iron, and Calcium for growing kids. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031494/ricemart_products/z6ztpsqdxkpfpyznv5rb.jpg"
+    ]
+  },
+  {
+    "id": "p_bev_thums_up",
+    "name": "Thums Up Charged Soft Drink Bottle",
+    "category": "c_2c3b6a6e-7058-4017-bc1b-3b386f6f0e6f",
+    "description": "Thums Up :::  ::: Thums Up Charged Soft Drink Bottle :::  ::: Taste the thunder! Bold, fizzy, and strong spicy cola flavor for instant refreshment on hot afternoons. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031495/ricemart_products/rihzrwpa5ngfonnivstr.jpg"
+    ]
+  },
+  {
+    "id": "p_bev_red_label_tea",
+    "name": "Brooke Bond Red Label Strong CTC Leaf Tea",
+    "category": "c_beverages",
+    "description": "Red Label :::  ::: Brooke Bond Red Label Strong CTC Leaf Tea :::  ::: High-quality Assam and Dooars CTC blend. Delivers deep amber color, strong aroma, and wholesome taste for every morning cup. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031497/ricemart_products/vbp50kyijfl2qxryfedw.jpg"
+    ]
+  },
+  {
+    "id": "p_dairy_heritage_curd",
+    "name": "Heritage Fresh Thick Curd (Perugu Tub / Pouch)",
+    "category": "c_dairy",
+    "description": "Heritage ::: హెరిటేజ్ గడ్డ పెరుగు ::: Thick, creamy, and mildly sweet pasteurized curd. ::: రుచికరమైన చిక్కటి హెరిటేజ్ గడ్డ పెరుగు. ::: Prepared from pasteurized standardized milk with active lactic cultures. Perfectly thick for curd rice, raita, and lassi. ::: పెరుగన్నం మరియు లస్సీల కోసం అమృతతుల్యమైన పెరుగు. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031499/ricemart_products/vztcsra3vqntkdzns84g.jpg"
+    ]
+  },
+  {
+    "id": "p_flour_pillsbury_atta",
+    "name": "Pillsbury Chakki Fresh Whole Wheat Atta",
+    "category": "c_rice",
+    "description": "Pillsbury ::: పిల్స్‌బరీ గోధుమ పిండి ::: Stone-ground chakki whole wheat flour rich in natural dietary fiber. ::: సహజ పీచు పదార్ధాలతో కూడిన సంప్రదాయ చక్కి గోధుమ పిండి. ::: Pillsbury Chakki Fresh Atta locks in natural dietary fiber and essential wheat nutrients for healthy daily rotis. ::: సహజ పోషకాలు మరియు పీచు పదార్ధాలతో కూడిన పిల్స్‌బరీ పిండి. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_pad,w_600,h_600,b_white,f_auto,q_auto/v1788024045/ricemart_products/yzeyve9tglqvukxrvzgw.jpg"
+    ]
+  },
+  {
+    "id": "p_oil_mustard",
+    "name": "Fortune Kachi Ghani Mustard Oil",
+    "category": "c_oil",
+    "description": "Fortune ::: ఆవ నూనె ::: Kachi ghani mustard oil. ::: ::: Strong aroma kachi ghani mustard oil, ideal for traditional pickles and cooking. ::: ::: true",
+    "imageUrls": [
+      "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&auto=format&fit=crop"
+    ]
+  },
+  {
+    "id": "p_spice_everest_garam_masala",
+    "name": "Everest Royal Garam Masala Blend",
+    "category": "c_spices",
+    "description": "Everest :::  ::: Everest Royal Garam Masala Blend :::  ::: Authentic blend of 13 roasted whole spices including cinnamon, cloves, and cardamom for rich biryani aroma. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031500/ricemart_products/jtv0g824zmgzkuvaqaw9.jpg"
+    ]
+  },
+  {
+    "id": "p_dairy_paneer",
+    "name": "Amul Fresh Paneer",
+    "category": "c_dairy",
+    "description": "Amul ::: పన్నీర్ ::: Soft fresh paneer cubes. ::: ::: Soft and delicious fresh paneer cubes, rich in calcium and protein. ::: ::: true",
+    "imageUrls": [
+      "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=600&auto=format&fit=crop"
+    ]
+  },
+  {
+    "id": "p_biscuit_good_day",
+    "name": "Britannia Good Day Butter Cookies",
+    "category": "c_snacks",
+    "description": "Britannia ::: బ్రిటానియా గుడ్ డే బిస్కెట్లు ::: Rich buttery cookies with smiley design for cheerful tea times. ::: స్వచ్ఛమైన వెన్నతో తయారైన గుడ్ డే బిస్కెట్లు. ::: Britannia Good Day brings happiness with its rich buttery taste, crispy texture, and iconic smile patterns. ::: టీ మరియు పాలతో తినడానికి అనువైన వెన్న బిస్కెట్లు. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031563/ricemart_products/qbgwwicjjtzreijototm.jpg"
+    ]
+  },
+  {
+    "id": "p_dairy_amul_paneer",
+    "name": "Amul Fresh Malai Paneer Block",
+    "category": "c_dairy",
+    "description": "Amul :::  ::: Amul Fresh Malai Paneer Block :::  ::: Soft, rich, and protein-packed fresh malai paneer. Retains shape and soft melt-in-mouth texture when cooked. :::  ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031503/ricemart_products/zeyefue8vujiz3f6vgnc.jpg"
+    ]
+  },
+  {
+    "id": "p_ghee_durga_pure",
+    "name": "Durga Pure Ghee (Traditional Andhra Taste)",
+    "category": "c_oil",
+    "description": "Durga ::: దుర్గా స్వచ్ఛమైన నెయ్యి ::: Authentic coastal Andhra style granular cow ghee. ::: ఆంధ్రా సంప్రదాయ రుచితో కూడిన స్వచ్ఛమైన నెయ్యి. ::: Durga Ghee is a household favorite in North Andhra, renowned for its rich golden color, aroma, and rich flavor in sweets. ::: ఉత్తరాంధ్ర ప్రజల అభిమాన దుర్గా నెయ్యి. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031504/ricemart_products/lkodmwv66crggodk2s4h.jpg"
+    ]
+  },
+  {
+    "id": "p_dairy_ghee",
+    "name": "Amul Pure Cow Ghee",
+    "category": "c_dairy",
+    "description": "Amul ::: ఆవు నెయ్యి ::: Pure and aromatic cow ghee. ::: ::: Pure and aromatic cow ghee from Amul, enhances taste and aids digestion. ::: ::: true",
+    "imageUrls": [
+      "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=600&auto=format&fit=crop"
+    ]
+  },
+  {
+    "id": "p_oil_idhayam_sesame",
+    "name": "Idhayam Traditional Sesame / Gingelly Oil",
+    "category": "c_oil",
+    "description": "Idhayam ::: ఇదయం నువ్వుల నూనె ::: Pure cold-pressed sesame oil with authentic South Indian flavor. ::: సంప్రదాయ నువ్వుల నూనె - పచ్చళ్ళు మరియు పొడులకు ఎంతో రుచి. ::: Idhayam sesame oil is made from hand-picked white sesame seeds with palm jaggery. Perfect for podi idli and tamarind rice. ::: స్వచ్ఛమైన నువ్వుల నుండి తయారైన ఆరోగ్యకరమైన నూనె. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031506/ricemart_products/jp4fsrrrvfnw9d2ilfsa.jpg"
+    ]
+  },
+  {
+    "id": "p_oil_gold_drop_groundnut",
+    "name": "Gold Drop Filtered Groundnut Oil (Verusenaga Nune)",
+    "category": "c_oil",
+    "description": "Gold Drop ::: గోల్డ్ డ్రాప్ వేరుశనగ నూనె ::: Traditional nutty aroma for authentic Andhra pickles, fries, and curries. ::: ఆవకాయ పచ్చళ్ళు మరియు వేపుళ్ళ కోసం ఘుమఘుమలాడే వేరుశనగ నూనె. ::: Extracted from premium selected groundnut seeds. Essential for authentic Andhra avakaya pickles and deep fried snacks. ::: స్వచ్ఛమైన వేరుశనగ గింజల నుండి తీసిన సంప్రదాయ వంట నూనె. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031508/ricemart_products/qyjzieiafupazaxc7rpb.jpg"
+    ]
+  },
+  {
+    "id": "p_snack_haldirams_khatta_meetha",
+    "name": "Haldiram's Khatta Meetha Mixture",
+    "category": "c_2c3b6a6e-7058-4017-bc1b-3b386f6f0e6f",
+    "description": "Haldiram's ::: హల్దీరామ్స్ ఖట్టా మీఠా మిక్చర్ ::: Sweet and tangy namkeen blend of sev, fried green peas, and sago puffs. ::: తీపి మరియు పులుపుల కలయిక గల రుచికరమైన మిక్చర్. ::: A crowd favorite combination of sweet and sour crispy ingredients that makes every bite exciting. ::: అందరికీ నచ్చే తియ్యటి మరియు పుల్లటి మిక్చర్. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031564/ricemart_products/lv8y86gqmczfcaujklys.jpg"
+    ]
+  },
+  {
+    "id": "p_dal_toor_tata",
+    "name": "Tata Sampann Unpolished Toor Dal (Kandi Pappu)",
+    "category": "c_dal",
+    "description": "Tata Sampann ::: టాటా కందిపప్పు ::: 100% unpolished toor dal rich in plant proteins with zero water polish. ::: నీటి పాలిష్ లేని స్వచ్ఛమైన ప్రొటీన్ కందిపప్పు. ::: Tata Sampann Toor Dal retains natural nutrients and cooks faster into thick, creamy sambar and mudda pappu. ::: ముద్దపప్పు మరియు సాంబారు కోసం నాణ్యమైన టాటా కందిపప్పు. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031566/ricemart_products/mtn6ee3c7aoowqzxlyer.jpg"
+    ]
+  },
+  {
+    "id": "p_rice_lalitha",
+    "name": "Lalitha Brand HMT Rice",
+    "category": "c_rice",
+    "description": "Lalitha ::: లలిత బ్రాండ్ బియ్యం ::: Finest quality HMT Kolam rice. ::: ::: Finest quality HMT Kolam rice from Lalitha brand. Soft texture and easily digestible. ::: ::: true",
+    "imageUrls": [
+      "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&auto=format&fit=crop"
+    ]
+  },
+  {
+    "id": "p_spice_turmeric_powder",
+    "name": "Aashirvaad Pure Turmeric Powder (Pasupu)",
+    "category": "c_spices",
+    "description": "Aashirvaad ::: పసుపు పొడి ::: Golden yellow pure turmeric with high natural curcumin content. ::: సహజ గుణాలు నిండిన స్వచ్ఛమైన పసుపు పొడి. ::: Milled from selected Salem turmeric rhizomes, delivering natural antimicrobial protection and rich yellow color. ::: ఆరోగ్యకరమైన మరియు స్వచ్ఛమైన పసుపు. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031511/ricemart_products/zkcj0p0kybqtt7fl1rc3.jpg"
+    ]
+  },
+  {
+    "id": "p_spices_turmeric",
+    "name": "Organic Turmeric Powder",
+    "category": "c_spices",
+    "description": "G-Store ::: పసుపు ::: Pure organic turmeric powder. ::: ::: Pure organic turmeric powder, high curcumin content with golden color. ::: ::: true",
+    "imageUrls": [
+      "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=600&auto=format&fit=crop"
+    ]
+  },
+  {
+    "id": "p_rice_basmati",
+    "name": "Royal Basmati Rice",
+    "category": "c_rice",
+    "description": "Sameera ::: బాస్మతి బియ్యం ::: Long grain aromatic Basmati rice. ::: ::: Long grain aromatic Basmati rice, perfect for Biryanis and Pulaos. ::: ::: true",
+    "imageUrls": [
+      "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&auto=format&fit=crop"
+    ]
+  },
+  {
+    "id": "p_oil_gemini_sunflower",
+    "name": "Gemini Pure Sunflower Oil with Nutri-V",
+    "category": "c_oil",
+    "description": "Gemini ::: జెమిని సన్‌ఫ్లవర్ ఆయిల్ ::: Enriched with Nutri-V for active energy and light tasty cooking. ::: న్యూట్రీ-వి పోషకాలతో కూడిన స్వచ్ఛమైన జెమిని నూనె. ::: Gemini Sunflower Oil comes with Nutri-V complex keeping food light and crispy without soaking excess oil. ::: తక్కువ నూనె పీల్చుకునే గుణం కలిగిన నాణ్యమైన నూనె. ::: true",
+    "imageUrls": [
+      "https://res.cloudinary.com/k1lw675z/image/upload/c_fill,g_auto,w_600,h_400,f_auto,q_auto/v1788031513/ricemart_products/jozsjgqq8kmi3xwuraie.jpg"
+    ]
+  }
+]
