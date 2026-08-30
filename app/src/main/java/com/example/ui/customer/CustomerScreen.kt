@@ -104,9 +104,10 @@ data class MapLatLng(val latitude: Double, val longitude: Double)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomerScreen() {
-    var selectedTab by remember { mutableStateOf("HOME") } // "HOME", "CART", "TRACKING"
+    var selectedTab by remember { mutableStateOf("HOME") } // "HOME", "CART", "TRACKING", "ACCOUNT"
     var showAddressModal by remember { mutableStateOf(false) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
+    var selectedProductForDetail by remember { mutableStateOf<Product?>(null) }
 
     val lastOrder = AppState.lastPlacedOrder
     if (lastOrder != null) {
@@ -186,7 +187,11 @@ fun CustomerScreen() {
                         Column(
                             modifier = Modifier
                                 .weight(1f)
-                                .clickable { selectedTab = tab }
+                                .clickable {
+                                    selectedTab = tab
+                                    showAddressModal = false
+                                    selectedProductForDetail = null
+                                }
                                 .padding(vertical = 4.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
@@ -233,8 +238,6 @@ fun CustomerScreen() {
             }
         }
     ) { paddingValues ->
-        var selectedProductForDetail by remember { mutableStateOf<Product?>(null) }
-
         Box(
             modifier = Modifier
                 .fillMaxSize()
