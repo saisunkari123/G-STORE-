@@ -44,6 +44,12 @@ object AppState {
 
     // 1. App State
     var forceStoreOpen by mutableStateOf(true)
+    var isDriverOnline by mutableStateOf(true)
+    var activeDriverOrder by mutableStateOf<Order?>(null)
+    var driverLiveLat by mutableStateOf(18.4529) // G-Store Rajam Hub
+    var driverLiveLon by mutableStateOf(83.6548)
+    var driverHeading by mutableStateOf(45f)
+    var settledCashAmount by mutableStateOf(0.0)
     // 2. Auth State
     private var _currentUser = mutableStateOf<User?>(null)
     var currentUser: User?
@@ -378,7 +384,7 @@ object AppState {
                                             
                                             if (userDoc != null) {
                                                 withContext(Dispatchers.Main) {
-                                                    if (userDoc.role == "CUSTOMER") {
+                                                    if (userDoc.role == "CUSTOMER" || userDoc.role == "DELIVERY") {
                                                         currentUser = userDoc
                                                         activeRole = userDoc.role
                                                         showLoginScreen = false
@@ -387,7 +393,7 @@ object AppState {
                                                     } else {
                                                         Amplify.Auth.signOut { }
                                                         currentUser = null
-                                                        authError = "Phone number is not registered as a customer."
+                                                        authError = "Account is not authorized for this app flow."
                                                         isNetworkLoading = false
                                                     }
                                                 }
@@ -1457,7 +1463,7 @@ object AppState {
         ordersJob = ioScope.launch {
             try {
                 if (::orderRepository.isInitialized) {
-                    val flow = if (role == "ADMIN") {
+                    val flow = if (role == "ADMIN" || role == "DELIVERY") {
                         orderRepository.getAllOrders()
                     } else {
                         orderRepository.getOrdersByUserId(userId)
@@ -1903,4 +1909,185 @@ object AppState {
             }
         }
     }
+
+    /** Update Driver live location and broadcast */
+    fun updateDriverLocation(lat: Double, lon: Double, heading: Float = 0f) {
+        driverLiveLat = lat
+        driverLiveLon = lon
+        driverHeading = heading
+        activeDriverOrder?.let { order ->
+            val updated = order.copy(driverLatitude = lat, driverLongitude = lon)
+            activeDriverOrder = updated
+        }
+    }
+
+    /** Simulates realistic driver motion from Hub (Rajam) towards customer destination */
+    fun simulateDriverProgress(order: Order, progressFraction: Float) {
+        val hubLat = 18.4529
+        val hubLon = 83.6548
+        val targetLat = if (order.latitude != 0.0) order.latitude else 18.4560
+        val targetLon = if (order.longitude != 0.0) order.longitude else 83.6600
+        val currentLat = hubLat + (targetLat - hubLat) * progressFraction.coerceIn(0f, 1f)
+        val currentLon = hubLon + (targetLon - hubLon) * progressFraction.coerceIn(0f, 1f)
+        updateDriverLocation(currentLat, currentLon)
+    }
+
+    /** Delivery Driver marks an order as picked up / OUT_FOR_DELIVERY */
+    fun driverMarkOrderPickedUp(orderId: String, onComplete: () -> Unit = {}) {
+        val currentDriver = currentUser
+        val order = ordersList.find { it.id == orderId } ?: return
+        val updatedOrder = order.copy(
+            status = OrderStatus.OUT_FOR_DELIVERY,
+            assignedDriverId = currentDriver?.id ?: "driver_raju_01",
+            assignedDriverName = currentDriver?.name ?: "Raju (G-Store Rider)",
+            assignedDriverPhone = currentDriver?.phone ?: "+919999900001",
+            driverLatitude = driverLiveLat,
+            driverLongitude = driverLiveLon
+        )
+        isNetworkLoading = true
+        ioScope.launch {
+            try {
+                orderRepository.saveOrder(updatedOrder)
+                orderRepository.updateOrderStatus(orderId, OrderStatus.OUT_FOR_DELIVERY.name)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                withContext(Dispatchers.Main) {
+                    activeDriverOrder = updatedOrder
+                    isNetworkLoading = false
+                    onComplete()
+                }
+            }
+        }
+    }
+
+    /** Delivery Driver completes delivery and records payment, photo POD and remarks */
+    fun driverConfirmDelivery(
+        orderId: String,
+        enteredOtp: String,
+        cashAmount: Double,
+        proofPhotoUrl: String = "",
+        remarks: String = "",
+        onComplete: () -> Unit = {}
+    ) {
+        val order = ordersList.find { it.id == orderId } ?: return
+        val updatedOrder = order.copy(
+            status = OrderStatus.DELIVERED,
+            deliveryOtp = enteredOtp,
+            cashCollected = cashAmount,
+            deliveryProofPhotoUrl = proofPhotoUrl,
+            deliveryRemarks = remarks.ifEmpty { "Handed over directly to customer at doorstep" }
+        )
+        isNetworkLoading = true
+        ioScope.launch {
+            try {
+                orderRepository.saveOrder(updatedOrder)
+                orderRepository.updateOrderStatus(orderId, OrderStatus.DELIVERED.name)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                withContext(Dispatchers.Main) {
+                    if (activeDriverOrder?.id == orderId) {
+                        activeDriverOrder = null
+                    }
+                    isNetworkLoading = false
+                    onComplete()
+                }
+            }
+        }
+    }
+
+    /** Admin Dispatches an order and assigns a Delivery Partner */
+    fun adminDispatchOrderWithDriver(
+        orderId: String,
+        driverName: String = "Raju (G-Store Rider)",
+        driverPhone: String = "+919999900001",
+        onComplete: () -> Unit = {}
+    ) {
+        val order = ordersList.find { it.id == orderId } ?: return
+        val otp = order.customerPhone.filter { it.isDigit() }.takeLast(4).ifEmpty { "1234" }
+        val updatedOrder = order.copy(
+            status = OrderStatus.OUT_FOR_DELIVERY,
+            assignedDriverId = "driver_raju_01",
+            assignedDriverName = driverName,
+            assignedDriverPhone = driverPhone,
+            deliveryOtp = otp,
+            driverLatitude = driverLiveLat,
+            driverLongitude = driverLiveLon
+        )
+        isNetworkLoading = true
+        ioScope.launch {
+            try {
+                orderRepository.saveOrder(updatedOrder)
+                orderRepository.updateOrderStatus(orderId, OrderStatus.OUT_FOR_DELIVERY.name)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                withContext(Dispatchers.Main) {
+                    isNetworkLoading = false
+                    onComplete()
+                }
+            }
+        }
+    }
+
+    /** Delivery Driver reports an issue (e.g. customer unavailable, wrong address, vehicle delay) */
+    fun driverReportIssue(
+        orderId: String,
+        reason: String,
+        notes: String = "",
+        onComplete: () -> Unit = {}
+    ) {
+        val order = ordersList.find { it.id == orderId } ?: return
+        val updatedOrder = order.copy(
+            issueReported = if (notes.isNotBlank()) "$reason: $notes" else reason
+        )
+        isNetworkLoading = true
+        ioScope.launch {
+            try {
+                orderRepository.saveOrder(updatedOrder)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                withContext(Dispatchers.Main) {
+                    if (activeDriverOrder?.id == orderId) {
+                        activeDriverOrder = updatedOrder
+                    }
+                    isNetworkLoading = false
+                    onComplete()
+                }
+            }
+        }
+    }
+
+    /** Calculates total rider earnings (Base Pay ₹25/trip + ₹5/km distance incentive) */
+    fun getRiderEarningsToday(completedOrders: List<Order>): Double {
+        val basePay = completedOrders.size * 25.0
+        val distanceBonus = completedOrders.sumOf { (if (it.distanceKm > 2.0) it.distanceKm - 2.0 else 0.0) * 5.0 }
+        return basePay + distanceBonus
+    }
+
+    /** Settle cash collected with Store Manager */
+    fun driverSettleCashWithStore(amount: Double, onComplete: () -> Unit = {}) {
+        settledCashAmount += amount
+        onComplete()
+    }
+
+    /** Quick Login / Switch for Delivery Partner */
+    fun loginAsDeliveryPartner(phone: String = "+919999900001", name: String = "Raju (G-Store Rider)") {
+        val driver = User(
+            id = "driver_raju_01",
+            phone = phone,
+            name = name,
+            role = "DELIVERY",
+            email = "driver@gstore.com"
+        )
+        ioScope.launch { userRepository.saveUser(driver) }
+        currentUser = driver
+        activeRole = "DELIVERY"
+        showLoginScreen = false
+        authError = null
+        isNetworkLoading = false
+    }
 }
+

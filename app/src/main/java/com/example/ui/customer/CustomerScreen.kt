@@ -2523,7 +2523,81 @@ fun CustomerOrdersView() {
                                 com.example.domain.model.OrderStatus.DELIVERED -> 2
                                 else -> 0
                             }
-                            OrderProgressStepper(currentStep = step)
+                            OrderProgressStepper(currentStep = step, order = order)
+
+                            // Assigned Delivery Partner & Verification PIN Card
+                            if (order.status == com.example.domain.model.OrderStatus.OUT_FOR_DELIVERY) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                val context = androidx.compose.ui.platform.LocalContext.current
+                                val isDarkTheme = AppState.isDarkMode
+                                val riderName = order.assignedDriverName.ifEmpty { "Raju (G-Store Rider)" }
+                                val riderPhone = order.assignedDriverPhone.ifEmpty { "+919999900001" }
+                                val deliveryPin = order.deliveryOtp.ifEmpty { 
+                                    order.customerPhone.filter { it.isDigit() }.takeLast(4).ifEmpty { "4821" }
+                                }
+
+                                Surface(
+                                    color = if (isDarkTheme) Color(0xFF262626) else Color(0xFFF0FDF4),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, RoyalEmerald.copy(alpha = 0.3f)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(34.dp)
+                                                        .clip(CircleShape)
+                                                        .background(RoyalEmerald.copy(alpha = 0.15f)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text("🛵", fontSize = 18.sp)
+                                                }
+                                                Spacer(Modifier.width(8.dp))
+                                                Column {
+                                                    Text(riderName, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+                                                    Text("Delivery Partner on the way", fontSize = 11.sp, color = RoyalEmerald, fontWeight = FontWeight.SemiBold)
+                                                }
+                                            }
+
+                                            // 1-Tap Call Driver
+                                            IconButton(
+                                                onClick = {
+                                                    val dialIntent = android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:$riderPhone"))
+                                                    context.startActivity(dialIntent)
+                                                },
+                                                modifier = Modifier.size(34.dp)
+                                            ) {
+                                                Icon(Icons.Default.Phone, contentDescription = "Call Driver", tint = RoyalEmerald, modifier = Modifier.size(18.dp))
+                                            }
+                                        }
+
+                                        Spacer(Modifier.height(8.dp))
+
+                                        // Verification PIN Pill
+                                        Surface(
+                                            color = DeepGold.copy(alpha = 0.15f),
+                                            shape = RoundedCornerShape(8.dp),
+                                            border = BorderStroke(1.dp, DeepGold.copy(alpha = 0.4f)),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text("Share Delivery PIN with Driver:", fontSize = 11.5.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                                                Text(deliveryPin, fontSize = 15.sp, fontWeight = FontWeight.Black, color = DeepGold, letterSpacing = 2.sp)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(12.dp))
@@ -2669,14 +2743,14 @@ fun CustomerOrdersView() {
 }
 
 @Composable
-fun OrderProgressStepper(currentStep: Int) {
+fun OrderProgressStepper(currentStep: Int, order: Order? = null) {
     val statusStr = when (currentStep) {
         0 -> "PENDING"
         1 -> "OUT_FOR_DELIVERY"
         2 -> "DELIVERED"
         else -> "PENDING"
     }
-    com.example.ui.components.OrderTrackingTimeline(orderStatus = statusStr)
+    com.example.ui.components.OrderTrackingTimeline(orderStatus = statusStr, order = order)
 }
 
 

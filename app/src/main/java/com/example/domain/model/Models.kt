@@ -85,7 +85,17 @@ data class Order(
     val totalAmount: Double = 0.0,
     val status: OrderStatus = OrderStatus.PENDING,
     val createdAt: Long = System.currentTimeMillis(),
-    val items: List<OrderItem> = emptyList()
+    val items: List<OrderItem> = emptyList(),
+    val assignedDriverId: String = "",
+    val assignedDriverName: String = "",
+    val assignedDriverPhone: String = "",
+    val deliveryOtp: String = "",
+    val cashCollected: Double = 0.0,
+    val deliveryProofPhotoUrl: String = "",
+    val deliveryRemarks: String = "",
+    val issueReported: String = "",
+    val driverLatitude: Double = 0.0,
+    val driverLongitude: Double = 0.0
 )
 
 data class OrderItem(
