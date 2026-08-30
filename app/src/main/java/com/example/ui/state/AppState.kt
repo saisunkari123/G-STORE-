@@ -1095,23 +1095,27 @@ object AppState {
         }
     }
 
-    fun addNewCategory(nameEn: String, imageUrl: String) {
+    fun addNewCategory(nameEn: String, imageUrl: String = ""): String {
+        val cleanId = "c_" + nameEn.trim().lowercase().replace("[^a-z0-9]+".toRegex(), "_").trim('_')
+        val newCategory = Category(
+            id = cleanId,
+            nameEn = nameEn.trim(),
+            description = "${nameEn.trim()} Essentials",
+            imageUrl = imageUrl.ifBlank { "https://amplify-ricemart-saisunkari-ricemartbucketc8abaf9b-ifnwmpoqk2ww.s3.amazonaws.com/public/products/p_rice_sona_masoori.jpg" }
+        )
+        val updated = categoriesList.filter { it.id != cleanId } + newCategory
+        categoriesList = updated
+
         ioScope.launch {
             try {
                 if (::productRepository.isInitialized) {
-                    val newId = "c_${UUID.randomUUID()}"
-                    val newCategory = Category(
-                        id = newId,
-                        nameEn = nameEn,
-                        imageUrl = imageUrl.ifBlank { "android.resource://com.aistudio.ricemart.pkqmsx/drawable/rice_bags_preview" }
-                    )
-                    val updated = categoriesList + newCategory
                     productRepository.saveCategories(updated)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
+        return cleanId
     }
 
     fun addNewGiftConfig(thresholdAmount: Double, giftPrice: Double, productName: String, imageUrl: String, stockQuantity: Int) {
