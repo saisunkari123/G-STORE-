@@ -57,8 +57,11 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
     private val persister = JsonPersister(context)
     private val gson = Gson()
     private val defaultCategories = listOf(
-        Category(id = "c_rice", nameEn = "Rice Bags & Grains", imageUrl = "https://amplify-ricemart-saisunkari-ricemartbucketc8abaf9b-ifnwmpoqk2ww.s3.amazonaws.com/public/products/p_rice_sona_masoori.jpg"),
-        Category(id = "c_snacks", nameEn = "Snacks & Biscuits", imageUrl = "https://amplify-ricemart-saisunkari-ricemartbucketc8abaf9b-ifnwmpoqk2ww.s3.amazonaws.com/public/products/p_biscuit_good_day.jpg")
+        Category(id = "c_rice", nameEn = "Rice", description = "Premium Sona Masuri, Basmati & Grains", imageUrl = "https://amplify-ricemart-saisunkari-ricemartbucketc8abaf9b-ifnwmpoqk2ww.s3.amazonaws.com/public/products/p_rice_sona_masoori.jpg"),
+        Category(id = "c_oil", nameEn = "Oil", description = "Sunflower, Groundnut & Cooking Oils", imageUrl = "https://amplify-ricemart-saisunkari-ricemartbucketc8abaf9b-ifnwmpoqk2ww.s3.amazonaws.com/public/products/p_oil_freedom_sunflower.jpg"),
+        Category(id = "c_snacks", nameEn = "Snacks", description = "Biscuits, Namkeen & Treats", imageUrl = "https://amplify-ricemart-saisunkari-ricemartbucketc8abaf9b-ifnwmpoqk2ww.s3.amazonaws.com/public/products/p_biscuit_good_day.jpg"),
+        Category(id = "c_home", nameEn = "Home Essentials", description = "Detergents, Dishwash & Cleaning", imageUrl = "https://amplify-ricemart-saisunkari-ricemartbucketc8abaf9b-ifnwmpoqk2ww.s3.amazonaws.com/public/products/p_clean_surf_excel.jpg"),
+        Category(id = "c_groceries", nameEn = "Groceries", description = "Dals, Pulses, Staples & Spices", imageUrl = "https://amplify-ricemart-saisunkari-ricemartbucketc8abaf9b-ifnwmpoqk2ww.s3.amazonaws.com/public/products/p_dal_tata_toor.jpg")
     )
     private val categoriesState = MutableStateFlow(
         run {
@@ -283,6 +286,27 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
                                    productsState.value = actualProducts
                                    persister.saveList("aws_products.json", actualProducts)
                                    Log.i("AwsProduct", "Cloud sync: ${actualProducts.size} products from AppSync")
+
+                                   // Dynamically auto-register categories if any product introduces a new category
+                                   val existingCatIds = categoriesState.value.map { it.id }.toSet()
+                                   val missingCatIds = actualProducts.map { it.categoryId }.filter { it.isNotBlank() && it !in existingCatIds }.distinct()
+                                   if (missingCatIds.isNotEmpty()) {
+                                       val newCategories = missingCatIds.map { catId ->
+                                           val sampleProd = actualProducts.find { it.categoryId == catId }
+                                           val cleanName = catId.removePrefix("c_").replace("_", " ").split(" ")
+                                               .joinToString(" ") { it.replaceFirstChar { char -> char.uppercase() } }
+                                           Category(
+                                               id = catId,
+                                               nameEn = cleanName,
+                                               description = "$cleanName Essentials",
+                                               imageUrl = sampleProd?.imageUrls?.firstOrNull() ?: ""
+                                           )
+                                       }
+                                       val updatedCats = categoriesState.value + newCategories
+                                       categoriesState.value = updatedCats
+                                       persister.saveList("aws_categories.json", updatedCats)
+                                       syncScope.launch { saveCategories(updatedCats) }
+                                   }
                                }
                          }
                     }
@@ -413,6 +437,23 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
             }
             productsState.value = currentList
             persister.saveList("aws_products.json", currentList)
+
+            // If product belongs to a new category, auto-register the category
+            val existingCatIds = categoriesState.value.map { it.id }.toSet()
+            if (prodWithId.categoryId.isNotBlank() && prodWithId.categoryId !in existingCatIds) {
+                val cleanName = prodWithId.categoryId.removePrefix("c_").replace("_", " ").split(" ")
+                    .joinToString(" ") { it.replaceFirstChar { char -> char.uppercase() } }
+                val newCat = Category(
+                    id = prodWithId.categoryId,
+                    nameEn = cleanName,
+                    description = "$cleanName Essentials",
+                    imageUrl = prodWithId.imageUrls.firstOrNull() ?: ""
+                )
+                val updatedCats = categoriesState.value + newCat
+                categoriesState.value = updatedCats
+                persister.saveList("aws_categories.json", updatedCats)
+                syncScope.launch { saveCategories(updatedCats) }
+            }
         }
 
         // Asynchronously sync to AWS AppSync Product Table

@@ -2536,6 +2536,7 @@ fun AdminDeliveryManagementView() {
     var selectedOrderForDriver by remember { mutableStateOf<Order?>(null) }
     var selectedOrderForEdit by remember { mutableStateOf<Order?>(null) }
     var selectedOrderForMap by remember { mutableStateOf<Order?>(null) }
+    var showFleetDetailSheet by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
     val fleetRiders = listOf(
@@ -2567,6 +2568,14 @@ fun AdminDeliveryManagementView() {
                 order.id.lowercase().contains(query) ||
                 order.assignedDriverName.lowercase().contains(query)
         matchesStatus && matchesSearch
+    }
+
+    if (showFleetDetailSheet) {
+        AdminDeliveryFleetDetailSheet(
+            fleetRiders = fleetRiders,
+            allOrders = allOrders,
+            onDismiss = { showFleetDetailSheet = false }
+        )
     }
 
     if (selectedOrderForDriver != null) {
@@ -2645,78 +2654,62 @@ fun AdminDeliveryManagementView() {
             }
         }
 
-        // 2. Delivery Boys Fleet & Performance Section
+        // 2. Compact Delivery Fleet Summary Card
         item {
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showFleetDetailSheet = true },
                 colors = CardDefaults.cardColors(containerColor = if (isDark) Color(0xFF1A1A1A) else Color.White),
                 shape = RoundedCornerShape(14.dp),
                 border = BorderStroke(1.dp, if (isDark) Color(0xFF333333) else Color(0xFFE2E8F0))
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(RoyalEmerald.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("🛵 Delivery Partners & Fleet Work", fontWeight = FontWeight.Black, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = RoyalEmerald.copy(alpha = 0.12f)
-                        ) {
-                            Text("3 ONLINE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = RoyalEmerald, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
-                        }
+                        Text("🛵", fontSize = 22.sp)
                     }
 
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.width(12.dp))
 
-                    fleetRiders.forEach { (riderName, riderPhone) ->
-                        val riderDelivered = deliveredOrders.filter { it.assignedDriverPhone == riderPhone || it.assignedDriverName == riderName }
-                        val riderActive = outForDeliveryOrders.filter { it.assignedDriverPhone == riderPhone || it.assignedDriverName == riderName }
-                        val riderCash = riderDelivered.sumOf { it.totalAmount }
-
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = if (isDark) Color(0xFF262626) else Color(0xFFF8FAFC),
-                            border = BorderStroke(1.dp, if (isDark) Color(0xFF383838) else Color(0xFFEAEAEA)),
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(10.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Delivery Fleet & Riders", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                            Spacer(Modifier.width(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = RoyalEmerald.copy(alpha = 0.12f)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(34.dp)
-                                        .clip(CircleShape)
-                                        .background(RoyalEmerald.copy(alpha = 0.15f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("🛵", fontSize = 16.sp)
-                                }
-
-                                Spacer(Modifier.width(10.dp))
-
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(riderName, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
-                                    Text(
-                                        "${riderDelivered.size} delivered today • ${riderActive.size} active • ₹${riderCash.toInt()} collected",
-                                        fontSize = 11.sp,
-                                        color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
-                                    )
-                                }
-
-                                // Quick Call Rider
-                                IconButton(
-                                    onClick = {
-                                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$riderPhone"))
-                                        context.startActivity(intent)
-                                    },
-                                    modifier = Modifier.size(30.dp)
-                                ) {
-                                    Icon(Icons.Default.Phone, contentDescription = "Call", tint = RoyalEmerald, modifier = Modifier.size(16.dp))
-                                }
+                                Text("3 ACTIVE", fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = RoyalEmerald, modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.5.dp))
                             }
+                        }
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            "${deliveredOrders.size} delivered today • ${outForDeliveryOrders.size} active on route • Tap to view all",
+                            fontSize = 11.sp,
+                            color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+                        )
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = (if (isDark) Color(0xFF333333) else Color(0xFFF1F5F9))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Details", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                            Spacer(Modifier.width(2.dp))
+                            Icon(Icons.Default.ChevronRight, contentDescription = "Open", tint = Color.Gray, modifier = Modifier.size(16.dp))
                         }
                     }
                 }
@@ -3042,6 +3035,181 @@ fun AdminDeliveryOrderCard(
                     Spacer(Modifier.width(4.dp))
                     Text("Map", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AdminDeliveryFleetDetailSheet(
+    fleetRiders: List<Pair<String, String>>,
+    allOrders: List<Order>,
+    onDismiss: () -> Unit
+) {
+    val isDark = AppState.isDarkMode
+    val context = LocalContext.current
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = if (isDark) Color(0xFF1E1E1E) else Color.White,
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp)
+                .padding(bottom = 28.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(RoyalEmerald.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("🛵", fontSize = 18.sp)
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column {
+                        Text("Delivery Partners & Fleet", fontSize = 17.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
+                        Text("Individual rider work, active trips & cash collected", fontSize = 11.sp, color = Color.Gray)
+                    }
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurface)
+                }
+            }
+
+            Spacer(Modifier.height(14.dp))
+
+            fleetRiders.forEach { (riderName, riderPhone) ->
+                val riderDelivered = allOrders.filter { it.status == OrderStatus.DELIVERED && (it.assignedDriverPhone == riderPhone || it.assignedDriverName == riderName) }
+                val riderActive = allOrders.filter { it.status == OrderStatus.OUT_FOR_DELIVERY && (it.assignedDriverPhone == riderPhone || it.assignedDriverName == riderName) }
+                val riderCash = riderDelivered.sumOf { it.totalAmount }
+
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = if (isDark) Color(0xFF262626) else Color(0xFFF8FAFC),
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF383838) else Color(0xFFE2E8F0)),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(CircleShape)
+                                    .background(RoyalEmerald.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    riderName.take(1).uppercase(),
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = RoyalEmerald
+                                )
+                            }
+
+                            Spacer(Modifier.width(12.dp))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(riderName, fontWeight = FontWeight.Bold, fontSize = 14.5.sp, color = MaterialTheme.colorScheme.onSurface)
+                                Text(riderPhone, fontSize = 11.5.sp, color = Color.Gray)
+                            }
+
+                            // Quick Call button
+                            IconButton(
+                                onClick = {
+                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$riderPhone"))
+                                    context.startActivity(intent)
+                                },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(Icons.Default.Phone, contentDescription = "Call", tint = RoyalEmerald, modifier = Modifier.size(18.dp))
+                            }
+                        }
+
+                        Spacer(Modifier.height(12.dp))
+
+                        // Stats Summary Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Surface(
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isDark) Color(0xFF1E1E1E) else Color.White,
+                                border = BorderStroke(0.5.dp, if (isDark) Color(0xFF333333) else Color(0xFFE2E8F0))
+                            ) {
+                                Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("${riderDelivered.size}", fontWeight = FontWeight.Black, fontSize = 15.sp, color = RoyalEmerald)
+                                    Text("Delivered", fontSize = 10.sp, color = Color.Gray)
+                                }
+                            }
+                            Surface(
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isDark) Color(0xFF1E1E1E) else Color.White,
+                                border = BorderStroke(0.5.dp, if (isDark) Color(0xFF333333) else Color(0xFFE2E8F0))
+                            ) {
+                                Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("${riderActive.size}", fontWeight = FontWeight.Black, fontSize = 15.sp, color = Color(0xFFF59E0B))
+                                    Text("Active Trips", fontSize = 10.sp, color = Color.Gray)
+                                }
+                            }
+                            Surface(
+                                modifier = Modifier.weight(1.1f),
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isDark) Color(0xFF1E1E1E) else Color.White,
+                                border = BorderStroke(0.5.dp, if (isDark) Color(0xFF333333) else Color(0xFFE2E8F0))
+                            ) {
+                                Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("₹${riderCash.toInt()}", fontWeight = FontWeight.Black, fontSize = 15.sp, color = DeepGold)
+                                    Text("Cash Collected", fontSize = 10.sp, color = Color.Gray)
+                                }
+                            }
+                        }
+
+                        if (riderActive.isNotEmpty()) {
+                            Spacer(Modifier.height(10.dp))
+                            Text("Active Orders on Route:", fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                            riderActive.forEach { actOrder ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("• #${actOrder.id.takeLast(6).uppercase()} (${actOrder.addressHouseNo.ifEmpty { "Customer" }})", fontSize = 11.sp, color = Color.Gray)
+                                    Text("₹${actOrder.totalAmount.toInt()}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(18.dp))
+
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth().height(46.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald)
+            ) {
+                Text("Close Details", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.White)
             }
         }
     }
