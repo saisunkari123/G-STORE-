@@ -57,16 +57,8 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
     private val persister = JsonPersister(context)
     private val gson = Gson()
     private val defaultCategories = listOf(
-        Category(id = "c_rice", nameEn = "Rice Bags", imageUrl = "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&auto=format&fit=crop"),
-        Category(id = "c_oil", nameEn = "Cooking Oils", imageUrl = "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&auto=format&fit=crop"),
-        Category(id = "c_dal", nameEn = "Dals & Pulses", imageUrl = "https://images.unsplash.com/photo-1585994192701-f1a505c8574a?w=600&auto=format&fit=crop"),
-        Category(id = "c_dairy", nameEn = "Dairy Essentials", imageUrl = "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=600&auto=format&fit=crop"),
-        Category(id = "c_spices", nameEn = "Spices & Masalas", imageUrl = "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=600&auto=format&fit=crop"),
-        Category(id = "c_dryfruits", nameEn = "Dry Fruits & Nuts", imageUrl = "https://images.unsplash.com/photo-1599599810769-bcde5a160d32?w=600&auto=format&fit=crop"),
-        Category(id = "c_snacks", nameEn = "Snacks & Namkeen", imageUrl = "https://images.unsplash.com/photo-1621996346565-e3d5d6281290?w=600&auto=format&fit=crop"),
-        Category(id = "c_biscuits", nameEn = "Biscuits & Bakery", imageUrl = "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=600&auto=format&fit=crop"),
-        Category(id = "c_beverages", nameEn = "Tea, Coffee & Drinks", imageUrl = "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&auto=format&fit=crop"),
-        Category(id = "c_cleaning", nameEn = "Home & Cleaning", imageUrl = "https://images.unsplash.com/photo-1583947215259-38e31be8751f?w=600&auto=format&fit=crop")
+        Category(id = "c_rice", nameEn = "Rice Bags & Grains", imageUrl = "https://amplify-ricemart-saisunkari-ricemartbucketc8abaf9b-ifnwmpoqk2ww.s3.amazonaws.com/public/products/p_rice_sona_masoori.jpg"),
+        Category(id = "c_snacks", nameEn = "Snacks & Biscuits", imageUrl = "https://amplify-ricemart-saisunkari-ricemartbucketc8abaf9b-ifnwmpoqk2ww.s3.amazonaws.com/public/products/p_biscuit_good_day.jpg")
     )
     private val categoriesState = MutableStateFlow(
         run {
@@ -287,13 +279,11 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
                               val actualProducts = cloudProducts.filter {
                                   it.id != "sys_categories" && it.id != "sys_gifts" && it.id != "sys_config"
                               }
-                              if (actualProducts.isNotEmpty()) {
-                                  val localOnly = productsState.value.filter { local -> actualProducts.none { cloud -> cloud.id == local.id } }
-                                  val merged = actualProducts + localOnly
-                                  productsState.value = merged
-                                  persister.saveList("aws_products.json", merged)
-                                  Log.i("AwsProduct", "Cloud sync: ${merged.size} total products (${actualProducts.size} from AppSync, ${localOnly.size} local)")
-                              }
+                               if (actualProducts.isNotEmpty()) {
+                                   productsState.value = actualProducts
+                                   persister.saveList("aws_products.json", actualProducts)
+                                   Log.i("AwsProduct", "Cloud sync: ${actualProducts.size} products from AppSync")
+                               }
                          }
                     }
                 } catch (e: Exception) {

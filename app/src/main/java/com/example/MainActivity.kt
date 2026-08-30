@@ -64,6 +64,7 @@ class MainActivity : ComponentActivity() {
               when (AppState.activeRole) {
                 "CUSTOMER" -> CustomerScreen()
                 "ADMIN" -> AdminScreen()
+                "DELIVERY" -> com.example.ui.delivery.DeliveryScreen()
                 else -> CustomerScreen()
               }
             }

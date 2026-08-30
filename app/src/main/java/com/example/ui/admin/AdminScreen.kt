@@ -3670,12 +3670,7 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
                                         return@launch
                                     }
                                     val downloadUrl = withContext(Dispatchers.IO) {
-                                        try {
-                                            CloudinaryUploader.upload(tempFile)
-                                        } catch (cErr: Exception) {
-                                            android.util.Log.w("ProductEditor", "Cloudinary upload failed, falling back to AWS S3 Storage...", cErr)
-                                            com.example.data.repository.AwsStorageUploader.uploadProductImage(tempFile)
-                                        }
+                                        com.example.data.repository.AwsStorageUploader.uploadProductImage(tempFile)
                                     }
                                     withContext(Dispatchers.IO) {
                                         try { tempFile.delete() } catch (_: Exception) {}

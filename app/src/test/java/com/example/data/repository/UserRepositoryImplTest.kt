@@ -41,6 +41,12 @@ class FakeUserDao : UserDao {
         usersFlow.value = currentUsers
     }
 
+    override suspend fun deleteAllNonAdminUsers() {
+        val currentUsers = usersFlow.value.toMutableList()
+        currentUsers.removeAll { it.role != "ADMIN" }
+        usersFlow.value = currentUsers
+    }
+
     override fun getAllUsers(): Flow<List<UserEntity>> {
         return usersFlow
     }
