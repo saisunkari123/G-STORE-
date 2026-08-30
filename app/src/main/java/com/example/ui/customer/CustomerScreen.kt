@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.domain.model.Category
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.List
@@ -3146,6 +3147,172 @@ fun CustomerAccountView(onLogoutClick: () -> Unit) {
     }
 }
 
+val RAJAM_LANDMARKS = listOf(
+    Pair("More Supermarket, Main Road", Pair("Rajam, Andhra Pradesh", MapLatLng(18.4530, 83.6545))),
+    Pair("Rajam RTC Bus Complex", Pair("Main Road, Rajam, Andhra Pradesh", MapLatLng(18.4518, 83.6532))),
+    Pair("GMR Institute of Technology (GMRIT)", Pair("GMR Nagar, Rajam, Andhra Pradesh", MapLatLng(18.4632, 83.6610))),
+    Pair("GMR Varalakshmi Care Hospital", Pair("Rajam, Andhra Pradesh", MapLatLng(18.4605, 83.6625))),
+    Pair("Old Bus Stand & Market", Pair("Center, Rajam, Andhra Pradesh", MapLatLng(18.4502, 83.6520))),
+    Pair("Rajam Police Station", Pair("Palakonda Road, Rajam, Andhra Pradesh", MapLatLng(18.4542, 83.6560))),
+    Pair("State Bank of India (SBI)", Pair("Main Road, Rajam, Andhra Pradesh", MapLatLng(18.4525, 83.6538))),
+    Pair("Union Bank of India (Andhra Bank)", Pair("Main Road, Rajam, Andhra Pradesh", MapLatLng(18.4515, 83.6528))),
+    Pair("Dollars Colony", Pair("Residential Area, Rajam, Andhra Pradesh", MapLatLng(18.4580, 83.6590))),
+    Pair("Sriharipuram", Pair("Rajam, Andhra Pradesh", MapLatLng(18.4610, 83.6490))),
+    Pair("Radham Junction", Pair("Main Road, Rajam, Andhra Pradesh", MapLatLng(18.4510, 83.6530))),
+    Pair("Vangara Road", Pair("Rajam, Andhra Pradesh", MapLatLng(18.4480, 83.6510))),
+    Pair("Palakonda Road", Pair("Rajam, Andhra Pradesh", MapLatLng(18.4560, 83.6570))),
+    Pair("Kaviti Road", Pair("Rajam, Andhra Pradesh", MapLatLng(18.4550, 83.6520))),
+    Pair("Market Yard / Rythu Bazar", Pair("Rajam, Andhra Pradesh", MapLatLng(18.4495, 83.6515))),
+    Pair("Pogiri", Pair("Rajam Mandal, Andhra Pradesh", MapLatLng(18.4720, 83.6420))),
+    Pair("Boddam", Pair("Rajam Mandal, Andhra Pradesh", MapLatLng(18.4350, 83.6680))),
+    Pair("Santakaviti Junction", Pair("Rajam Area, Andhra Pradesh", MapLatLng(18.4280, 83.6390)))
+)
+
+suspend fun searchRajamPlaces(context: Context, rawQuery: String): List<Pair<String, MapLatLng>> = withContext(Dispatchers.IO) {
+    val results = mutableListOf<Pair<String, MapLatLng>>()
+    val query = rawQuery.trim()
+    if (query.length < 2) return@withContext emptyList()
+
+    // 1. Instant Rajam Landmarks Matching
+    val qLower = query.lowercase(Locale.ENGLISH)
+    val words = qLower.split(" ").filter { it.isNotBlank() }
+
+    val localMatches = RAJAM_LANDMARKS.filter { landmark ->
+        val fullText = "${landmark.first} ${landmark.second.first}".lowercase(Locale.ENGLISH)
+        words.all { w -> fullText.contains(w) } || fullText.contains(qLower)
+    }.map { Pair("${it.first}, ${it.second.first}", it.second.second) }
+
+    results.addAll(localMatches)
+
+    // 2. OpenStreetMap Nominatim Free Search API (High accuracy for Indian localities & shops)
+    try {
+        val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
+        val searchUrls = listOf(
+            "https://nominatim.openstreetmap.org/search?format=json&q=$encodedQuery&countrycodes=in&limit=8",
+            if (!qLower.contains("rajam")) {
+                val rajamEncoded = java.net.URLEncoder.encode("$query Rajam Andhra Pradesh", "UTF-8")
+                "https://nominatim.openstreetmap.org/search?format=json&q=$rajamEncoded&countrycodes=in&limit=5"
+            } else null
+        ).filterNotNull()
+
+        for (urlStr in searchUrls) {
+            val url = java.net.URL(urlStr)
+            val conn = url.openConnection() as java.net.HttpURLConnection
+            conn.requestMethod = "GET"
+            conn.setRequestProperty("User-Agent", "GStore-Android/1.0 (contact@gstore.com)")
+            conn.connectTimeout = 3000
+            conn.readTimeout = 3000
+
+            if (conn.responseCode == 200) {
+                val responseText = conn.inputStream.bufferedReader().use { it.readText() }
+                val jsonArray = org.json.JSONArray(responseText)
+                for (i in 0 until jsonArray.length()) {
+                    val obj = jsonArray.getJSONObject(i)
+                    val dispName = obj.optString("display_name", "")
+                    val lat = obj.optString("lat", "").toDoubleOrNull()
+                    val lon = obj.optString("lon", "").toDoubleOrNull()
+                    if (dispName.isNotBlank() && lat != null && lon != null) {
+                        results.add(Pair(dispName, MapLatLng(lat, lon)))
+                    }
+                }
+            }
+            conn.disconnect()
+            if (results.size >= 8) break
+        }
+    } catch (_: Exception) {}
+
+    // 3. Android Native Geocoder (Google Play Services)
+    try {
+        val geocoder = android.location.Geocoder(context, Locale.ENGLISH)
+        @Suppress("DEPRECATION")
+        val addresses = geocoder.getFromLocationName(query, 6)
+        if (!addresses.isNullOrEmpty()) {
+            addresses.forEach { addr ->
+                val line = (0..addr.maxAddressLineIndex).mapNotNull { addr.getAddressLine(it) }.joinToString(", ")
+                val placeName = if (line.isNotBlank()) line else "${addr.featureName ?: ""}, ${addr.locality ?: ""}, ${addr.adminArea ?: ""}".trim(',', ' ')
+                if (placeName.isNotBlank()) {
+                    results.add(Pair(placeName, MapLatLng(addr.latitude, addr.longitude)))
+                }
+            }
+        }
+
+        if (!qLower.contains("rajam")) {
+            @Suppress("DEPRECATION")
+            val rajamAddrs = geocoder.getFromLocationName("$query, Rajam, Andhra Pradesh, India", 4)
+            if (!rajamAddrs.isNullOrEmpty()) {
+                rajamAddrs.forEach { addr ->
+                    val line = (0..addr.maxAddressLineIndex).mapNotNull { addr.getAddressLine(it) }.joinToString(", ")
+                    val placeName = if (line.isNotBlank()) line else "${addr.featureName ?: ""}, Rajam, AP".trim(',', ' ')
+                    if (placeName.isNotBlank()) {
+                        results.add(Pair(placeName, MapLatLng(addr.latitude, addr.longitude)))
+                    }
+                }
+            }
+        }
+    } catch (_: Exception) {}
+
+    // 4. Deduplicate results by proximity (< 50 meters apart) and name
+    val uniqueResults = mutableListOf<Pair<String, MapLatLng>>()
+    for (item in results) {
+        val alreadyExists = uniqueResults.any { existing ->
+            val dist = AppState.calculateDistanceKm(
+                existing.second.latitude,
+                existing.second.longitude,
+                item.second.latitude,
+                item.second.longitude
+            )
+            dist < 0.05 || existing.first.equals(item.first, ignoreCase = true)
+        }
+        if (!alreadyExists) {
+            uniqueResults.add(item)
+        }
+    }
+
+    uniqueResults.take(10)
+}
+
+suspend fun reverseGeocodeAddress(context: Context, lat: Double, lon: Double): String = withContext(Dispatchers.IO) {
+    var resolvedAddress = ""
+    // 1. Android Native Geocoder
+    try {
+        val geocoder = android.location.Geocoder(context, Locale.ENGLISH)
+        @Suppress("DEPRECATION")
+        val addresses = geocoder.getFromLocation(lat, lon, 1)
+        if (!addresses.isNullOrEmpty()) {
+            val addr = addresses[0]
+            val lines = (0..addr.maxAddressLineIndex).mapNotNull { addr.getAddressLine(it) }
+            if (lines.isNotEmpty()) {
+                resolvedAddress = lines.joinToString(", ")
+            }
+        }
+    } catch (_: Exception) {}
+
+    // 2. OpenStreetMap Nominatim Reverse Geocoding
+    if (resolvedAddress.isBlank()) {
+        try {
+            val urlStr = "https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lon&zoom=18&addressdetails=1"
+            val url = java.net.URL(urlStr)
+            val conn = url.openConnection() as java.net.HttpURLConnection
+            conn.requestMethod = "GET"
+            conn.setRequestProperty("User-Agent", "GStore-Android/1.0 (contact@gstore.com)")
+            conn.connectTimeout = 3000
+            conn.readTimeout = 3000
+            if (conn.responseCode == 200) {
+                val responseText = conn.inputStream.bufferedReader().use { it.readText() }
+                val jsonObj = org.json.JSONObject(responseText)
+                resolvedAddress = jsonObj.optString("display_name", "")
+            }
+            conn.disconnect()
+        } catch (_: Exception) {}
+    }
+
+    // 3. Fallback
+    if (resolvedAddress.isBlank()) {
+        resolvedAddress = "Location: ${String.format(Locale.ENGLISH, "%.4f", lat)}, ${String.format(Locale.ENGLISH, "%.4f", lon)}"
+    }
+    resolvedAddress
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AWSMapPickerDialog(
@@ -3161,61 +3328,17 @@ fun AWSMapPickerDialog(
 
     fun updateAddress(latLng: MapLatLng) {
         selectedLatLng = latLng
-        scope.launch(Dispatchers.IO) {
-            var resolvedAddress = ""
-            // 1. Try Android Native Geocoder for exact street address
-            try {
-                val geocoder = android.location.Geocoder(context, java.util.Locale.getDefault())
-                @Suppress("DEPRECATION")
-                val addresses = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1)
-                if (!addresses.isNullOrEmpty()) {
-                    val addr = addresses[0]
-                    val lines = (0..addr.maxAddressLineIndex).mapNotNull { addr.getAddressLine(it) }
-                    if (lines.isNotEmpty()) {
-                        resolvedAddress = lines.joinToString(", ")
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-
-            // 2. Fallback to AWS Location Services if Geocoder returns empty
-            if (resolvedAddress.isBlank()) {
-                try {
-                    val options = GeoSearchByCoordinatesOptions.builder().maxResults(1).build()
-                    val latch = java.util.concurrent.CountDownLatch(1)
-                    Amplify.Geo.searchByCoordinates(
-                        Coordinates(latLng.latitude, latLng.longitude),
-                        options,
-                        { result ->
-                            val places = result.places
-                            if (places.isNotEmpty()) {
-                                val place = places[0]
-                                val labelMatch = Regex("label=(.*?),\\s*addressNumber=").find(place.toString())
-                                resolvedAddress = labelMatch?.groups?.get(1)?.value?.trim() ?: place.toString()
-                            }
-                            latch.countDown()
-                        },
-                        { error ->
-                            latch.countDown()
-                        }
-                    )
-                    latch.await(2, java.util.concurrent.TimeUnit.SECONDS)
-                } catch (_: Exception) {}
-            }
-
-            // 3. Fallback if address is still blank
-            if (resolvedAddress.isBlank()) {
-                resolvedAddress = "Lat: ${String.format("%.4f", latLng.latitude)}, Lon: ${String.format("%.4f", latLng.longitude)}"
-            }
-
-            withContext(Dispatchers.Main) {
-                addressText = resolvedAddress
-            }
+        scope.launch {
+            val addr = reverseGeocodeAddress(context, latLng.latitude, latLng.longitude)
+            addressText = addr
         }
     }
 
-    var locationPermissionGranted by remember { mutableStateOf(androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED) }
+    var locationPermissionGranted by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        )
+    }
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -3223,14 +3346,12 @@ fun AWSMapPickerDialog(
         locationPermissionGranted = isGranted
         if (isGranted) {
             try {
-                fusedLocationClient.lastLocation
-                    .addOnSuccessListener { location ->
-                        if (location != null) {
-                            val currentLatLng = MapLatLng(location.latitude, location.longitude)
-                            updateAddress(currentLatLng)
-                        }
+                fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                    if (location != null) {
+                        val currentLatLng = MapLatLng(location.latitude, location.longitude)
+                        updateAddress(currentLatLng)
                     }
-                    .addOnFailureListener { }
+                }
             } catch (_: SecurityException) {}
         }
     }
@@ -3239,14 +3360,12 @@ fun AWSMapPickerDialog(
         updateAddress(selectedLatLng)
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             try {
-                fusedLocationClient.lastLocation
-                    .addOnSuccessListener { location ->
-                        if (location != null) {
-                            val currentLatLng = MapLatLng(location.latitude, location.longitude)
-                            updateAddress(currentLatLng)
-                        }
+                fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                    if (location != null) {
+                        val currentLatLng = MapLatLng(location.latitude, location.longitude)
+                        updateAddress(currentLatLng)
                     }
-                    .addOnFailureListener { }
+                }
             } catch (_: SecurityException) {}
         } else {
             locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -3257,65 +3376,25 @@ fun AWSMapPickerDialog(
     var mapSearchQuery by remember { mutableStateOf("") }
     var searchResultsList by remember { mutableStateOf<List<Pair<String, MapLatLng>>>(emptyList()) }
     var isSearching by remember { mutableStateOf(false) }
-    var mapZoomLevel by remember { mutableStateOf(17.0) }
-    var isZoomedIn by remember { mutableStateOf(false) }
-    var isMapScrolling by remember { mutableStateOf(false) }
-
-    // Pin Drop Lift & Bounce Animations
-    val pinOffsetY by animateDpAsState(
-        targetValue = if (isMapScrolling) (-40).dp else (-26).dp,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
-    )
-    val pinScale by animateFloatAsState(
-        targetValue = if (isMapScrolling) 1.2f else 1.0f,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
-    )
-    val shadowScale by animateFloatAsState(
-        targetValue = if (isMapScrolling) 0.5f else 1.0f,
-        animationSpec = tween(durationMillis = 150)
-    )
 
     // Automatic Live Search Suggestions (Debounced as user types)
     LaunchedEffect(mapSearchQuery) {
         val query = mapSearchQuery.trim()
-        if (query.length >= 3) {
-            kotlinx.coroutines.delay(300) // 300ms debounce while typing
+        if (query.length >= 2) {
+            kotlinx.coroutines.delay(250) // 250ms debounce
             isSearching = true
-            withContext(Dispatchers.IO) {
-                try {
-                    val geocoder = android.location.Geocoder(context, java.util.Locale.getDefault())
-                    @Suppress("DEPRECATION")
-                    val addresses = geocoder.getFromLocationName(query, 5)
-                    if (!addresses.isNullOrEmpty()) {
-                        val list = addresses.mapNotNull { addr ->
-                            val line = (0..addr.maxAddressLineIndex).mapNotNull { addr.getAddressLine(it) }.joinToString(", ")
-                            val placeName = if (line.isNotBlank()) line else "${addr.featureName ?: ""}, ${addr.locality ?: ""}".trim(',', ' ')
-                            if (placeName.isNotBlank()) {
-                                Pair(placeName, MapLatLng(addr.latitude, addr.longitude))
-                            } else null
-                        }
-                        withContext(Dispatchers.Main) {
-                            searchResultsList = list
-                        }
-                    }
-                } catch (_: Exception) {
-                } finally {
-                    withContext(Dispatchers.Main) { isSearching = false }
-                }
+            try {
+                val list = searchRajamPlaces(context, query)
+                searchResultsList = list
+            } catch (_: Exception) {
+            } finally {
+                isSearching = false
             }
         } else {
             searchResultsList = emptyList()
         }
     }
-    
-    // Initialize OSMDroid Configuration
-    LaunchedEffect(Unit) {
-        try {
-            org.osmdroid.config.Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", android.content.Context.MODE_PRIVATE))
-            org.osmdroid.config.Configuration.getInstance().userAgentValue = context.packageName
-        } catch (_: Exception) {}
-    }
-    
+
     BackHandler { onDismiss() }
 
     Surface(
@@ -3327,14 +3406,14 @@ fun AWSMapPickerDialog(
         Box(
             modifier = Modifier.fillMaxSize()
         ) {
-            // 1. Fully Native Android OSMMapView Component with Pin Drop Animation
+            // 1. Google Map Component
             Box(
                 modifier = Modifier.fillMaxSize()
             ) {
                 val cameraPositionState = com.google.maps.android.compose.rememberCameraPositionState {
                     position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(
-                        com.google.android.gms.maps.model.LatLng(selectedLatLng.latitude, selectedLatLng.longitude), 
-                        19f
+                        com.google.android.gms.maps.model.LatLng(selectedLatLng.latitude, selectedLatLng.longitude),
+                        16f
                     )
                 }
 
@@ -3344,11 +3423,19 @@ fun AWSMapPickerDialog(
                         cameraPositionState.animate(
                             com.google.android.gms.maps.CameraUpdateFactory.newLatLngZoom(
                                 com.google.android.gms.maps.model.LatLng(selectedLatLng.latitude, selectedLatLng.longitude),
-                                19f
+                                17f
                             )
                         )
                     }
                 }
+
+                val currentDist = AppState.calculateDistanceKm(
+                    AppState.SHOP_LATITUDE,
+                    AppState.SHOP_LONGITUDE,
+                    selectedLatLng.latitude,
+                    selectedLatLng.longitude
+                )
+                val isDeliverablePin = currentDist <= AppState.deliveryRadiusKm
 
                 com.google.maps.android.compose.GoogleMap(
                     modifier = Modifier.fillMaxSize(),
@@ -3365,125 +3452,122 @@ fun AWSMapPickerDialog(
                         updateAddress(MapLatLng(latLng.latitude, latLng.longitude))
                     }
                 ) {
+                    // Delivery Radius Circle Overlay (Visual indicator of delivery boundary)
+                    com.google.maps.android.compose.Circle(
+                        center = com.google.android.gms.maps.model.LatLng(AppState.SHOP_LATITUDE, AppState.SHOP_LONGITUDE),
+                        radius = AppState.deliveryRadiusKm * 1000.0,
+                        fillColor = RoyalEmerald.copy(alpha = 0.08f),
+                        strokeColor = RoyalEmerald.copy(alpha = 0.55f),
+                        strokeWidth = 2f
+                    )
+
+                    // Store Hub Marker
                     com.google.maps.android.compose.Marker(
-                        state = com.google.maps.android.compose.MarkerState(position = com.google.android.gms.maps.model.LatLng(selectedLatLng.latitude, selectedLatLng.longitude)),
-                        onClick = { true }
+                        state = com.google.maps.android.compose.MarkerState(
+                            position = com.google.android.gms.maps.model.LatLng(AppState.SHOP_LATITUDE, AppState.SHOP_LONGITUDE)
+                        ),
+                        title = "🏬 G-Store Hub (Rajam)",
+                        snippet = "Delivery Zone: ${AppState.deliveryRadiusKm.toInt()} km radius"
+                    )
+
+                    // Selected Customer Location Marker
+                    com.google.maps.android.compose.Marker(
+                        state = com.google.maps.android.compose.MarkerState(
+                            position = com.google.android.gms.maps.model.LatLng(selectedLatLng.latitude, selectedLatLng.longitude)
+                        ),
+                        title = if (isDeliverablePin) "📍 Delivery Address" else "⚠️ Outside Delivery Radius",
+                        snippet = if (isDeliverablePin) "Deliverable (~${String.format(Locale.ENGLISH, "%.1f", currentDist)} km)" else "Outside ${AppState.deliveryRadiusKm.toInt()} km limit"
                     )
                 }
             }
 
-            // 2. Compact Floating Search Bar Card at top
+            // 2. Compact Floating Search Bar Card at top (Reduced height, zero clutter)
             Column(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .statusBarsPadding()
-                    .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp)
+                    .padding(start = 12.dp, end = 12.dp, top = 6.dp)
                     .fillMaxWidth()
             ) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = CircleShape,
-                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp),
+                    shape = RoundedCornerShape(22.dp),
+                    shadowElevation = 6.dp,
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, if (AppState.isDarkMode) Color(0xFF333333) else Color(0xFFE2E8F0))
                 ) {
                     Row(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 4.dp, vertical = 4.dp),
+                            .fillMaxSize()
+                            .padding(horizontal = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = onDismiss) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurface)
+                        IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(18.dp))
                         }
-                        
-                        OutlinedTextField(
+
+                        Spacer(Modifier.width(4.dp))
+
+                        androidx.compose.foundation.text.BasicTextField(
                             value = mapSearchQuery,
-                            onValueChange = { newQuery ->
-                                mapSearchQuery = newQuery
-                            },
-                            placeholder = { Text("Search area, place, pincode...", fontSize = 14.sp) },
+                            onValueChange = { mapSearchQuery = it },
                             singleLine = true,
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                fontSize = 13.5.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.Medium
+                            ),
                             modifier = Modifier.weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color.Transparent,
-                                unfocusedBorderColor = Color.Transparent,
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent
-                            )
+                            decorationBox = { innerTextField ->
+                                if (mapSearchQuery.isEmpty()) {
+                                    Text(
+                                        "Search place or area (e.g. More, RTC, GMRIT)...",
+                                        fontSize = 12.5.sp,
+                                        color = Color.Gray,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                innerTextField()
+                            }
                         )
 
                         if (isSearching) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp).padding(4.dp), strokeWidth = 2.dp, color = RoyalEmerald)
-                        } else {
-                            IconButton(
-                                onClick = {
-                                    val query = mapSearchQuery.trim()
-                                    if (query.isNotEmpty()) {
-                                        val parts = query.split(",")
-                                        if (parts.size == 2) {
-                                            val lat = parts[0].trim().toDoubleOrNull()
-                                            val lon = parts[1].trim().toDoubleOrNull()
-                                            if (lat != null && lon != null) {
-                                                val newLatLng = MapLatLng(lat, lon)
-                                                updateAddress(newLatLng)
-                                                searchResultsList = emptyList()
-                                                return@IconButton
-                                            }
-                                        }
-                                        
-                                        isSearching = true
-                                        scope.launch(Dispatchers.IO) {
-                                            try {
-                                                val geocoder = android.location.Geocoder(context, java.util.Locale.getDefault())
-                                                @Suppress("DEPRECATION")
-                                                val addresses = geocoder.getFromLocationName(query, 5)
-                                                if (!addresses.isNullOrEmpty()) {
-                                                    val list = addresses.mapNotNull { addr ->
-                                                        val line = (0..addr.maxAddressLineIndex).mapNotNull { addr.getAddressLine(it) }.joinToString(", ")
-                                                        val placeName = if (line.isNotBlank()) line else "${addr.featureName ?: ""}, ${addr.locality ?: ""}".trim(',', ' ')
-                                                        if (placeName.isNotBlank()) {
-                                                            Pair(placeName, MapLatLng(addr.latitude, addr.longitude))
-                                                        } else null
-                                                    }
-                                                    withContext(Dispatchers.Main) {
-                                                        searchResultsList = list
-                                                        if (list.isNotEmpty()) {
-                                                            updateAddress(list[0].second)
-                                                        }
-                                                    }
-                                                } else {
-                                                    withContext(Dispatchers.Main) {
-                                                        Toast.makeText(dialogContext, "Location not found", Toast.LENGTH_SHORT).show()
-                                                    }
-                                                }
-                                            } catch (e: Exception) {
-                                                withContext(Dispatchers.Main) {
-                                                    Toast.makeText(dialogContext, "Search error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
-                                                }
-                                            } finally {
-                                                withContext(Dispatchers.Main) { isSearching = false }
-                                            }
-                                        }
-                                    }
-                                }
-                            ) {
-                                Icon(Icons.Default.Search, contentDescription = "Search", tint = RoyalEmerald)
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp).padding(2.dp), strokeWidth = 2.dp, color = RoyalEmerald)
+                        } else if (mapSearchQuery.isNotEmpty()) {
+                            IconButton(onClick = { mapSearchQuery = ""; searchResultsList = emptyList() }, modifier = Modifier.size(28.dp)) {
+                                Icon(Icons.Default.Clear, contentDescription = "Clear", tint = Color.Gray, modifier = Modifier.size(16.dp))
                             }
+                        } else {
+                            Icon(Icons.Default.Search, contentDescription = "Search", tint = RoyalEmerald, modifier = Modifier.size(18.dp).padding(end = 4.dp))
                         }
                     }
                 }
 
-                // Automatic Search Results Dropdown List (Appears as user types!)
+                // Automatic Search Results Dropdown List (Fast, rich multi-source results!)
                 if (searchResultsList.isNotEmpty()) {
                     Spacer(Modifier.height(4.dp))
                     Card(
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp),
-                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 240.dp),
+                        shape = RoundedCornerShape(14.dp),
                         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        border = BorderStroke(1.dp, if (AppState.isDarkMode) Color(0xFF333333) else Color(0xFFE2E8F0))
                     ) {
-                        LazyColumn(modifier = Modifier.fillMaxWidth().padding(4.dp)) {
+                        LazyColumn(modifier = Modifier.fillMaxWidth()) {
                             items(searchResultsList) { result ->
+                                val dist = AppState.calculateDistanceKm(
+                                    AppState.SHOP_LATITUDE,
+                                    AppState.SHOP_LONGITUDE,
+                                    result.second.latitude,
+                                    result.second.longitude
+                                )
+                                val isDeliverableItem = dist <= AppState.deliveryRadiusKm
+
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -3492,27 +3576,48 @@ fun AWSMapPickerDialog(
                                             mapSearchQuery = result.first
                                             searchResultsList = emptyList()
                                         }
-                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(Icons.Default.LocationOn, contentDescription = null, tint = RoyalEmerald, modifier = Modifier.size(20.dp))
-                                    Spacer(Modifier.width(10.dp))
-                                    Text(
-                                        text = result.first,
-                                        fontSize = 13.sp,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
+                                    Icon(
+                                        Icons.Default.LocationOn,
+                                        contentDescription = null,
+                                        tint = if (isDeliverableItem) RoyalEmerald else Color.Red,
+                                        modifier = Modifier.size(18.dp)
                                     )
+                                    Spacer(Modifier.width(8.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = result.first,
+                                            fontSize = 12.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    Spacer(Modifier.width(6.dp))
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = if (isDeliverableItem) RoyalEmerald.copy(alpha = 0.12f) else Color.Red.copy(alpha = 0.12f)
+                                    ) {
+                                        Text(
+                                            text = "~${String.format(Locale.ENGLISH, "%.1f", dist)} km",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isDeliverableItem) RoyalEmerald else Color.Red,
+                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                        )
+                                    }
                                 }
-                                HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
+                                HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f))
                             }
                         }
                     }
                 }
             }
 
-            // Small location icon on the side with some color
+            // My Location Floating Action Button
             FloatingActionButton(
                 onClick = {
                     if (locationPermissionGranted) {
@@ -3537,7 +3642,7 @@ fun AWSMapPickerDialog(
                 },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = 150.dp)
+                    .padding(end = 16.dp, bottom = 175.dp)
                     .size(44.dp),
                 containerColor = RoyalEmerald,
                 contentColor = Color.White,
@@ -3546,12 +3651,20 @@ fun AWSMapPickerDialog(
                 Icon(Icons.Default.MyLocation, contentDescription = "My Location", modifier = Modifier.size(20.dp))
             }
 
-            // Floating Bottom Panel Card (Positioned neatly at the bottom with 12dp margin)
+            // 3. Floating Bottom Panel Card with Direct Radius Validation
+            val distFromStore = AppState.calculateDistanceKm(
+                AppState.SHOP_LATITUDE,
+                AppState.SHOP_LONGITUDE,
+                selectedLatLng.latitude,
+                selectedLatLng.longitude
+            )
+            val isDeliverable = distFromStore <= AppState.deliveryRadiusKm
+
             Card(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+                    .padding(start = 14.dp, end = 14.dp, bottom = 12.dp)
                     .fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
@@ -3560,36 +3673,75 @@ fun AWSMapPickerDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = addressText,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
 
-                    val coordsText = "Lat: ${String.format("%.6f", selectedLatLng.latitude)}, Lon: ${String.format("%.6f", selectedLatLng.longitude)}"
+                    // Radius Deliverability Badge (Short & Clean without clutter)
+                    if (isDeliverable) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = RoyalEmerald.copy(alpha = 0.12f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = RoyalEmerald, modifier = Modifier.size(15.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = "✓ Deliverable • ~${String.format(Locale.ENGLISH, "%.1f", distFromStore)} km from Rajam store",
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = RoyalEmerald
+                                )
+                            }
+                        }
+                    } else {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color.Red.copy(alpha = 0.12f),
+                            border = BorderStroke(1.dp, Color.Red.copy(alpha = 0.3f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("⚠️", fontSize = 13.sp)
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = "We can't deliver here (~${String.format(Locale.ENGLISH, "%.1f", distFromStore)} km is outside our ${AppState.deliveryRadiusKm.toInt()} km delivery radius)",
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Red
+                                )
+                            }
+                        }
+                    }
+
+                    val coordsText = "Lat: ${String.format(Locale.ENGLISH, "%.5f", selectedLatLng.latitude)}, Lon: ${String.format(Locale.ENGLISH, "%.5f", selectedLatLng.longitude)}"
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = null,
-                            tint = RoyalEmerald,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
                         Text(
                             text = coordsText,
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 11.sp,
+                            color = Color.Gray,
                             modifier = Modifier.weight(1f)
                         )
                         IconButton(
@@ -3597,23 +3749,31 @@ fun AWSMapPickerDialog(
                                 val rawCoords = "${selectedLatLng.latitude},${selectedLatLng.longitude}"
                                 val clipboard = dialogContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                 clipboard.setPrimaryClip(ClipData.newPlainText("GPS Coordinates", rawCoords))
-                                Toast.makeText(dialogContext, "Raw coordinates copied!", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(dialogContext, "Coordinates copied!", Toast.LENGTH_SHORT).show()
                             },
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(26.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.ContentCopy,
                                 contentDescription = "Copy coordinates",
                                 tint = RoyalEmerald,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(15.dp)
                             )
                         }
                     }
 
                     Button(
                         onClick = {
+                            if (!isDeliverable) {
+                                Toast.makeText(
+                                    dialogContext,
+                                    "Cannot add address: Selected location is outside our ${AppState.deliveryRadiusKm.toInt()} km delivery radius.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                return@Button
+                            }
                             val confirmedAddress = if (addressText.isBlank() || addressText.contains("Fetching", ignoreCase = true)) {
-                                "Location: %.4f, %.4f".format(java.util.Locale.US, selectedLatLng.latitude, selectedLatLng.longitude)
+                                "Location: %.4f, %.4f".format(Locale.US, selectedLatLng.latitude, selectedLatLng.longitude)
                             } else {
                                 addressText
                             }
@@ -3622,11 +3782,19 @@ fun AWSMapPickerDialog(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
+                            .height(46.dp),
                         shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald)
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isDeliverable) RoyalEmerald else Color.Gray.copy(alpha = 0.5f),
+                            contentColor = Color.White
+                        ),
+                        enabled = isDeliverable
                     ) {
-                        Text("Confirm Location", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = if (isDeliverable) "Confirm Location" else "Outside Delivery Zone (Can't Deliver)",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
