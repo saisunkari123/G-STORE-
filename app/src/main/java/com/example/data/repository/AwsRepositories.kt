@@ -5,6 +5,7 @@ import android.util.Log
 import com.amplifyframework.api.graphql.SimpleGraphQLRequest
 import com.amplifyframework.api.aws.GsonVariablesSerializer
 import com.amplifyframework.core.Amplify
+import com.example.data.local.db.RiceMartDatabase
 import com.example.domain.model.*
 import com.example.domain.repository.*
 import com.google.gson.Gson
@@ -844,6 +845,15 @@ class AwsOrderRepositoryImpl(private val context: Context) : OrderRepository {
             Log.e("AwsOrder", "AWS Order status sync failed", e)
         }
     }
+
+    override suspend fun clearAllOrders() {
+        ordersState.value = emptyList()
+        persister.saveList("aws_orders.json", emptyList<Order>())
+        try {
+            val db = RiceMartDatabase.getInstance(context)
+            db.orderDao().clearAllOrders()
+        } catch (_: Exception) {}
+    }
 }
 
 class AwsUserRepositoryImpl(private val context: Context) : UserRepository {
@@ -931,6 +941,16 @@ class AwsUserRepositoryImpl(private val context: Context) : UserRepository {
     }
 
     override fun getAllUsers(): Flow<List<User>> = usersState
+
+    override suspend fun clearAllNonAdminUsers() {
+        val adminList = usersState.value.filter { it.role == "ADMIN" }
+        usersState.value = adminList
+        persister.saveList("aws_users.json", adminList)
+        try {
+            val db = RiceMartDatabase.getInstance(context)
+            db.userDao().deleteAllNonAdminUsers()
+        } catch (_: Exception) {}
+    }
 }
 
 class AwsAddressRepositoryImpl(private val context: Context) : AddressRepository {
@@ -1058,6 +1078,15 @@ class AwsAddressRepositoryImpl(private val context: Context) : AddressRepository
         } catch (e: Exception) {
             Log.e("AwsAddress", "AWS Address delete failed", e)
         }
+    }
+
+    override suspend fun clearAllAddresses() {
+        addressesState.value = emptyList()
+        persister.saveList("aws_addresses.json", emptyList<Address>())
+        try {
+            val db = RiceMartDatabase.getInstance(context)
+            db.addressDao().deleteAllAddresses()
+        } catch (_: Exception) {}
     }
 }
 

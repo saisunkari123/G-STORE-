@@ -25,4 +25,23 @@ abstract class RiceMartDatabase : RoomDatabase() {
     abstract fun productDao(): ProductDao
     abstract fun addressDao(): AddressDao
     abstract fun orderDao(): OrderDao
+
+    companion object {
+        @Volatile
+        private var INSTANCE: RiceMartDatabase? = null
+
+        fun getInstance(context: android.content.Context): RiceMartDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = androidx.room.Room.databaseBuilder(
+                    context.applicationContext,
+                    RiceMartDatabase::class.java,
+                    "ricemart_database"
+                )
+                    .fallbackToDestructiveMigration()
+                    .build()
+                INSTANCE = instance
+                instance
+            }
+        }
+    }
 }

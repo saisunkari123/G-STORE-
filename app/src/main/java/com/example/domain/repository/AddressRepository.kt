@@ -9,4 +9,5 @@ interface AddressRepository {
     suspend fun saveAndSelectAddress(address: Address)
     suspend fun selectAddress(userId: String, addressId: String)
     suspend fun deleteAddress(addressId: String)
+    suspend fun clearAllAddresses() { /* default no-op */ }
 }

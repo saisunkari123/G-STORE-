@@ -30,4 +30,7 @@ interface AddressDao {
 
     @Query("DELETE FROM addresses WHERE id = :addressId")
     suspend fun deleteAddress(addressId: String)
+
+    @Query("DELETE FROM addresses")
+    suspend fun deleteAllAddresses()
 }

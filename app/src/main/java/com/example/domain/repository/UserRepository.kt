@@ -9,4 +9,5 @@ interface UserRepository {
     suspend fun saveUser(user: User)
     suspend fun deleteUser(userId: String)
     fun getAllUsers(): Flow<List<User>>
+    suspend fun clearAllNonAdminUsers() { /* default no-op */ }
 }

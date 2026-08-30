@@ -449,6 +449,52 @@ fun LoginScreen() {
                             )
                         }
                     } else { // Admin Flow
+                        // Demo Admin Credentials Box
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = primaryGreen.copy(alpha = 0.08f)),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, primaryGreen.copy(alpha = 0.3f))
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("🛡️", fontSize = 14.sp)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Demo Administrator Credentials", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = primaryGreen)
+                                }
+                                Spacer(Modifier.height(6.dp))
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("Email:", fontSize = 11.5.sp, color = subtextColor)
+                                    Text("admin@gstore.com", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = inputTextColor)
+                                }
+                                Spacer(Modifier.height(2.dp))
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("Password:", fontSize = 11.5.sp, color = subtextColor)
+                                    Text("Ram@1234", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = inputTextColor)
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = primaryGreen,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(32.dp)
+                                        .clickable {
+                                            adminEmailInput = "admin@gstore.com"
+                                            adminPasswordInput = "Ram@1234"
+                                            AppState.loginAsAdmin("admin@gstore.com", "Ram@1234")
+                                        }
+                                ) {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        Text("⚡ One-Tap Auto-Login as Admin", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                    }
+                                }
+                            }
+                        }
+
                         Text(
                             text = "Admin Email",
                             style = MaterialTheme.typography.bodyMedium,
@@ -460,7 +506,7 @@ fun LoginScreen() {
                             value = adminEmailInput,
                             onValueChange = { adminEmailInput = it },
                             modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text("Enter admin email", color = subtextColor) },
+                            placeholder = { Text("admin@gstore.com", color = subtextColor) },
                             leadingIcon = { Icon(Icons.Default.Email, null, tint = primaryGreen) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                             shape = RoundedCornerShape(12.dp),
@@ -479,7 +525,7 @@ fun LoginScreen() {
                             value = adminPasswordInput,
                             onValueChange = { adminPasswordInput = it },
                             modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text("••••••••", color = subtextColor) },
+                            placeholder = { Text("Ram@1234", color = subtextColor) },
                             leadingIcon = { Icon(Icons.Default.Lock, null, tint = primaryGreen) },
                             trailingIcon = {
                                 IconButton(onClick = { adminPasswordVisible = !adminPasswordVisible }) {
@@ -510,6 +556,18 @@ fun LoginScreen() {
                             } else {
                                 Text("Admin Login", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedButton(
+                            onClick = { AppState.loginAsDeliveryPartner() },
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = primaryGreen),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, primaryGreen.copy(alpha = 0.5f))
+                        ) {
+                            Text("🛵 Switch to Delivery Partner Mode", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
                 }

@@ -9,4 +9,5 @@ interface OrderRepository {
     suspend fun saveOrder(order: Order)
     suspend fun updateOrderStatus(orderId: String, newStatus: String)
     suspend fun forceRefreshFromCloud() { /* default no-op */ }
+    suspend fun clearAllOrders() { /* default no-op */ }
 }

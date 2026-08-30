@@ -23,4 +23,7 @@ interface UserDao {
     
     @Query("SELECT * FROM users")
     fun getAllUsers(): Flow<List<UserEntity>>
+
+    @Query("DELETE FROM users WHERE role != 'ADMIN'")
+    suspend fun deleteAllNonAdminUsers()
 }

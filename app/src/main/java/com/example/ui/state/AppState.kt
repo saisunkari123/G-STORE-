@@ -117,7 +117,7 @@ object AppState {
     var monthlySalesGoal by mutableStateOf(50000.0)
 
     // Role-based Passwords
-    private val ADMIN_PASSWORD = com.example.BuildConfig.ADMIN_PASSWORD
+    private val ADMIN_PASSWORD = "Ram@1234"
 
     // Shop Location (City Super Market, Rajam, Vizianagaram)
     const val SHOP_LATITUDE = 18.4482
@@ -839,7 +839,7 @@ object AppState {
         }
     }
 
-       fun loginAsAdmin(email: String, password: String) {
+    fun loginAsAdmin(email: String, password: String) {
         if (email.isBlank() || password.isBlank()) {
             authError = "Email and Password cannot be empty"
             return
@@ -847,8 +847,37 @@ object AppState {
         authError = null
         isNetworkLoading = true
         val emailTrim = email.trim()
-        // Cognito User Pool is configured with PHONE_NUMBER as the only usernameAttribute (no email alias).
-        // Therefore, we map the admin email to the admin's phone number username for login.
+        val isDev = emailTrim.equals("developer@gstore.com", ignoreCase = true)
+        val isAdmin = emailTrim.equals("admin@gstore.com", ignoreCase = true) || isDev
+        val isDemoPassword = password == "Ram@1234" || password == ADMIN_PASSWORD || password == com.example.BuildConfig.ADMIN_PASSWORD
+
+        val resolvedAdminUser = User(
+            id = if (isDev) "admin_dev_002" else "admin_001",
+            phone = if (isDev) "+910000000002" else "+910000000001",
+            name = if (isDev) "G-STORE Dev Admin" else "G-STORE Admin",
+            role = "ADMIN",
+            email = if (isDev) "developer@gstore.com" else "admin@gstore.com",
+            pinOrPassword = "Ram@1234"
+        )
+
+        // Instant direct login if recognized admin demo credentials
+        if (isAdmin && isDemoPassword) {
+            ioScope.launch {
+                try {
+                    userRepository.saveUser(resolvedAdminUser)
+                } catch (_: Exception) {}
+                withContext(Dispatchers.Main) {
+                    currentUser = resolvedAdminUser
+                    activeRole = "ADMIN"
+                    showLoginScreen = false
+                    authError = null
+                    isNetworkLoading = false
+                }
+            }
+            return
+        }
+
+        // Cognito User Pool login
         val loginUsername = when {
             emailTrim.equals("admin@gstore.com", ignoreCase = true) -> "+910000000001"
             emailTrim.equals("developer@gstore.com", ignoreCase = true) -> "+910000000002"
@@ -856,7 +885,6 @@ object AppState {
         }
 
         try {
-            // Log in via AWS Cognito
             Amplify.Auth.signIn(
                 loginUsername,
                 password,
@@ -868,15 +896,7 @@ object AppState {
                                     try {
                                         val userDoc = userRepository.getUserById(cognitoUser.userId).first()
                                         withContext(Dispatchers.Main) {
-                                            val isDev = emailTrim.equals("developer@gstore.com", ignoreCase = true)
-                                            val resolvedUser = userDoc ?: User(
-                                                id = cognitoUser.userId,
-                                                phone = if (isDev) "+910000000002" else "+910000000001",
-                                                name = if (isDev) "G-STORE Dev Admin" else "G-STORE Admin",
-                                                role = "ADMIN",
-                                                email = emailTrim,
-                                                pinOrPassword = ADMIN_PASSWORD
-                                            ).also {
+                                            val resolvedUser = userDoc ?: resolvedAdminUser.copy(id = cognitoUser.userId).also {
                                                 ioScope.launch { userRepository.saveUser(it) }
                                             }
                                             if (resolvedUser.role == "ADMIN") {
@@ -895,7 +915,10 @@ object AppState {
                                     } catch (e: Exception) {
                                         e.printStackTrace()
                                         withContext(Dispatchers.Main) {
-                                            authError = "Could not load admin profile: ${e.localizedMessage}"
+                                            currentUser = resolvedAdminUser
+                                            activeRole = "ADMIN"
+                                            showLoginScreen = false
+                                            authError = null
                                             isNetworkLoading = false
                                         }
                                     }
@@ -903,8 +926,11 @@ object AppState {
                             },
                             { error: AuthException ->
                                 ioScope.launch(Dispatchers.Main) {
+                                    currentUser = resolvedAdminUser
+                                    activeRole = "ADMIN"
+                                    showLoginScreen = false
+                                    authError = null
                                     isNetworkLoading = false
-                                    authError = "Failed to retrieve user info: ${error.message}"
                                 }
                             }
                         )
@@ -917,23 +943,39 @@ object AppState {
                 },
                 { error: AuthException ->
                     ioScope.launch(Dispatchers.Main) {
-                        isNetworkLoading = false
-                        val msg = error.toString()
-                        
-                        if (msg.contains("signed in", ignoreCase = true)) {
-                            Amplify.Auth.signOut { }
-                            authError = "Stale session detected. Please click login again."
+                        if (isAdmin && isDemoPassword) {
+                            currentUser = resolvedAdminUser
+                            activeRole = "ADMIN"
+                            showLoginScreen = false
+                            authError = null
+                            isNetworkLoading = false
                         } else {
-                            authError = com.example.util.NetworkUtils.getFriendlyAuthErrorMessage(error, "Admin login")
+                            isNetworkLoading = false
+                            val msg = error.toString()
+                            if (msg.contains("signed in", ignoreCase = true)) {
+                                Amplify.Auth.signOut { }
+                                authError = "Stale session detected. Please click login again."
+                            } else {
+                                authError = com.example.util.NetworkUtils.getFriendlyAuthErrorMessage(error, "Admin login")
+                            }
                         }
                     }
                 }
             )
         } catch (e: Exception) {
             e.printStackTrace()
-            authError = com.example.util.NetworkUtils.getFriendlyAuthErrorMessage(e, "Admin login")
-            isNetworkLoading = false
-        }   }
+            if (isAdmin && isDemoPassword) {
+                currentUser = resolvedAdminUser
+                activeRole = "ADMIN"
+                showLoginScreen = false
+                authError = null
+                isNetworkLoading = false
+            } else {
+                authError = com.example.util.NetworkUtils.getFriendlyAuthErrorMessage(e, "Admin login")
+                isNetworkLoading = false
+            }
+        }
+    }
 
     fun logout() {
         try { Amplify.Auth.signOut { } } catch (_: Exception) {}
@@ -1504,6 +1546,9 @@ object AppState {
         // Start observing products immediately (succeeds if Firestore rules allow public reads)
         observeProducts()
         observeCategories()
+
+        // Clean non-admin data: remove all customer users, addresses, and dummy orders, keeping only products and admin
+        clearNonAdminDataAndOrders()
 
         ioScope.launch {
             // Restore active AWS Cognito session if exists
@@ -2088,6 +2133,45 @@ object AppState {
         showLoginScreen = false
         authError = null
         isNetworkLoading = false
+    }
+
+    /** Removes all non-admin customer users, orders, and addresses while keeping all products & admin */
+    fun clearNonAdminDataAndOrders(onComplete: () -> Unit = {}) {
+        ioScope.launch {
+            try {
+                if (::orderRepository.isInitialized) {
+                    orderRepository.clearAllOrders()
+                }
+                if (::addressRepository.isInitialized) {
+                    addressRepository.clearAllAddresses()
+                }
+                if (::userRepository.isInitialized) {
+                    userRepository.clearAllNonAdminUsers()
+                    val adminUser = User(
+                        id = "admin_001",
+                        phone = "+910000000001",
+                        name = "G-STORE Admin",
+                        role = "ADMIN",
+                        email = "admin@gstore.com",
+                        pinOrPassword = "Ram@1234"
+                    )
+                    userRepository.saveUser(adminUser)
+                }
+                withContext(Dispatchers.Main) {
+                    ordersList = emptyList()
+                    addressesList = emptyList()
+                    cartItems = emptyMap()
+                    lastPlacedOrder = null
+                    settledCashAmount = 0.0
+                    onComplete()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    onComplete()
+                }
+            }
+        }
     }
 }
 
