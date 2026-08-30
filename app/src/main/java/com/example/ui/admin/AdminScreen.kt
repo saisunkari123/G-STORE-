@@ -1,8 +1,9 @@
 package com.example.ui.admin
 
+import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
-import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
@@ -28,7 +29,9 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
@@ -39,6 +42,7 @@ import com.example.domain.model.OrderStatus
 import com.example.domain.model.Product
 import com.example.domain.model.ProductVariant
 import com.example.ui.state.AppState
+import com.example.ui.theme.AlertRed
 import com.example.ui.theme.DeepGold
 import com.example.ui.theme.RoyalEmerald
 import kotlinx.coroutines.Dispatchers
@@ -177,13 +181,20 @@ fun AdminScreen() {
                         }
                     }
 
+                    val selectedTabIndex = when (adminTab) {
+                        "ORDERS" -> 0
+                        "INVENTORY" -> 1
+                        "DELIVERY" -> 2
+                        else -> 0
+                    }
+
                     TabRow(
-                        selectedTabIndex = if (adminTab == "ORDERS") 0 else 1,
+                        selectedTabIndex = selectedTabIndex,
                         containerColor = MaterialTheme.colorScheme.surface,
                         contentColor = RoyalEmerald,
                         indicator = { tabPositions ->
                             TabRowDefaults.SecondaryIndicator(
-                                Modifier.tabIndicatorOffset(tabPositions[if (adminTab == "ORDERS") 0 else 1]),
+                                Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
                                 color = if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald
                             )
                         }
@@ -214,6 +225,19 @@ fun AdminScreen() {
                                 ) 
                             }
                         )
+                        Tab(
+                            selected = adminTab == "DELIVERY",
+                            onClick = { adminTab = "DELIVERY" },
+                            modifier = Modifier.height(38.dp),
+                            text = { 
+                                Text(
+                                    "Delivery", 
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = if (adminTab == "DELIVERY") (if (AppState.isDarkMode) Color(0xFF34D399) else RoyalEmerald) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                ) 
+                            }
+                        )
                     }
                 }
             }
@@ -230,6 +254,7 @@ fun AdminScreen() {
                         onAddProductClicked = { isAddingProduct = true },
                         onEditProductClicked = { showProductEditor = it }
                     )
+                    "DELIVERY" -> AdminDeliveryManagementView()
                 }
 
                 if (isAddingProduct || showProductEditor != null) {
@@ -361,6 +386,7 @@ fun AdminSidePanelContent(onLogoutClicked: () -> Unit, onManageCategoriesClicked
     var showGoalEditDialog by remember { mutableStateOf(false) }
     var newGoalText by remember { mutableStateOf("") }
     var showStoreSettingsDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -786,6 +812,7 @@ fun AdminSidePanelContent(onLogoutClicked: () -> Unit, onManageCategoriesClicked
                         val newMin = minOrderText.toDoubleOrNull() ?: 150.0
                         val newRadius = radiusText.toDoubleOrNull() ?: 10.0
                         AppState.saveStoreSettings(newMin, newRadius)
+                        android.widget.Toast.makeText(context, "✓ Store settings updated successfully! (Min: ₹${newMin.toInt()}, Radius: ${newRadius.toInt()} km)", android.widget.Toast.LENGTH_SHORT).show()
                         showStoreSettingsDialog = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald)
@@ -1162,7 +1189,7 @@ fun AdminOrderGridCard(
                 Button(
                     onClick = {
                         isUpdatingStatus = true
-                        AppState.updateOrderStatus(order.id, OrderStatus.OUT_FOR_DELIVERY) {
+                        AppState.adminDispatchOrderWithDriver(order.id) {
                             isUpdatingStatus = false
                         }
                     },
@@ -1389,7 +1416,7 @@ fun AdminOrderDetailModal(
                         Button(
                             onClick = { 
                                 isUpdatingStatus = true
-                                AppState.updateOrderStatus(order.id, OrderStatus.OUT_FOR_DELIVERY) {
+                                AppState.adminDispatchOrderWithDriver(order.id) {
                                     isUpdatingStatus = false
                                     onDismiss()
                                 }
@@ -2499,6 +2526,830 @@ fun VariantEditorDialog(productId: String, existingVariant: ProductVariant?, onD
     )
 }
 
+@Composable
+fun AdminDeliveryManagementView() {
+    val isDark = AppState.isDarkMode
+    val context = LocalContext.current
+    val allOrders = AppState.ordersList
+
+    var filterStatus by remember { mutableStateOf("ALL") } // "ALL", "OUT_FOR_DELIVERY", "PENDING", "DELIVERED", "ISSUES"
+    var selectedOrderForDriver by remember { mutableStateOf<Order?>(null) }
+    var selectedOrderForEdit by remember { mutableStateOf<Order?>(null) }
+    var selectedOrderForMap by remember { mutableStateOf<Order?>(null) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val fleetRiders = listOf(
+        Pair("Raju (G-Store Rider)", "+919999900001"),
+        Pair("Suresh (Express Rider)", "+919999900002"),
+        Pair("Kiran (Local Delivery)", "+919999900003")
+    )
+
+    val outForDeliveryOrders = allOrders.filter { it.status == OrderStatus.OUT_FOR_DELIVERY }
+    val pendingAssignmentOrders = allOrders.filter { it.status == OrderStatus.PENDING }
+    val deliveredOrders = allOrders.filter { it.status == OrderStatus.DELIVERED }
+    val issueOrders = allOrders.filter { it.issueReported.isNotBlank() && it.status != OrderStatus.DELIVERED }
+
+    val totalCashCollected = deliveredOrders.sumOf { it.totalAmount }
+    val remainingCashToSettle = (totalCashCollected - AppState.settledCashAmount).coerceAtLeast(0.0)
+
+    val filteredOrders = allOrders.filter { order ->
+        val matchesStatus = when (filterStatus) {
+            "OUT_FOR_DELIVERY" -> order.status == OrderStatus.OUT_FOR_DELIVERY
+            "PENDING" -> order.status == OrderStatus.PENDING
+            "DELIVERED" -> order.status == OrderStatus.DELIVERED
+            "ISSUES" -> order.issueReported.isNotBlank()
+            else -> true
+        }
+        val query = searchQuery.trim().lowercase()
+        val matchesSearch = query.isEmpty() ||
+                order.customerName.lowercase().contains(query) ||
+                order.customerPhone.contains(query) ||
+                order.id.lowercase().contains(query) ||
+                order.assignedDriverName.lowercase().contains(query)
+        matchesStatus && matchesSearch
+    }
+
+    if (selectedOrderForDriver != null) {
+        AdminAssignDriverModal(
+            order = selectedOrderForDriver!!,
+            isDark = isDark,
+            onDismiss = { selectedOrderForDriver = null }
+        )
+    }
+
+    if (selectedOrderForEdit != null) {
+        AdminEditDeliveryModal(
+            order = selectedOrderForEdit!!,
+            isDark = isDark,
+            onDismiss = { selectedOrderForEdit = null }
+        )
+    }
+
+    if (selectedOrderForMap != null) {
+        AdminOrderMapModal(
+            order = selectedOrderForMap!!,
+            onDismiss = { selectedOrderForMap = null }
+        )
+    }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        // 1. Top Metrics Grid
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Out For Delivery
+                Card(
+                    modifier = Modifier.weight(1f),
+                    colors = CardDefaults.cardColors(containerColor = if (isDark) Color(0xFF1E1E1E) else Color.White),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF333333) else Color(0xFFE2E8F0))
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Text("On Route", fontSize = 10.5.sp, color = Color.Gray, fontWeight = FontWeight.SemiBold)
+                        Text("${outForDeliveryOrders.size}", fontSize = 18.sp, fontWeight = FontWeight.Black, color = if (isDark) Color(0xFF34D399) else RoyalEmerald)
+                    }
+                }
+
+                // Unassigned
+                Card(
+                    modifier = Modifier.weight(1f),
+                    colors = CardDefaults.cardColors(containerColor = if (isDark) Color(0xFF1E1E1E) else Color.White),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF333333) else Color(0xFFE2E8F0))
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Text("Unassigned", fontSize = 10.5.sp, color = Color.Gray, fontWeight = FontWeight.SemiBold)
+                        Text("${pendingAssignmentOrders.size}", fontSize = 18.sp, fontWeight = FontWeight.Black, color = if (pendingAssignmentOrders.isNotEmpty()) DeepGold else Color.Gray)
+                    }
+                }
+
+                // Cash in Hand
+                Card(
+                    modifier = Modifier.weight(1.2f),
+                    colors = CardDefaults.cardColors(containerColor = if (isDark) Color(0xFF1E1E1E) else Color.White),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF333333) else Color(0xFFE2E8F0))
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Text("COD to Settle", fontSize = 10.5.sp, color = Color.Gray, fontWeight = FontWeight.SemiBold)
+                        Text("₹${remainingCashToSettle.toInt()}", fontSize = 18.sp, fontWeight = FontWeight.Black, color = DeepGold)
+                    }
+                }
+            }
+        }
+
+        // 2. Delivery Boys Fleet & Performance Section
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = if (isDark) Color(0xFF1A1A1A) else Color.White),
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, if (isDark) Color(0xFF333333) else Color(0xFFE2E8F0))
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("🛵 Delivery Partners & Fleet Work", fontWeight = FontWeight.Black, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = RoyalEmerald.copy(alpha = 0.12f)
+                        ) {
+                            Text("3 ONLINE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = RoyalEmerald, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                        }
+                    }
+
+                    Spacer(Modifier.height(10.dp))
+
+                    fleetRiders.forEach { (riderName, riderPhone) ->
+                        val riderDelivered = deliveredOrders.filter { it.assignedDriverPhone == riderPhone || it.assignedDriverName == riderName }
+                        val riderActive = outForDeliveryOrders.filter { it.assignedDriverPhone == riderPhone || it.assignedDriverName == riderName }
+                        val riderCash = riderDelivered.sumOf { it.totalAmount }
+
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isDark) Color(0xFF262626) else Color(0xFFF8FAFC),
+                            border = BorderStroke(1.dp, if (isDark) Color(0xFF383838) else Color(0xFFEAEAEA)),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(RoyalEmerald.copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("🛵", fontSize = 16.sp)
+                                }
+
+                                Spacer(Modifier.width(10.dp))
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(riderName, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+                                    Text(
+                                        "${riderDelivered.size} delivered today • ${riderActive.size} active • ₹${riderCash.toInt()} collected",
+                                        fontSize = 11.sp,
+                                        color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+                                    )
+                                }
+
+                                // Quick Call Rider
+                                IconButton(
+                                    onClick = {
+                                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$riderPhone"))
+                                        context.startActivity(intent)
+                                    },
+                                    modifier = Modifier.size(30.dp)
+                                ) {
+                                    Icon(Icons.Default.Phone, contentDescription = "Call", tint = RoyalEmerald, modifier = Modifier.size(16.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Search Bar
+        item {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                placeholder = { Text("Search deliveries by customer, order ID, or rider...", fontSize = 12.sp) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.Gray)
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = RoyalEmerald,
+                    unfocusedBorderColor = if (isDark) Color(0xFF333333) else Color(0xFFE2E8F0)
+                )
+            )
+        }
+
+        // 4. Filter Chips Row
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                listOf(
+                    Pair("ALL", "All (${allOrders.size})"),
+                    Pair("OUT_FOR_DELIVERY", "Out for Delivery (${outForDeliveryOrders.size})"),
+                    Pair("PENDING", "Unassigned (${pendingAssignmentOrders.size})"),
+                    Pair("DELIVERED", "Delivered (${deliveredOrders.size})"),
+                    Pair("ISSUES", "⚠️ Issues (${issueOrders.size})")
+                ).forEach { (key, label) ->
+                    val isSel = filterStatus == key
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = if (isSel) RoyalEmerald else (if (isDark) Color(0xFF262626) else Color(0xFFF1F5F9)),
+                        border = BorderStroke(1.dp, if (isSel) RoyalEmerald else Color.Transparent),
+                        modifier = Modifier.clickable { filterStatus = key }
+                    ) {
+                        Text(
+                            text = label,
+                            fontSize = 11.5.sp,
+                            fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSel) Color.White else (if (isDark) Color(0xFFCBD5E1) else Color(0xFF475569)),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // 5. Deliveries List
+        if (filteredOrders.isEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.DeliveryDining, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(40.dp))
+                        Spacer(Modifier.height(8.dp))
+                        Text("No deliveries match this filter", fontSize = 14.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        } else {
+            items(filteredOrders, key = { it.id }) { order ->
+                AdminDeliveryOrderCard(
+                    order = order,
+                    isDark = isDark,
+                    onAssignDriver = { selectedOrderForDriver = order },
+                    onEditDelivery = { selectedOrderForEdit = order },
+                    onViewMap = { selectedOrderForMap = order },
+                    onCallCustomer = {
+                        val phone = order.customerPhone.filter { it.isDigit() || it == '+' }
+                        if (phone.isNotBlank()) {
+                            context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone")))
+                        }
+                    },
+                    onCallRider = {
+                        val phone = order.assignedDriverPhone.filter { it.isDigit() || it == '+' }
+                        if (phone.isNotBlank()) {
+                            context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone")))
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AdminDeliveryOrderCard(
+    order: Order,
+    isDark: Boolean,
+    onAssignDriver: () -> Unit,
+    onEditDelivery: () -> Unit,
+    onViewMap: () -> Unit,
+    onCallCustomer: () -> Unit,
+    onCallRider: () -> Unit
+) {
+    val cardBg = if (isDark) Color(0xFF1E1E1E) else Color.White
+    val cardBorder = if (isDark) Color(0xFF333333) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+
+    val isDelivered = order.status == OrderStatus.DELIVERED
+    val isOut = order.status == OrderStatus.OUT_FOR_DELIVERY
+    val isAssigned = order.assignedDriverName.isNotBlank()
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg),
+        border = BorderStroke(1.dp, cardBorder),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            // Header Row: Order ID & Status Badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "ORDER #${order.id.takeLast(6).uppercase()}",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Black,
+                    color = textSecondary
+                )
+
+                val (badgeBg, badgeText, badgeColor) = when (order.status) {
+                    OrderStatus.OUT_FOR_DELIVERY -> Triple(RoyalEmerald.copy(alpha = 0.15f), "OUT FOR DELIVERY", RoyalEmerald)
+                    OrderStatus.DELIVERED -> Triple(Color(0xFF10B981).copy(alpha = 0.15f), "DELIVERED", Color(0xFF10B981))
+                    OrderStatus.PENDING -> Triple(DeepGold.copy(alpha = 0.15f), "PENDING ASSIGNMENT", DeepGold)
+                    else -> Triple(Color.Gray.copy(alpha = 0.15f), order.status.name, Color.Gray)
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = badgeBg
+                ) {
+                    Text(
+                        text = badgeText,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = badgeColor,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            // Issue Banner if present
+            if (order.issueReported.isNotBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = AlertRed.copy(alpha = 0.12f),
+                    border = BorderStroke(1.dp, AlertRed.copy(alpha = 0.3f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("⚠️", fontSize = 12.sp)
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "Driver Issue: ${order.issueReported}",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AlertRed,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // Customer Name & Contact
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.Person, contentDescription = null, tint = RoyalEmerald, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(order.customerName.ifEmpty { "Customer" }, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = textPrimary)
+                Spacer(Modifier.width(6.dp))
+                Text("(${order.customerPhone})", fontSize = 12.sp, color = textSecondary)
+
+                Spacer(Modifier.weight(1f))
+
+                // Call customer
+                IconButton(onClick = onCallCustomer, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Default.Phone, contentDescription = "Call Customer", tint = RoyalEmerald, modifier = Modifier.size(14.dp))
+                }
+            }
+
+            // Address snippet
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top
+            ) {
+                Icon(Icons.Default.LocationOn, contentDescription = null, tint = textSecondary, modifier = Modifier.size(14.dp).padding(top = 2.dp))
+                Spacer(Modifier.width(6.dp))
+                Column {
+                    Text(order.addressHouseNo.ifEmpty { "Delivery Address" }, fontSize = 12.sp, color = textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (order.addressLandmark.isNotBlank()) {
+                        Text("Landmark: ${order.addressLandmark}", fontSize = 11.sp, color = textSecondary)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // Assigned Delivery Partner Card
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = if (isAssigned) (if (isDark) Color(0xFF262626) else Color(0xFFF1F5F3)) else DeepGold.copy(alpha = 0.12f),
+                border = BorderStroke(1.dp, if (isAssigned) (if (isDark) Color(0xFF383838) else Color(0xFFE2E8F0)) else DeepGold.copy(alpha = 0.4f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Text("🛵", fontSize = 14.sp)
+                        Spacer(Modifier.width(6.dp))
+                        Column {
+                            Text(
+                                text = if (isAssigned) "Driver: ${order.assignedDriverName}" else "⚠️ No Delivery Partner Assigned",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isAssigned) textPrimary else DeepGold
+                            )
+                            if (isAssigned && order.assignedDriverPhone.isNotBlank()) {
+                                Text(order.assignedDriverPhone, fontSize = 10.5.sp, color = textSecondary)
+                            }
+                        }
+                    }
+
+                    if (isAssigned) {
+                        IconButton(onClick = onCallRider, modifier = Modifier.size(24.dp)) {
+                            Icon(Icons.Default.Phone, contentDescription = "Call Rider", tint = RoyalEmerald, modifier = Modifier.size(14.dp))
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            // Bill & Items Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("${order.items.size} Items (Total: ₹${order.totalAmount.toInt()})", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = RoyalEmerald)
+                if (order.deliveryRemarks.isNotBlank()) {
+                    Text(order.deliveryRemarks, fontSize = 10.5.sp, color = textSecondary, maxLines = 1)
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            // Action Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // Assign Partner Button
+                Button(
+                    onClick = onAssignDriver,
+                    modifier = Modifier.weight(1.2f).height(34.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = if (isDark) Color(0xFF34D399) else RoyalEmerald),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
+                ) {
+                    Icon(Icons.Default.TwoWheeler, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(if (isAssigned) "Reassign" else "Assign Driver", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+
+                // Edit Details Button
+                OutlinedButton(
+                    onClick = onEditDelivery,
+                    modifier = Modifier.weight(1f).height(34.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = textPrimary),
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF404040) else Color(0xFFCBD5E1)),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(13.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Edit Info", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+
+                // Map Button
+                OutlinedButton(
+                    onClick = onViewMap,
+                    modifier = Modifier.weight(0.9f).height(34.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = textPrimary),
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF404040) else Color(0xFFCBD5E1)),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
+                ) {
+                    Icon(Icons.Default.Navigation, contentDescription = null, modifier = Modifier.size(13.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Map", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AdminAssignDriverModal(
+    order: Order,
+    isDark: Boolean,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+
+    val predefinedRiders = listOf(
+        Triple("Raju (G-Store Rider)", "+919999900001", "Primary Hub Rider"),
+        Triple("Suresh (Express Rider)", "+919999900002", "Express Quick-Commerce"),
+        Triple("Kiran (Local Delivery)", "+919999900003", "Rajam Town & Rural")
+    )
+
+    var selectedRiderName by remember { mutableStateOf(order.assignedDriverName.ifEmpty { predefinedRiders[0].first }) }
+    var selectedRiderPhone by remember { mutableStateOf(order.assignedDriverPhone.ifEmpty { predefinedRiders[0].second }) }
+    var isCustomRider by remember { mutableStateOf(false) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Text("Assign Delivery Partner", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = textPrimary)
+            Spacer(Modifier.height(4.dp))
+            Text("Order #${order.id.takeLast(6).uppercase()} • ${order.customerName} (${order.addressHouseNo})", fontSize = 13.sp, color = textSecondary)
+
+            Spacer(Modifier.height(16.dp))
+
+            Text("SELECT FROM FLEET", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = textSecondary, letterSpacing = 0.5.sp)
+            Spacer(Modifier.height(8.dp))
+
+            predefinedRiders.forEach { (name, phone, role) ->
+                val isSelected = !isCustomRider && selectedRiderName == name
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isSelected) RoyalEmerald.copy(alpha = 0.12f) else if (isDark) Color(0xFF262626) else Color(0xFFF8FAF9),
+                    border = BorderStroke(1.dp, if (isSelected) RoyalEmerald else Color(0xFFE2E8F0)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .clickable {
+                            isCustomRider = false
+                            selectedRiderName = name
+                            selectedRiderPhone = phone
+                        }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = isSelected,
+                            onClick = {
+                                isCustomRider = false
+                                selectedRiderName = name
+                                selectedRiderPhone = phone
+                            },
+                            colors = RadioButtonDefaults.colors(selectedColor = RoyalEmerald)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = textPrimary)
+                            Text("$phone • $role", fontSize = 11.5.sp, color = textSecondary)
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // Custom Rider Option
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = if (isCustomRider) RoyalEmerald.copy(alpha = 0.12f) else if (isDark) Color(0xFF262626) else Color(0xFFF8FAF9),
+                border = BorderStroke(1.dp, if (isCustomRider) RoyalEmerald else Color(0xFFE2E8F0)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { isCustomRider = true }
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = isCustomRider,
+                        onClick = { isCustomRider = true },
+                        colors = RadioButtonDefaults.colors(selectedColor = RoyalEmerald)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Custom / Other Driver", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = textPrimary)
+                }
+            }
+
+            if (isCustomRider) {
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = selectedRiderName,
+                    onValueChange = { selectedRiderName = it },
+                    label = { Text("Driver Full Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = selectedRiderPhone,
+                    onValueChange = { selectedRiderPhone = it },
+                    label = { Text("Driver Phone Number") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            Button(
+                onClick = {
+                    AppState.adminDispatchOrderWithDriver(
+                        orderId = order.id,
+                        driverName = selectedRiderName.trim().ifEmpty { "Raju (G-Store Rider)" },
+                        driverPhone = selectedRiderPhone.trim().ifEmpty { "+919999900001" }
+                    ) {
+                        android.widget.Toast.makeText(context, "✓ Delivery Partner Assigned to Order #${order.id.takeLast(6).uppercase()}!", android.widget.Toast.LENGTH_SHORT).show()
+                        onDismiss()
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald)
+            ) {
+                Icon(Icons.Default.TwoWheeler, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Confirm Assignment & Dispatch", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.White)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AdminEditDeliveryModal(
+    order: Order,
+    isDark: Boolean,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
+
+    var addressText by remember { mutableStateOf(order.addressHouseNo) }
+    var landmarkText by remember { mutableStateOf(order.addressLandmark) }
+    var driverNameText by remember { mutableStateOf(order.assignedDriverName) }
+    var driverPhoneText by remember { mutableStateOf(order.assignedDriverPhone) }
+    var deliveryFeeText by remember { mutableStateOf(order.deliveryFee.toInt().toString()) }
+    var remarksText by remember { mutableStateOf(order.deliveryRemarks) }
+    var selectedStatus by remember { mutableStateOf(order.status) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+                .padding(bottom = 32.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Edit Delivery Details", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = textPrimary)
+                Text("#${order.id.takeLast(6).uppercase()}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = RoyalEmerald)
+            }
+
+            OutlinedTextField(
+                value = addressText,
+                onValueChange = { addressText = it },
+                label = { Text("Delivery House / Street Address") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = false,
+                maxLines = 3
+            )
+
+            OutlinedTextField(
+                value = landmarkText,
+                onValueChange = { landmarkText = it },
+                label = { Text("Landmark") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = driverNameText,
+                    onValueChange = { driverNameText = it },
+                    label = { Text("Assigned Driver") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = driverPhoneText,
+                    onValueChange = { driverPhoneText = it },
+                    label = { Text("Driver Phone") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true
+                )
+            }
+
+            OutlinedTextField(
+                value = deliveryFeeText,
+                onValueChange = { deliveryFeeText = it.filter { c -> c.isDigit() } },
+                label = { Text("Delivery Fee (₹)") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            OutlinedTextField(
+                value = remarksText,
+                onValueChange = { remarksText = it },
+                label = { Text("Delivery Notes / Instructions") },
+                placeholder = { Text("e.g. Ring bell twice, deliver before 7 PM") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = false,
+                maxLines = 2
+            )
+
+            // Status Selector
+            Text("ORDER STATUS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray, letterSpacing = 0.5.sp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(OrderStatus.PENDING, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED).forEach { st ->
+                    val isSel = selectedStatus == st
+                    val label = when (st) {
+                        OrderStatus.PENDING -> "Pending"
+                        OrderStatus.OUT_FOR_DELIVERY -> "Out for Delivery"
+                        OrderStatus.DELIVERED -> "Delivered"
+                        else -> st.name
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isSel) RoyalEmerald.copy(alpha = 0.15f) else (if (isDark) Color(0xFF262626) else Color(0xFFEAEAEA)),
+                        border = BorderStroke(1.dp, if (isSel) RoyalEmerald else Color.Transparent),
+                        modifier = Modifier.weight(1f).clickable { selectedStatus = st }
+                    ) {
+                        Text(
+                            text = label,
+                            fontSize = 11.sp,
+                            fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSel) RoyalEmerald else (if (isDark) Color.LightGray else Color.DarkGray),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 2.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            Button(
+                onClick = {
+                    val parsedFee = deliveryFeeText.toDoubleOrNull() ?: order.deliveryFee
+                    val updatedOrder = order.copy(
+                        addressHouseNo = addressText.trim(),
+                        addressLandmark = landmarkText.trim(),
+                        assignedDriverName = driverNameText.trim(),
+                        assignedDriverPhone = driverPhoneText.trim(),
+                        deliveryFee = parsedFee,
+                        totalAmount = (order.subtotal + parsedFee),
+                        deliveryRemarks = remarksText.trim(),
+                        status = selectedStatus
+                    )
+                    AppState.ioScope.launch {
+                        AppState.orderRepository.saveOrder(updatedOrder)
+                        if (selectedStatus != order.status) {
+                            AppState.orderRepository.updateOrderStatus(updatedOrder.id, selectedStatus.name)
+                        }
+                    }
+                    android.widget.Toast.makeText(context, "✓ Delivery Details Updated Successfully!", android.widget.Toast.LENGTH_SHORT).show()
+                    onDismiss()
+                },
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald)
+            ) {
+                Text("Save Changes", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.White)
+            }
+        }
+    }
+}
+
 fun getCategoryFallbackImage(categoryId: String): String {
     return when (categoryId.lowercase()) {
         "c_rice" -> "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&h=400&fit=crop"
@@ -2830,6 +3681,7 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
                                         try { tempFile.delete() } catch (_: Exception) {}
                                     }
                                     saveProductWithImage(
+                                        context = context,
                                         imageUrl = downloadUrl,
                                         nameEn = nameEn,
                                         brand = brand,
@@ -2856,6 +3708,7 @@ fun AdminProductEditor(existingProduct: Product?, onDismiss: () -> Unit) {
                             }
                         } else {
                             saveProductWithImage(
+                                context = context,
                                 imageUrl = currentImageUrl,
                                 nameEn = nameEn,
                                 brand = brand,
@@ -2902,6 +3755,7 @@ private fun getFileFromUri(context: Context, uri: Uri): java.io.File? {
 }
 
 private fun saveProductWithImage(
+    context: Context,
     imageUrl: String,
     nameEn: String,
     brand: String,
@@ -2940,6 +3794,7 @@ private fun saveProductWithImage(
             variants = listOf(initialVariant),
             categoryId = categoryId
         )
+        android.widget.Toast.makeText(context, "✓ Product '${nameEn.trim()}' added to inventory successfully!", android.widget.Toast.LENGTH_SHORT).show()
     } else {
         val updatedProduct = existingProduct.copy(
             nameEn = nameEn.trim(),
@@ -2950,6 +3805,7 @@ private fun saveProductWithImage(
             lastUpdated = System.currentTimeMillis()
         )
         AppState.adminUpdateProduct(updatedProduct)
+        android.widget.Toast.makeText(context, "✓ Product '${nameEn.trim()}' updated successfully!", android.widget.Toast.LENGTH_SHORT).show()
     }
     onDismiss()
 }

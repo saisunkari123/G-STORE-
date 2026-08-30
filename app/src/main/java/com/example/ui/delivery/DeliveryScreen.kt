@@ -930,58 +930,11 @@ fun DeliveryCompletionModal(
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
-
-            // Photo Proof of Delivery (POD) Box
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = if (isDark) Color(0xFF262626) else Color(0xFFF1F5F3),
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    if (isPhotoCaptured) RoyalEmerald else if (isDark) Color(0xFF404040) else Color(0xFFCBD5E1)
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { isPhotoCaptured = !isPhotoCaptured }
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(if (isPhotoCaptured) RoyalEmerald.copy(alpha = 0.2f) else Color.Gray.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = if (isPhotoCaptured) Icons.Default.Check else Icons.Default.CameraAlt,
-                            contentDescription = null,
-                            tint = if (isPhotoCaptured) RoyalEmerald else textSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = if (isPhotoCaptured) "Doorstep Photo Attached ✓" else "Snap Doorstep Photo (Optional POD)",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isPhotoCaptured) RoyalEmerald else textPrimary
-                        )
-                        Text(
-                            text = if (isPhotoCaptured) "Timestamp & location tagged" else "Tap to attach delivery drop photo",
-                            fontSize = 11.sp,
-                            color = textSecondary
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(14.dp))
 
             // Handover note options
+            Text("HANDOVER DETAILS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = textSecondary, letterSpacing = 0.5.sp)
+            Spacer(Modifier.height(6.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -996,17 +949,17 @@ fun DeliveryCompletionModal(
                     ) {
                         Text(
                             text = note,
-                            fontSize = 10.sp,
+                            fontSize = 10.5.sp,
                             fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
                             color = if (isSel) RoyalEmerald else textSecondary,
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(vertical = 6.dp, horizontal = 2.dp)
+                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 2.dp)
                         )
                     }
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(14.dp))
 
             // Optional PIN / OTP Verification
             OutlinedTextField(
@@ -1023,8 +976,7 @@ fun DeliveryCompletionModal(
 
             Button(
                 onClick = {
-                    val mockPhotoUrl = if (isPhotoCaptured) "https://res.cloudinary.com/k1lw675z/image/upload/v1788031478/ricemart_products/pod_drop_${order.id.takeLast(6)}.jpg" else ""
-                    onConfirm(otpInput, order.totalAmount, mockPhotoUrl, selectedDropNote)
+                    onConfirm(otpInput, order.totalAmount, "", selectedDropNote)
                 },
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 shape = RoundedCornerShape(12.dp),
