@@ -3150,44 +3150,14 @@ fun CustomerAccountView(onLogoutClick: () -> Unit) {
     }
 }
 
-val RAJAM_LANDMARKS = listOf(
-    Pair("More Supermarket, Main Road", Pair("Rajam, Andhra Pradesh", MapLatLng(18.4530, 83.6545))),
-    Pair("Rajam RTC Bus Complex", Pair("Main Road, Rajam, Andhra Pradesh", MapLatLng(18.4518, 83.6532))),
-    Pair("GMR Institute of Technology (GMRIT)", Pair("GMR Nagar, Rajam, Andhra Pradesh", MapLatLng(18.4632, 83.6610))),
-    Pair("GMR Varalakshmi Care Hospital", Pair("Rajam, Andhra Pradesh", MapLatLng(18.4605, 83.6625))),
-    Pair("Old Bus Stand & Market", Pair("Center, Rajam, Andhra Pradesh", MapLatLng(18.4502, 83.6520))),
-    Pair("Rajam Police Station", Pair("Palakonda Road, Rajam, Andhra Pradesh", MapLatLng(18.4542, 83.6560))),
-    Pair("State Bank of India (SBI)", Pair("Main Road, Rajam, Andhra Pradesh", MapLatLng(18.4525, 83.6538))),
-    Pair("Union Bank of India (Andhra Bank)", Pair("Main Road, Rajam, Andhra Pradesh", MapLatLng(18.4515, 83.6528))),
-    Pair("Dollars Colony", Pair("Residential Area, Rajam, Andhra Pradesh", MapLatLng(18.4580, 83.6590))),
-    Pair("Sriharipuram", Pair("Rajam, Andhra Pradesh", MapLatLng(18.4610, 83.6490))),
-    Pair("Radham Junction", Pair("Main Road, Rajam, Andhra Pradesh", MapLatLng(18.4510, 83.6530))),
-    Pair("Vangara Road", Pair("Rajam, Andhra Pradesh", MapLatLng(18.4480, 83.6510))),
-    Pair("Palakonda Road", Pair("Rajam, Andhra Pradesh", MapLatLng(18.4560, 83.6570))),
-    Pair("Kaviti Road", Pair("Rajam, Andhra Pradesh", MapLatLng(18.4550, 83.6520))),
-    Pair("Market Yard / Rythu Bazar", Pair("Rajam, Andhra Pradesh", MapLatLng(18.4495, 83.6515))),
-    Pair("Pogiri", Pair("Rajam Mandal, Andhra Pradesh", MapLatLng(18.4720, 83.6420))),
-    Pair("Boddam", Pair("Rajam Mandal, Andhra Pradesh", MapLatLng(18.4350, 83.6680))),
-    Pair("Santakaviti Junction", Pair("Rajam Area, Andhra Pradesh", MapLatLng(18.4280, 83.6390)))
-)
-
 suspend fun searchRajamPlaces(context: Context, rawQuery: String): List<Pair<String, MapLatLng>> = withContext(Dispatchers.IO) {
     val results = mutableListOf<Pair<String, MapLatLng>>()
     val query = rawQuery.trim()
     if (query.length < 2) return@withContext emptyList()
 
-    // 1. Instant Rajam Landmarks Matching
     val qLower = query.lowercase(Locale.ENGLISH)
-    val words = qLower.split(" ").filter { it.isNotBlank() }
 
-    val localMatches = RAJAM_LANDMARKS.filter { landmark ->
-        val fullText = "${landmark.first} ${landmark.second.first}".lowercase(Locale.ENGLISH)
-        words.all { w -> fullText.contains(w) } || fullText.contains(qLower)
-    }.map { Pair("${it.first}, ${it.second.first}", it.second.second) }
-
-    results.addAll(localMatches)
-
-    // 2. OpenStreetMap Nominatim Free Search API (High accuracy for Indian localities & shops)
+    // 1. OpenStreetMap Nominatim Free Search API (High accuracy for all localities, streets & shops)
     try {
         val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
         val searchUrls = listOf(
@@ -3224,7 +3194,7 @@ suspend fun searchRajamPlaces(context: Context, rawQuery: String): List<Pair<Str
         }
     } catch (_: Exception) {}
 
-    // 3. Android Native Geocoder (Google Play Services)
+    // 2. Android Native Geocoder (Google Play Services)
     try {
         val geocoder = android.location.Geocoder(context, Locale.ENGLISH)
         @Suppress("DEPRECATION")
@@ -3254,7 +3224,7 @@ suspend fun searchRajamPlaces(context: Context, rawQuery: String): List<Pair<Str
         }
     } catch (_: Exception) {}
 
-    // 4. Deduplicate results by proximity (< 50 meters apart) and name
+    // 3. Deduplicate results by proximity (< 50 meters apart) and name
     val uniqueResults = mutableListOf<Pair<String, MapLatLng>>()
     for (item in results) {
         val alreadyExists = uniqueResults.any { existing ->
