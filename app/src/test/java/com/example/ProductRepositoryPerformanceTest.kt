@@ -17,7 +17,7 @@ import org.robolectric.annotation.Config
 import kotlin.system.measureTimeMillis
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
+@Config(sdk = [34])
 class ProductRepositoryPerformanceTest {
 
     private lateinit var database: RiceMartDatabase

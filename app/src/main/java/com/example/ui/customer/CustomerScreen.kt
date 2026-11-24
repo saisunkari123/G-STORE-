@@ -2226,7 +2226,7 @@ fun AddressSelectionDialog(onDismiss: () -> Unit) {
     if (showMapPicker) {
         AWSMapPickerDialog(
             onDismiss = { showMapPicker = false },
-            onLocationSelected = { latLng, address ->
+            onLocationSelected = { latLng, address, houseNo ->
                 val dist = AppState.calculateDistanceKm(
                     AppState.SHOP_LATITUDE,
                     AppState.SHOP_LONGITUDE,
@@ -2239,7 +2239,7 @@ fun AddressSelectionDialog(onDismiss: () -> Unit) {
                     address
                 }
                 AppState.addNewAddress(
-                    house = "Home",
+                    house = houseNo.ifBlank { "Home" },
                     landmark = cleanLandmark,
                     distance = dist,
                     lat = latLng.latitude,
@@ -3155,76 +3155,60 @@ suspend fun searchRajamPlaces(context: Context, rawQuery: String): List<Pair<Str
     val query = rawQuery.trim()
     if (query.length < 2) return@withContext emptyList()
 
-    val qLower = query.lowercase(Locale.ENGLISH)
-
-    // 1. OpenStreetMap Nominatim Free Search API (High accuracy for all localities, streets & shops)
+    // 1. Android Native Geocoder (Google Play Services / High Speed & Precision across all locations)
     try {
-        val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
-        val searchUrls = listOf(
-            "https://nominatim.openstreetmap.org/search?format=json&q=$encodedQuery&countrycodes=in&limit=8",
-            if (!qLower.contains("rajam")) {
-                val rajamEncoded = java.net.URLEncoder.encode("$query Rajam Andhra Pradesh", "UTF-8")
-                "https://nominatim.openstreetmap.org/search?format=json&q=$rajamEncoded&countrycodes=in&limit=5"
-            } else null
-        ).filterNotNull()
-
-        for (urlStr in searchUrls) {
-            val url = java.net.URL(urlStr)
-            val conn = url.openConnection() as java.net.HttpURLConnection
-            conn.requestMethod = "GET"
-            conn.setRequestProperty("User-Agent", "GStore-Android/1.0 (contact@gstore.com)")
-            conn.connectTimeout = 3000
-            conn.readTimeout = 3000
-
-            if (conn.responseCode == 200) {
-                val responseText = conn.inputStream.bufferedReader().use { it.readText() }
-                val jsonArray = org.json.JSONArray(responseText)
-                for (i in 0 until jsonArray.length()) {
-                    val obj = jsonArray.getJSONObject(i)
-                    val dispName = obj.optString("display_name", "")
-                    val lat = obj.optString("lat", "").toDoubleOrNull()
-                    val lon = obj.optString("lon", "").toDoubleOrNull()
-                    if (dispName.isNotBlank() && lat != null && lon != null) {
-                        results.add(Pair(dispName, MapLatLng(lat, lon)))
-                    }
-                }
-            }
-            conn.disconnect()
-            if (results.size >= 8) break
-        }
-    } catch (_: Exception) {}
-
-    // 2. Android Native Geocoder (Google Play Services)
-    try {
-        val geocoder = android.location.Geocoder(context, Locale.ENGLISH)
+        val geocoder = android.location.Geocoder(context, Locale("en", "IN"))
         @Suppress("DEPRECATION")
-        val addresses = geocoder.getFromLocationName(query, 6)
+        val addresses = geocoder.getFromLocationName(query, 8)
         if (!addresses.isNullOrEmpty()) {
             addresses.forEach { addr ->
                 val line = (0..addr.maxAddressLineIndex).mapNotNull { addr.getAddressLine(it) }.joinToString(", ")
-                val placeName = if (line.isNotBlank()) line else "${addr.featureName ?: ""}, ${addr.locality ?: ""}, ${addr.adminArea ?: ""}".trim(',', ' ')
+                val placeName = if (line.isNotBlank()) {
+                    line
+                } else {
+                    listOfNotNull(
+                        addr.featureName,
+                        addr.subLocality,
+                        addr.locality,
+                        addr.postalCode,
+                        addr.adminArea
+                    ).distinct().joinToString(", ")
+                }
                 if (placeName.isNotBlank()) {
                     results.add(Pair(placeName, MapLatLng(addr.latitude, addr.longitude)))
                 }
             }
         }
+    } catch (_: Exception) {}
 
-        if (!qLower.contains("rajam")) {
-            @Suppress("DEPRECATION")
-            val rajamAddrs = geocoder.getFromLocationName("$query, Rajam, Andhra Pradesh, India", 4)
-            if (!rajamAddrs.isNullOrEmpty()) {
-                rajamAddrs.forEach { addr ->
-                    val line = (0..addr.maxAddressLineIndex).mapNotNull { addr.getAddressLine(it) }.joinToString(", ")
-                    val placeName = if (line.isNotBlank()) line else "${addr.featureName ?: ""}, Rajam, AP".trim(',', ' ')
-                    if (placeName.isNotBlank()) {
-                        results.add(Pair(placeName, MapLatLng(addr.latitude, addr.longitude)))
-                    }
+    // 2. OpenStreetMap Nominatim Geocoding (Live street & landmark database for India)
+    try {
+        val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
+        val urlStr = "https://nominatim.openstreetmap.org/search?format=json&q=$encodedQuery&countrycodes=in&addressdetails=1&limit=8"
+        val url = java.net.URL(urlStr)
+        val conn = url.openConnection() as java.net.HttpURLConnection
+        conn.requestMethod = "GET"
+        conn.setRequestProperty("User-Agent", "GStoreApp/2.0 (contact@gstore.com)")
+        conn.connectTimeout = 3000
+        conn.readTimeout = 3000
+
+        if (conn.responseCode == 200) {
+            val responseText = conn.inputStream.bufferedReader().use { it.readText() }
+            val jsonArray = org.json.JSONArray(responseText)
+            for (i in 0 until jsonArray.length()) {
+                val obj = jsonArray.getJSONObject(i)
+                val dispName = obj.optString("display_name", "")
+                val lat = obj.optString("lat", "").toDoubleOrNull()
+                val lon = obj.optString("lon", "").toDoubleOrNull()
+                if (dispName.isNotBlank() && lat != null && lon != null) {
+                    results.add(Pair(dispName, MapLatLng(lat, lon)))
                 }
             }
         }
+        conn.disconnect()
     } catch (_: Exception) {}
 
-    // 3. Deduplicate results by proximity (< 50 meters apart) and name
+    // 3. Deduplicate results by proximity (< 40 meters) or exact place name
     val uniqueResults = mutableListOf<Pair<String, MapLatLng>>()
     for (item in results) {
         val alreadyExists = uniqueResults.any { existing ->
@@ -3234,21 +3218,29 @@ suspend fun searchRajamPlaces(context: Context, rawQuery: String): List<Pair<Str
                 item.second.latitude,
                 item.second.longitude
             )
-            dist < 0.05 || existing.first.equals(item.first, ignoreCase = true)
+            dist < 0.04 || existing.first.equals(item.first, ignoreCase = true)
         }
         if (!alreadyExists) {
             uniqueResults.add(item)
         }
     }
 
-    uniqueResults.take(10)
+    // Sort by proximity to store hub so nearby places in delivery zone appear first
+    uniqueResults.sortedBy {
+        AppState.calculateDistanceKm(
+            AppState.SHOP_LATITUDE,
+            AppState.SHOP_LONGITUDE,
+            it.second.latitude,
+            it.second.longitude
+        )
+    }.take(10)
 }
 
 suspend fun reverseGeocodeAddress(context: Context, lat: Double, lon: Double): String = withContext(Dispatchers.IO) {
     var resolvedAddress = ""
-    // 1. Android Native Geocoder
+    // 1. Android Native Geocoder (Google Play Services)
     try {
-        val geocoder = android.location.Geocoder(context, Locale.ENGLISH)
+        val geocoder = android.location.Geocoder(context, Locale("en", "IN"))
         @Suppress("DEPRECATION")
         val addresses = geocoder.getFromLocation(lat, lon, 1)
         if (!addresses.isNullOrEmpty()) {
@@ -3256,6 +3248,15 @@ suspend fun reverseGeocodeAddress(context: Context, lat: Double, lon: Double): S
             val lines = (0..addr.maxAddressLineIndex).mapNotNull { addr.getAddressLine(it) }
             if (lines.isNotEmpty()) {
                 resolvedAddress = lines.joinToString(", ")
+            } else {
+                resolvedAddress = listOfNotNull(
+                    addr.featureName,
+                    addr.thoroughfare,
+                    addr.subLocality,
+                    addr.locality,
+                    addr.postalCode,
+                    addr.adminArea
+                ).distinct().joinToString(", ")
             }
         }
     } catch (_: Exception) {}
@@ -3267,7 +3268,7 @@ suspend fun reverseGeocodeAddress(context: Context, lat: Double, lon: Double): S
             val url = java.net.URL(urlStr)
             val conn = url.openConnection() as java.net.HttpURLConnection
             conn.requestMethod = "GET"
-            conn.setRequestProperty("User-Agent", "GStore-Android/1.0 (contact@gstore.com)")
+            conn.setRequestProperty("User-Agent", "GStoreApp/2.0 (contact@gstore.com)")
             conn.connectTimeout = 3000
             conn.readTimeout = 3000
             if (conn.responseCode == 200) {
@@ -3281,7 +3282,7 @@ suspend fun reverseGeocodeAddress(context: Context, lat: Double, lon: Double): S
 
     // 3. Fallback
     if (resolvedAddress.isBlank()) {
-        resolvedAddress = "Location: ${String.format(Locale.ENGLISH, "%.4f", lat)}, ${String.format(Locale.ENGLISH, "%.4f", lon)}"
+        resolvedAddress = "Pinned Location: ${String.format(Locale.ENGLISH, "%.4f", lat)}, ${String.format(Locale.ENGLISH, "%.4f", lon)}"
     }
     resolvedAddress
 }
@@ -3290,11 +3291,14 @@ suspend fun reverseGeocodeAddress(context: Context, lat: Double, lon: Double): S
 @Composable
 fun AWSMapPickerDialog(
     onDismiss: () -> Unit,
-    onLocationSelected: (MapLatLng, String) -> Unit
+    onLocationSelected: (MapLatLng, String, String) -> Unit
 ) {
     val context = LocalContext.current
     var selectedLatLng by remember { mutableStateOf(MapLatLng(AppState.SHOP_LATITUDE, AppState.SHOP_LONGITUDE)) }
     var addressText by remember { mutableStateOf("Fetching location...") }
+    var isSatelliteMap by remember { mutableStateOf(false) }
+    var houseNoInput by remember { mutableStateOf("") }
+    var selectedAddressType by remember { mutableStateOf("Home") }
     val scope = rememberCoroutineScope()
 
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
@@ -3304,6 +3308,28 @@ fun AWSMapPickerDialog(
         scope.launch {
             val addr = reverseGeocodeAddress(context, latLng.latitude, latLng.longitude)
             addressText = addr
+        }
+    }
+
+    fun fetchCurrentGpsLocation() {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            try {
+                fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
+                    if (loc != null) {
+                        val currentLatLng = MapLatLng(loc.latitude, loc.longitude)
+                        updateAddress(currentLatLng)
+                    }
+                }
+                fusedLocationClient.getCurrentLocation(
+                    com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY,
+                    null
+                ).addOnSuccessListener { loc ->
+                    if (loc != null) {
+                        val currentLatLng = MapLatLng(loc.latitude, loc.longitude)
+                        updateAddress(currentLatLng)
+                    }
+                }
+            } catch (_: SecurityException) {}
         }
     }
 
@@ -3318,31 +3344,17 @@ fun AWSMapPickerDialog(
     ) { isGranted: Boolean ->
         locationPermissionGranted = isGranted
         if (isGranted) {
-            try {
-                fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                    if (location != null) {
-                        val currentLatLng = MapLatLng(location.latitude, location.longitude)
-                        updateAddress(currentLatLng)
-                    }
-                }
-            } catch (_: SecurityException) {}
+            fetchCurrentGpsLocation()
         }
     }
 
     LaunchedEffect(Unit) {
-        updateAddress(selectedLatLng)
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            try {
-                fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                    if (location != null) {
-                        val currentLatLng = MapLatLng(location.latitude, location.longitude)
-                        updateAddress(currentLatLng)
-                    }
-                }
-            } catch (_: SecurityException) {}
+        if (locationPermissionGranted) {
+            fetchCurrentGpsLocation()
         } else {
             locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
+        updateAddress(selectedLatLng)
     }
 
     val dialogContext = LocalContext.current
@@ -3354,7 +3366,7 @@ fun AWSMapPickerDialog(
     LaunchedEffect(mapSearchQuery) {
         val query = mapSearchQuery.trim()
         if (query.length >= 2) {
-            kotlinx.coroutines.delay(250) // 250ms debounce
+            kotlinx.coroutines.delay(200) // 200ms debounce
             isSearching = true
             try {
                 val list = searchRajamPlaces(context, query)
@@ -3414,11 +3426,11 @@ fun AWSMapPickerDialog(
                     modifier = Modifier.fillMaxSize(),
                     cameraPositionState = cameraPositionState,
                     properties = com.google.maps.android.compose.MapProperties(
-                        mapType = com.google.maps.android.compose.MapType.NORMAL,
+                        mapType = if (isSatelliteMap) com.google.maps.android.compose.MapType.HYBRID else com.google.maps.android.compose.MapType.NORMAL,
                         isMyLocationEnabled = locationPermissionGranted
                     ),
                     uiSettings = com.google.maps.android.compose.MapUiSettings(
-                        zoomControlsEnabled = true,
+                        zoomControlsEnabled = false,
                         myLocationButtonEnabled = false
                     ),
                     onMapClick = { latLng ->
@@ -3454,7 +3466,7 @@ fun AWSMapPickerDialog(
                 }
             }
 
-            // 2. Compact Floating Search Bar Card at top (Reduced height, zero clutter)
+            // 2. Compact Floating Search Bar Card at top
             Column(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -3487,6 +3499,32 @@ fun AWSMapPickerDialog(
                             value = mapSearchQuery,
                             onValueChange = { mapSearchQuery = it },
                             singleLine = true,
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                imeAction = androidx.compose.ui.text.input.ImeAction.Search
+                            ),
+                            keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                                onSearch = {
+                                    val q = mapSearchQuery.trim()
+                                    if (q.isNotEmpty()) {
+                                        scope.launch {
+                                            isSearching = true
+                                            try {
+                                                val list = searchRajamPlaces(context, q)
+                                                searchResultsList = list
+                                                if (list.isNotEmpty()) {
+                                                    val top = list.first()
+                                                    updateAddress(top.second)
+                                                    mapSearchQuery = top.first
+                                                    searchResultsList = emptyList()
+                                                }
+                                            } catch (_: Exception) {
+                                            } finally {
+                                                isSearching = false
+                                            }
+                                        }
+                                    }
+                                }
+                            ),
                             textStyle = androidx.compose.ui.text.TextStyle(
                                 fontSize = 13.5.sp,
                                 color = MaterialTheme.colorScheme.onSurface,
@@ -3496,7 +3534,7 @@ fun AWSMapPickerDialog(
                             decorationBox = { innerTextField ->
                                 if (mapSearchQuery.isEmpty()) {
                                     Text(
-                                        "Search place or area (e.g. More, RTC, GMRIT)...",
+                                        "Search any location, landmark, area, or street...",
                                         fontSize = 12.5.sp,
                                         color = Color.Gray,
                                         maxLines = 1,
@@ -3519,7 +3557,7 @@ fun AWSMapPickerDialog(
                     }
                 }
 
-                // Automatic Search Results Dropdown List (Fast, rich multi-source results!)
+                // Automatic Search Results Dropdown List
                 if (searchResultsList.isNotEmpty()) {
                     Spacer(Modifier.height(4.dp))
                     Card(
@@ -3590,32 +3628,36 @@ fun AWSMapPickerDialog(
                 }
             }
 
+            // Map Layer Toggle (Normal vs Satellite)
+            FloatingActionButton(
+                onClick = { isSatelliteMap = !isSatelliteMap },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = 295.dp)
+                    .size(44.dp),
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = RoyalEmerald,
+                shape = CircleShape
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Layers,
+                    contentDescription = "Toggle Satellite Map",
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
             // My Location Floating Action Button
             FloatingActionButton(
                 onClick = {
                     if (locationPermissionGranted) {
-                        try {
-                            fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
-                                if (loc != null) {
-                                    updateAddress(MapLatLng(loc.latitude, loc.longitude))
-                                }
-                            }
-                            fusedLocationClient.getCurrentLocation(com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY, null)
-                                .addOnSuccessListener { loc ->
-                                    if (loc != null) {
-                                        updateAddress(MapLatLng(loc.latitude, loc.longitude))
-                                    }
-                                }
-                        } catch (e: SecurityException) {
-                            Toast.makeText(dialogContext, "Location permission required", Toast.LENGTH_SHORT).show()
-                        }
+                        fetchCurrentGpsLocation()
                     } else {
                         locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                     }
                 },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = 175.dp)
+                    .padding(end = 16.dp, bottom = 240.dp)
                     .size(44.dp),
                 containerColor = RoyalEmerald,
                 contentColor = Color.White,
@@ -3624,7 +3666,7 @@ fun AWSMapPickerDialog(
                 Icon(Icons.Default.MyLocation, contentDescription = "My Location", modifier = Modifier.size(20.dp))
             }
 
-            // 3. Floating Bottom Panel Card with Direct Radius Validation
+            // 3. Floating Bottom Panel Card with Direct Radius Validation & Address Details
             val distFromStore = AppState.calculateDistanceKm(
                 AppState.SHOP_LATITUDE,
                 AppState.SHOP_LONGITUDE,
@@ -3659,7 +3701,7 @@ fun AWSMapPickerDialog(
                         overflow = TextOverflow.Ellipsis
                     )
 
-                    // Radius Deliverability Badge (Short & Clean without clutter)
+                    // Radius Deliverability Badge
                     if (isDeliverable) {
                         Surface(
                             shape = RoundedCornerShape(8.dp),
@@ -3703,37 +3745,47 @@ fun AWSMapPickerDialog(
                         }
                     }
 
-                    val coordsText = "Lat: ${String.format(Locale.ENGLISH, "%.5f", selectedLatLng.latitude)}, Lon: ${String.format(Locale.ENGLISH, "%.5f", selectedLatLng.longitude)}"
+                    // Address Type Selection (Home / Work / Other)
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 10.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = coordsText,
-                            fontSize = 11.sp,
-                            color = Color.Gray,
-                            modifier = Modifier.weight(1f)
-                        )
-                        IconButton(
-                            onClick = {
-                                val rawCoords = "${selectedLatLng.latitude},${selectedLatLng.longitude}"
-                                val clipboard = dialogContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(ClipData.newPlainText("GPS Coordinates", rawCoords))
-                                Toast.makeText(dialogContext, "Coordinates copied!", Toast.LENGTH_SHORT).show()
-                            },
-                            modifier = Modifier.size(26.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ContentCopy,
-                                contentDescription = "Copy coordinates",
-                                tint = RoyalEmerald,
-                                modifier = Modifier.size(15.dp)
-                            )
+                        listOf("Home", "Work", "Other").forEach { type ->
+                            val isSel = selectedAddressType == type
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isSel) RoyalEmerald.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                border = BorderStroke(1.dp, if (isSel) RoyalEmerald else Color.Transparent),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { selectedAddressType = type }
+                            ) {
+                                Text(
+                                    text = if (type == "Home") "🏠 Home" else if (type == "Work") "🏢 Work" else "📍 Other",
+                                    fontSize = 11.5.sp,
+                                    fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSel) RoyalEmerald else MaterialTheme.colorScheme.onSurface,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    modifier = Modifier.padding(vertical = 5.dp)
+                                )
+                            }
                         }
                     }
+
+                    // Optional Flat / House / Door Number TextField
+                    OutlinedTextField(
+                        value = houseNoInput,
+                        onValueChange = { houseNoInput = it },
+                        placeholder = { Text("Flat / House / Door No. (e.g. D.No 4-12, Flat 201)", fontSize = 12.sp, color = Color.Gray) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.5.sp, color = MaterialTheme.colorScheme.onSurface),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = RoyalEmerald,
+                            unfocusedBorderColor = Color.LightGray.copy(alpha = 0.6f)
+                        )
+                    )
 
                     Button(
                         onClick = {
@@ -3750,7 +3802,8 @@ fun AWSMapPickerDialog(
                             } else {
                                 addressText
                             }
-                            onLocationSelected(selectedLatLng, confirmedAddress)
+                            val fullHouseLabel = if (houseNoInput.isNotBlank()) "$selectedAddressType: ${houseNoInput.trim()}" else selectedAddressType
+                            onLocationSelected(selectedLatLng, confirmedAddress, fullHouseLabel)
                             onDismiss()
                         },
                         modifier = Modifier

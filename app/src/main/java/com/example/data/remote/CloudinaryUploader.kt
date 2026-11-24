@@ -42,57 +42,64 @@ object CloudinaryUploader {
         val lineEnd  = "\r\n"
         val twoHyphens = "--"
 
-        val connection = (URL(UPLOAD_URL).openConnection() as HttpsURLConnection).apply {
-            requestMethod = "POST"
-            doInput  = true
-            doOutput = true
-            useCaches = false
-            connectTimeout = 45_000
-            readTimeout    = 90_000
-            setRequestProperty("Connection", "Keep-Alive")
-            setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
-        }
-
-        DataOutputStream(connection.outputStream).use { out ->
-
-            // Helper to write a text field
-            fun writeField(name: String, value: String) {
-                out.writeBytes("$twoHyphens$boundary$lineEnd")
-                out.writeBytes("Content-Disposition: form-data; name=\"$name\"$lineEnd$lineEnd")
-                out.writeBytes("$value$lineEnd")
+        try {
+            val connection = (URL(UPLOAD_URL).openConnection() as HttpsURLConnection).apply {
+                requestMethod = "POST"
+                doInput  = true
+                doOutput = true
+                useCaches = false
+                connectTimeout = 45_000
+                readTimeout    = 90_000
+                setRequestProperty("Connection", "Keep-Alive")
+                setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
             }
 
-            writeField("api_key",   API_KEY)
-            writeField("timestamp", timestamp)
-            writeField("signature", signature)
-            writeField("folder",    FOLDER)
+            DataOutputStream(connection.outputStream).use { out ->
 
-            // Write the image file part
-            out.writeBytes("$twoHyphens$boundary$lineEnd")
-            out.writeBytes("Content-Disposition: form-data; name=\"file\"; filename=\"${file.name}\"$lineEnd")
-            out.writeBytes("Content-Type: image/jpeg$lineEnd$lineEnd")
-            file.inputStream().use { it.copyTo(out) }
-            out.writeBytes(lineEnd)
+                // Helper to write a text field
+                fun writeField(name: String, value: String) {
+                    out.writeBytes("$twoHyphens$boundary$lineEnd")
+                    out.writeBytes("Content-Disposition: form-data; name=\"$name\"$lineEnd$lineEnd")
+                    out.writeBytes("$value$lineEnd")
+                }
 
-            // Closing boundary
-            out.writeBytes("$twoHyphens$boundary$twoHyphens$lineEnd")
-            out.flush()
+                writeField("api_key",   API_KEY)
+                writeField("timestamp", timestamp)
+                writeField("signature", signature)
+                writeField("folder",    FOLDER)
+
+                // Write the image file part
+                out.writeBytes("$twoHyphens$boundary$lineEnd")
+                out.writeBytes("Content-Disposition: form-data; name=\"file\"; filename=\"${file.name}\"$lineEnd")
+                out.writeBytes("Content-Type: image/jpeg$lineEnd$lineEnd")
+                file.inputStream().use { it.copyTo(out) }
+                out.writeBytes(lineEnd)
+
+                // Closing boundary
+                out.writeBytes("$twoHyphens$boundary$twoHyphens$lineEnd")
+                out.flush()
+            }
+
+            val responseCode = connection.responseCode
+            val responseBody = if (responseCode in 200..299) {
+                connection.inputStream.bufferedReader().readText()
+            } else {
+                val errRaw = try { connection.errorStream?.bufferedReader()?.readText() ?: "Unknown network error" }
+                              catch (_: Exception) { "Unknown network error" }
+                val formattedMsg = try {
+                    JSONObject(errRaw).optJSONObject("error")?.optString("message") ?: errRaw
+                } catch (_: Exception) { errRaw }
+                throw Exception("Cloudinary upload failed ($responseCode): $formattedMsg")
+            }
+            connection.disconnect()
+
+            return JSONObject(responseBody).getString("secure_url")
+        } catch (e: Exception) {
+            if (e.message?.startsWith("Cloudinary") == true) {
+                throw e
+            }
+            throw Exception("Cloudinary upload failed: ${e.message ?: "Network error"}", e)
         }
-
-        val responseCode = connection.responseCode
-        val responseBody = if (responseCode in 200..299) {
-            connection.inputStream.bufferedReader().readText()
-        } else {
-            val errRaw = try { connection.errorStream?.bufferedReader()?.readText() ?: "Unknown network error" }
-                          catch (_: Exception) { "Unknown network error" }
-            val formattedMsg = try {
-                JSONObject(errRaw).optJSONObject("error")?.optString("message") ?: errRaw
-            } catch (_: Exception) { errRaw }
-            throw Exception("Cloudinary upload failed ($responseCode): $formattedMsg")
-        }
-        connection.disconnect()
-
-        return JSONObject(responseBody).getString("secure_url")
     }
 
     /** SHA-1 hex digest used for Cloudinary request signing */

@@ -23,9 +23,9 @@ app.use(express.json({ limit: "50mb" }));
 const PORT = process.env.PORT || 3000;
 
 // Cloudinary configuration
-const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || "k1lw675z";
-const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || "498889461713286";
-const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || "8SR-robZhuJf-5ehvJTFCscCatY";
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || "";
+const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || "";
+const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || "";
 
 function formatCloudinaryUrl(url: string): string {
   if (url && url.includes("res.cloudinary.com") && url.includes("/upload/")) {

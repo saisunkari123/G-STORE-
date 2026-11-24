@@ -14,8 +14,25 @@
 
 # Uncomment this to preserve the line number information for
 # debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+-keepattributes SourceFile,LineNumberTable
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Room Database Entities & DAOs
+-keep class com.example.data.local.entity.** { *; }
+-keep class com.example.data.local.dao.** { *; }
+-keep class com.example.data.local.db.** { *; }
+-keep class * extends androidx.room.RoomDatabase
+
+# Domain Models (used across serialization and Room mappings)
+-keep class com.example.domain.model.** { *; }
+
+# Moshi JSON Models
+-keepattributes *Annotation*
+-keepclassmembers class * {
+    @com.squareup.moshi.* <fields>;
+    @com.squareup.moshi.* <methods>;
+}
+
+# Amplify & Location SDKs
+-dontwarn com.amplifyframework.**
+-dontwarn org.osmdroid.**
+-dontwarn org.maplibre.gl.**

@@ -89,11 +89,11 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
         startPeriodicCloudSync()
     }
 
-    /** Polls AWS AppSync every 5 seconds and updates the local state if data changed. */
+    /** Polls AWS AppSync periodically and updates the local state if data changed. */
     private fun startPeriodicCloudSync() {
         syncScope.launch {
             while (true) {
-                delay(5_000L)
+                delay(30_000L)
                 try {
                     kotlinx.coroutines.withTimeout(15_000L) {
                         fetchProductsFromCloud()
@@ -120,7 +120,7 @@ class AwsProductRepositoryImpl(private val context: Context) : ProductRepository
      */
     private suspend fun fetchProductsFromCloud(): Unit = suspendCancellableCoroutine { cont ->
         val query = """
-            query ListProducts_${System.currentTimeMillis()} {
+            query ListProducts {
                 listProducts(limit: 1000) {
                     items {
                         id
@@ -615,7 +615,7 @@ class AwsOrderRepositoryImpl(private val context: Context) : OrderRepository {
         }
     }
 
-    /** Polls AppSync listOrders every 3 seconds and merges results into ordersState. */
+    /** Polls AppSync listOrders periodically and merges results into ordersState. */
     private fun startPeriodicOrderSync() {
         syncScope.launch {
             while (true) {
@@ -626,7 +626,7 @@ class AwsOrderRepositoryImpl(private val context: Context) : OrderRepository {
                 } catch (e: Exception) {
                     Log.w("AwsOrder", "Periodic order sync failed silently", e)
                 }
-                delay(3_000L)
+                delay(15_000L)
             }
         }
     }
@@ -637,7 +637,7 @@ class AwsOrderRepositoryImpl(private val context: Context) : OrderRepository {
      */
     private suspend fun fetchOrdersFromCloud(): Unit = suspendCancellableCoroutine { cont ->
         val query = """
-            query ListOrders_${System.currentTimeMillis()} {
+            query ListOrders {
                 listOrders(limit: 1000) {
                     items {
                         id

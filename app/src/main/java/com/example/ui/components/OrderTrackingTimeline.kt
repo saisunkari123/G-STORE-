@@ -127,6 +127,54 @@ fun OrderTrackingTimeline(
             }
         }
 
+        if (order != null && currentStepIndex in 0..2) {
+            val deliveryPin = order.deliveryOtp.ifBlank {
+                order.customerPhone.filter { it.isDigit() }.takeLast(4).ifEmpty { "1234" }
+            }
+            Spacer(Modifier.height(10.dp))
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = if (isDark) Color(0xFF232D28) else Color(0xFFEBF7F2),
+                border = androidx.compose.foundation.BorderStroke(1.dp, RoyalEmerald.copy(alpha = 0.35f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = "DELIVERY HANDOVER PIN",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = RoyalEmerald,
+                            letterSpacing = 0.5.sp
+                        )
+                        Text(
+                            text = "Share with rider at doorstep",
+                            fontSize = 10.5.sp,
+                            color = inactiveTextColor
+                        )
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = RoyalEmerald,
+                        modifier = Modifier.padding(start = 8.dp)
+                    ) {
+                        Text(
+                            text = deliveryPin,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color.White,
+                            letterSpacing = 2.sp,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+        }
+
         if (currentStepIndex == 3 && order != null) {
             Spacer(Modifier.height(10.dp))
             Surface(

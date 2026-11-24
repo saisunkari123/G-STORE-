@@ -183,8 +183,9 @@ fun DeliveryScreen() {
             order = order,
             isDark = isDark,
             onConfirm = { otp, cash, photoUrl, remarks ->
-                AppState.driverConfirmDelivery(order.id, otp, cash, photoUrl, remarks)
-                activeCompletionOrder = null
+                if (AppState.driverConfirmDelivery(order.id, otp, cash, photoUrl, remarks)) {
+                    activeCompletionOrder = null
+                }
             },
             onReportIssue = {
                 val orderToReport = activeCompletionOrder
@@ -961,13 +962,29 @@ fun DeliveryCompletionModal(
 
             Spacer(Modifier.height(14.dp))
 
-            // Optional PIN / OTP Verification
+            // Customer Handover PIN Verification
+            val expectedPin = order.deliveryOtp.ifBlank {
+                order.customerPhone.filter { it.isDigit() }.takeLast(4).ifEmpty { "1234" }
+            }
+            val isPinMatching = otpInput.isNotBlank() && otpInput == expectedPin
+            val isPinMismatched = otpInput.length == 4 && otpInput != expectedPin
+
             OutlinedTextField(
                 value = otpInput,
-                onValueChange = { if (it.length <= 4) otpInput = it },
-                label = { Text("Customer 4-Digit PIN (Optional)") },
-                placeholder = { Text("Enter last 4 digits of phone") },
+                onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) otpInput = it },
+                label = { Text("Customer 4-Digit Handover PIN (Optional)") },
+                placeholder = { Text("Ask customer for code in app") },
                 singleLine = true,
+                isError = isPinMismatched,
+                supportingText = {
+                    if (isPinMatching) {
+                        Text("✔ Handover PIN verified successfully", color = RoyalEmerald, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    } else if (isPinMismatched) {
+                        Text("✖ Incorrect PIN (check customer app screen)", color = AlertRed, fontSize = 11.sp)
+                    } else {
+                        Text("Displayed on customer's order tracking screen", fontSize = 11.sp, color = textSecondary)
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             )
@@ -980,7 +997,7 @@ fun DeliveryCompletionModal(
                 },
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 shape = RoundedCornerShape(12.dp),
-                enabled = isCashReceived,
+                enabled = isCashReceived && isPinMatching,
                 colors = ButtonDefaults.buttonColors(containerColor = RoyalEmerald)
             ) {
                 Text("Confirm Handover & Settle", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.White)
@@ -1250,8 +1267,8 @@ fun MultiStopRouteModal(
     val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
     val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
 
-    val storeLat = 18.4529
-    val storeLon = 83.6548
+    val storeLat = AppState.SHOP_LATITUDE
+    val storeLon = AppState.SHOP_LONGITUDE
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
@@ -1313,8 +1330,8 @@ fun MultiStopRouteModal(
 
                             // Add Numbered Pins for each customer stop
                             activeOrders.forEachIndexed { idx, order ->
-                                val stopLat = if (order.latitude != 0.0) order.latitude else (storeLat + (idx + 1) * 0.003)
-                                val stopLon = if (order.longitude != 0.0) order.longitude else (storeLon + (idx + 1) * 0.004)
+                                val stopLat = if (order.latitude != 0.0) order.latitude else storeLat
+                                val stopLon = if (order.longitude != 0.0) order.longitude else storeLon
                                 val stopMarker = Marker(this).apply {
                                     position = GeoPoint(stopLat, stopLon)
                                     title = "Stop #${idx + 1}: ${order.customerName} (${order.addressHouseNo})"
@@ -1381,10 +1398,10 @@ fun DeliveryMapModal(
     val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
 
     // Store Location (Rajam Market) vs Customer Location
-    val storeLat = 18.4529
-    val storeLon = 83.6548
-    val custLat = if (order.latitude != 0.0) order.latitude else 18.4550
-    val custLon = if (order.longitude != 0.0) order.longitude else 83.6590
+    val storeLat = AppState.SHOP_LATITUDE
+    val storeLon = AppState.SHOP_LONGITUDE
+    val custLat = if (order.latitude != 0.0) order.latitude else storeLat
+    val custLon = if (order.longitude != 0.0) order.longitude else storeLon
 
     var simProgress by remember { mutableFloatStateOf(0.35f) }
 

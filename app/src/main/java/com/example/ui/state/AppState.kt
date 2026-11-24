@@ -31,6 +31,7 @@ import com.amplifyframework.auth.options.AuthSignUpOptions
 import com.amplifyframework.auth.AuthUserAttributeKey
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
+import com.example.util.SecurityUtils
 
 
 object AppState {
@@ -116,8 +117,8 @@ object AppState {
     var isDarkMode by mutableStateOf(false)
     var monthlySalesGoal by mutableStateOf(50000.0)
 
-    // Role-based Passwords
-    private val ADMIN_PASSWORD = "Ram@1234"
+    // Role-based Passwords & Cryptographic Hashes
+    private const val ADMIN_PASSWORD_HASH = "63c6f625eb63641e7987cd2abc94fe13da5e3b52b5248a7dc1b289d92832d149"
 
     // Shop Location (City Super Market, Rajam, Vizianagaram)
     const val SHOP_LATITUDE = 18.4482
@@ -849,7 +850,7 @@ object AppState {
         val emailTrim = email.trim()
         val isDev = emailTrim.equals("developer@gstore.com", ignoreCase = true)
         val isAdmin = emailTrim.equals("admin@gstore.com", ignoreCase = true) || isDev
-        val isDemoPassword = password == "Ram@1234" || password == ADMIN_PASSWORD || password == com.example.BuildConfig.ADMIN_PASSWORD
+        val isDemoPassword = SecurityUtils.verifyPassword(password, ADMIN_PASSWORD_HASH) || password == com.example.BuildConfig.ADMIN_PASSWORD
 
         val resolvedAdminUser = User(
             id = if (isDev) "admin_dev_002" else "admin_001",
@@ -857,7 +858,7 @@ object AppState {
             name = if (isDev) "G-STORE Dev Admin" else "G-STORE Admin",
             role = "ADMIN",
             email = if (isDev) "developer@gstore.com" else "admin@gstore.com",
-            pinOrPassword = "Ram@1234"
+            pinOrPassword = ADMIN_PASSWORD_HASH
         )
 
         // Instant direct login if recognized admin demo credentials
@@ -1551,9 +1552,6 @@ object AppState {
         observeProducts()
         observeCategories()
 
-        // Clean non-admin data: remove all customer users, addresses, and dummy orders, keeping only products and admin
-        clearNonAdminDataAndOrders()
-
         ioScope.launch {
             // Restore active AWS Cognito session if exists
             try {
@@ -1970,12 +1968,12 @@ object AppState {
         }
     }
 
-    /** Simulates realistic driver motion from Hub (Rajam) towards customer destination */
+    /** Simulates realistic driver motion from Hub towards customer destination */
     fun simulateDriverProgress(order: Order, progressFraction: Float) {
-        val hubLat = 18.4529
-        val hubLon = 83.6548
-        val targetLat = if (order.latitude != 0.0) order.latitude else 18.4560
-        val targetLon = if (order.longitude != 0.0) order.longitude else 83.6600
+        val hubLat = SHOP_LATITUDE
+        val hubLon = SHOP_LONGITUDE
+        val targetLat = if (order.latitude != 0.0) order.latitude else SHOP_LATITUDE
+        val targetLon = if (order.longitude != 0.0) order.longitude else SHOP_LONGITUDE
         val currentLat = hubLat + (targetLat - hubLat) * progressFraction.coerceIn(0f, 1f)
         val currentLon = hubLon + (targetLon - hubLon) * progressFraction.coerceIn(0f, 1f)
         updateDriverLocation(currentLat, currentLon)
@@ -2018,11 +2016,14 @@ object AppState {
         proofPhotoUrl: String = "",
         remarks: String = "",
         onComplete: () -> Unit = {}
-    ) {
-        val order = ordersList.find { it.id == orderId } ?: return
+    ): Boolean {
+        val order = ordersList.find { it.id == orderId } ?: return false
+        val expectedPin = order.deliveryOtp.ifBlank {
+            order.customerPhone.filter { it.isDigit() }.takeLast(4).ifEmpty { "1234" }
+        }
+        if (enteredOtp != expectedPin) return false
         val updatedOrder = order.copy(
             status = OrderStatus.DELIVERED,
-            deliveryOtp = enteredOtp,
             cashCollected = cashAmount,
             deliveryProofPhotoUrl = proofPhotoUrl,
             deliveryRemarks = remarks.ifEmpty { "Handed over directly to customer at doorstep" }
@@ -2044,6 +2045,7 @@ object AppState {
                 }
             }
         }
+        return true
     }
 
     /** Admin Dispatches an order and assigns a Delivery Partner */
@@ -2157,7 +2159,7 @@ object AppState {
                         name = "G-STORE Admin",
                         role = "ADMIN",
                         email = "admin@gstore.com",
-                        pinOrPassword = "Ram@1234"
+                        pinOrPassword = ADMIN_PASSWORD_HASH
                     )
                     userRepository.saveUser(adminUser)
                 }
@@ -2178,4 +2180,3 @@ object AppState {
         }
     }
 }
-

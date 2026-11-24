@@ -24,3 +24,6 @@ gradle-9.3.1-bin.zip
 secrets.properties
 .secrets/
 MCP_INTEGRATION_LOG.md
+*.apk
+*.local.json
+all_products_dump.json
