@@ -264,17 +264,17 @@ const toolsList = [
   {
     name: "create_product",
     description:
-      "Create and add a new product to G-Store catalog with pricing, weight size, stock, and image. Uploads the image directly to store's Cloudinary storage and saves to AWS AppSync.",
+      "Create and add a new product to G-Store catalog with pricing, weight size, stock, and image. Uploads the image directly to store's Cloudinary storage and saves to AWS AppSync.\n\nCRITICAL PACKAGED FMCG RULE FOR AGENT:\nFor branded FMCG grocery items (biscuits, detergents, edible oils, soaps, noodles, snacks, chocolates, dairy, packaged spices like Sunfeast, Britannia, Surf Excel, Freedom, Maggi, Tata, etc.), you MUST ALWAYS automatically find and supply a real, authentic official product image URL in 'imageUrl' (from official brand listings or grocery catalogs like Amazon India, Blinkit, BigBasket), or use the photo provided by the store owner. DO NOT leave blank or resort to synthetic AI generation for branded goods as diffusion models corrupt brand logos and text.",
     inputSchema: {
       type: "object",
       properties: {
         name: {
           type: "string",
-          description: "Product display name (e.g., 'Amul Taaza Homogenised Toned Milk', 'Freedom Refined Sunflower Oil')",
+          description: "Product display name (e.g., 'Sunfeast Mom\\'s Magic Cashew & Almond', 'Amul Taaza Homogenised Toned Milk', 'Freedom Refined Sunflower Oil')",
         },
         category: {
           type: "string",
-          description: "Product category: 'Dairy Essentials', 'Rice Bags', 'Cooking Oils', 'Dals & Pulses', or 'Spices & Masalas'",
+          description: "Product category: 'Dairy Essentials', 'Rice Bags', 'Cooking Oils', 'Dals & Pulses', 'Spices & Masalas', 'Biscuits & Bakery', 'Snacks & Namkeen', 'Home & Cleaning', 'Tea, Coffee & Drinks'",
         },
         price: {
           type: "number",
@@ -286,7 +286,7 @@ const toolsList = [
         },
         size: {
           type: "string",
-          description: "Weight or volume size (e.g., '500ml', '1L', '26kg', '10kg', '1kg').",
+          description: "Weight or volume size (e.g., '100g', '500ml', '1L', '26kg', '10kg', '1kg').",
         },
         stock: {
           type: "number",
@@ -298,7 +298,7 @@ const toolsList = [
         },
         imageUrl: {
           type: "string",
-          description: "Optional image URL. Automatically uploaded to Cloudinary folder 'ricemart_products'. If omitted, a clean category placeholder image is assigned.",
+          description: "STRONGLY RECOMMENDED: Direct URL to an authentic real product packaging photo, or photo provided by the user. Automatically uploaded to Cloudinary folder 'ricemart_products'. For branded FMCG items, search the web or use the photo provided by the user so official brand packaging is shown.",
         },
       },
       required: ["name", "category", "price"],
@@ -395,13 +395,13 @@ const toolsList = [
   {
     name: "generate_and_upload_product_image",
     description:
-      "Generate a photo-realistic, studio e-commerce grocery product image using AI or process a reference photo taken by the store owner, automatically formatting it to a 600x600 square on a clean white background and uploading it to Cloudinary. Optionally attaches it directly to a product.",
+      "Formats and uploads a product packaging image to Cloudinary (600x400 card landscape or 600x600 modal square) and attaches it directly to the product in AWS AppSync.\n\nCRITICAL PACKAGING RULE:\n1. For branded packaged FMCG products (Sunfeast, Britannia, Parle, Surf Excel, Ariel, Freedom, Fortune, Maggi, Tata, etc.): ALWAYS pass the real product photo URL or the user's phone camera photo in 'referenceImageUrlOrBase64'. NEVER generate synthetic AI images for branded products because text-to-image models distort logos and text.\n2. AI image generation is STRICTLY reserved for unbranded raw commodities (e.g. loose rice grains, raw whole dals, whole turmeric root) where no commercial branded packet exists.",
     inputSchema: {
       type: "object",
       properties: {
         productName: {
           type: "string",
-          description: "Name of the product (e.g. 'Lalitha Brand HMT Rice 26kg bag', 'Freedom Refined Sunflower Oil 1L')",
+          description: "Name of the product (e.g. 'Lalitha Brand HMT Rice 26kg bag', 'Sunfeast Mom\\'s Magic')",
         },
         productId: {
           type: "string",
@@ -409,15 +409,15 @@ const toolsList = [
         },
         referenceImageUrlOrBase64: {
           type: "string",
-          description: "Optional reference photo URL or base64 image taken on phone. If provided, uploads and formats this reference image.",
+          description: "Real product photo URL or base64 photo taken on mobile phone camera. For all branded FMCG products, always provide this real photo URL.",
         },
         customPrompt: {
           type: "string",
-          description: "Optional custom prompt describing visual packaging details (e.g. 'yellow woven bag with red Lalitha brand logo on pure white background, studio lighting')",
+          description: "Only used for non-branded raw commodities (e.g. 'heap of golden raw toor dal on rustic wooden table, studio lighting, white background').",
         },
         category: {
           type: "string",
-          description: "Optional product category ('Rice Bags', 'Cooking Oils', 'Dals & Pulses', 'Dairy Essentials', 'Spices & Masalas')",
+          description: "Optional product category ('Rice Bags', 'Cooking Oils', 'Dals & Pulses', 'Dairy Essentials', 'Spices & Masalas', 'Biscuits & Bakery', 'Snacks & Namkeen')",
         },
       },
       required: ["productName"],
@@ -1206,12 +1206,12 @@ async function executeToolCall(name: string, args: any) {
       let finalCloudinaryUrl = "";
 
       if (referenceImage) {
-        // Case 1: Reference photo taken on phone or image URL provided
+        // Case 1: Reference photo taken on phone or real product image URL provided
         finalCloudinaryUrl = await uploadToCloudinary(referenceImage);
       } else {
-        // Case 2: AI-generated commercial studio packaging photo filling full card frame
-        const promptDetails = customPrompt || `${productName}, authentic Indian grocery retail package, vibrant high-contrast packaging`;
-        const fullPrompt = `Close-up commercial retail packaging photography of ${promptDetails}, ${category}, product packaging filling the full frame edge-to-edge, ultra-high resolution 8k details, vibrant crisp branding, studio lighting, clean background, modern quick-commerce product image`;
+        // Case 2: Clean studio commodity packshot on seamless white background
+        const promptDetails = customPrompt || `${productName}, authentic Indian grocery retail packshot, pure white background`;
+        const fullPrompt = `Commercial product photography of ${promptDetails}, ${category}, centered on seamless pure white background, studio lighting, hyper-realistic, 8k resolution, crisp clean edges, professional e-commerce product catalog photo, no text distortions, no watermarks`;
         
         const seed = Math.floor(Math.random() * 100000);
         const aiImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=600&height=400&nologo=true&enhance=true&seed=${seed}`;
